@@ -1,5 +1,9 @@
 #lang racket/base
 
+(module+ test
+  (require racket/sequence)
+  (call-with-input-file "/home/leo/code/test.js" es-parse))
+
 (require parser-tools/lex
          racket/generator
          racket/list
@@ -58,13 +62,20 @@
 (define (collapse-syntax stx)
   (syntax-parse stx
     [((~datum eol-or-semicolon) _) #'";"]
-    [((~not (~or (~datum variable-declaration-list)
-                 (~datum variable-declaration)
-                 (~datum formal-parameter-list)))
-      (~and (_ ...) sub))
-     (collapse-syntax #'sub)]
     [(rule sub ...)
-     #`(rule #,@(map collapse-syntax (syntax->list #'(sub ...))))]
+     (let ([subs (syntax->list #'(sub ...))])
+       (if (and (= 1 (length subs))
+                (not
+                 (memq (syntax-e #'rule)
+                       '(program identifier numeric string
+                         statement variable-declaration-list
+                         variable-declaration-list-no-in
+                         variable-declaration
+                         variable-declaration-no-in
+                         empty-statement
+                         formal-parameter-list))))
+           (collapse-syntax (car subs))
+           #`(rule #,@(map collapse-syntax subs))))]
     [_ stx]))
 
 (define (es-parse in)
@@ -76,14 +87,13 @@
 
 (define (parse-program stx)
   (syntax-parse stx
-    #:datum-literals (program)
-    [(program elt ...+) (es-program stx (stx-map parse-source-element #'(elt ...)))]))
+    [((~datum program) elt ...)
+     (es-program stx (stx-map parse-source-element #'(elt ...)))]))
 
 (define (parse-source-element stx)
   (syntax-parse stx
-    #:datum-literals (function-declaration)
-    [(function-declaration . _) (parse-function stx)]
-    [_ (parse-statement stx)]))
+    [((~datum statement) . _) (parse-statement stx)]
+    [((~datum function-declaration) . _) (parse-function stx)]))
 
 (define (parse-expression stx)
   (syntax-parse stx
@@ -123,12 +133,13 @@
 (define (parse-arguments stx)
   (syntax-parse stx
     #:datum-literals (arguments)
-    [(arguments "(" expr ... ")") (stx-map parse-expression #'(expr ...))]))
+    [(arguments "(" (~seq (~optional ",") expr) ... ")")
+     (stx-map parse-expression #'(expr ...))]))
 
 (define (parse-statement stx)
   (syntax-parse stx
     #:datum-literals (statement block variable-statement empty-statement expression-statement
-                      if-statement while-statement for-statement continue-statement
+                      if-statement iteration-statement continue-statement
                       break-statement return-statement with-statement)
     [(statement s) (parse-statement #'s)]
     [(block "{" stmt ... "}") (es-block stx (stx-map parse-statement #'(stmt ...)))]
@@ -138,17 +149,17 @@
     [(if-statement "if" "(" test ")" true) (es-if stx (parse-expression #'test) (parse-statement #'true) #f)]
     [(if-statement "if" "(" test ")" true "else" false)
      (es-if stx (parse-expression #'test) (parse-statement #'true) (parse-statement #'false))]
-    [(while-statement "while" "(" test ")" body) (es-while stx (parse-expression #'test) (parse-statement #'body))]
-    [(for-statement "for" "(" "var" declist ";" (~optional test) ";" (~optional step) ")" body)
+    [(iteration-statement "while" "(" test ")" body) (es-while stx (parse-expression #'test) (parse-statement #'body))]
+    [(iteration-statement "for" "(" "var" declist ";" (~optional test) ";" (~optional step) ")" body)
      (es-for stx (parse-variable-declaration-list #'declist) (parse-optexpr (attribute test))
              (parse-optexpr (attribute step)) (parse-statement #'body))]
-    [(for-statement "for" "(" (~optional init) ";" (~optional test) ";" (~optional step) ")" body)
+    [(iteration-statement "for" "(" (~optional init) ";" (~optional test) ";" (~optional step) ")" body)
      (es-for stx (parse-optexpr (attribute init)) (parse-optexpr (attribute test))
              (parse-optexpr (attribute step)) (parse-statement #'body))]
-    [(for-statement "for" "(" "var" (~seq id (~optional (~seq "=" init))) "in" expr ")" body)
+    [(iteration-statement "for" "(" "var" (~seq id (~optional (~seq "=" init))) "in" expr ")" body)
      (es-for-in stx (es-var-decl #'id (parse-id #'id) (parse-optexpr (attribute init)))
                 (parse-expression #'expr) (parse-statement #'body))]
-    [(for-statement "for" "(" init "in" expr ")" body)
+    [(iteration-statement "for" "(" init "in" expr ")" body)
      (es-for-in stx (parse-expression #'init) (parse-expression #'expr) (parse-statement #'body))]
     [(continue-statement "continue" ";") (es-continue stx)]
     [(break-statement "break" ";") (es-break stx)]
@@ -160,20 +171,27 @@
 
 (define (parse-variable-declaration-list stx)
   (syntax-parse stx
-    #:datum-literals (variable-declaration-list)
-    [(variable-declaration-list decl0 (~seq "," decl) ...)
+    [((~or (~datum variable-declaration-list)
+           (~datum variable-declaration-list-no-in))
+      decl0 (~seq "," decl) ...)
      (stx-map parse-variable-declaration #'(decl0 decl ...))]))
 
 (define (parse-variable-declaration stx)
   (syntax-parse stx
-    #:datum-literals (variable-declaration)
-    [(variable-declaration id (~optional (~seq "=" expr)))
+    [((~or (~datum variable-declaration)
+           (~datum variable-declaration-no-in))
+      id (~optional (~seq "=" expr)))
      (es-var-decl stx (parse-id #'id) (parse-optexpr (attribute expr)))]))
 
 (define (parse-function stx)
   (syntax-parse stx
-    #:datum-literals (function-declaration formal-parameter-list)
-    [(function-declaration "function" id "(" ")" body)
-     (es-function stx (parse-id #'id) '() (parse-statement #'body))]
-    [(function-declaration "function" id "(" (formal-parameter-list arg0 (~seq "," arg) ...) ")" body)
-     (es-function stx (parse-id #'id) (stx-map parse-id #'(arg0 arg ...)) (parse-statement #'body))]))
+    [((~datum function-declaration)
+      "function" id "("
+      (~optional ((~datum formal-parameter-list)
+                  arg0 (~seq "," arg) ...))
+      ")" "{" body ... "}")
+     (es-function
+      stx
+      (parse-id #'id)
+      (if (attribute arg0) (stx-map parse-id #'(arg0 arg ...)) '())
+      (parse-statement #'(block "{" body ... "}")))]))

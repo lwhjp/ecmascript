@@ -6,74 +6,75 @@
 
 (provide es-lex)
 
-;; 7.1 White Space
 (define-lex-abbrev white-space
-  (:or #\u0009 #\u000B #\u000C #\u0020))
+  (:or #\u0009 #\u000B #\u000C #\u0020 #\u00A0 #\uFEFF))
 
-;; 7.2 Line Terminators
 (define-lex-abbrev line-terminator
-  (:or #\u000A #\u000D))
+  (:or #\u000A #\u000D #\u2028 #\u2029))
 
-;; 7.3 Comments
 (define-lex-abbrev comment
   (:or (:: "/*" (complement (:: any-string "*/" any-string)) "*/")
        (:: "//" (:* (char-complement line-terminator)))))
 
-;; 7.4 Tokens
+(define-lex-abbrevs
+  [identifier (:: identifier-start (:* identifier-part))]
+  [identifier-start (:or alphabetic #\$ #\_)]
+  [identifier-part (:or identifier-start numeric)])
+
 (define-lex-abbrevs
   [keyword
-   (:or "break" "continue" "delete" "else"
-        "for" "function" "if" "in"
-        "new" "return" "this" "typeof"
-        "var" "void" "while" "with")]
+   (:or "break" "case" "catch" "continue" "debugger" "default" "delete"
+        "do" "else" "finally" "for" "function" "if" "in"
+        "instanceof" "new" "return" "switch" "this" "throw" "try"
+        "typeof" "var" "void" "while" "with")]
   [future-reserved-word
-   (:or "case" "catch" "class" "const"
-        "debugger" "default" "do" "enum"
-        "export" "extends" "finally" "import"
-        "super" "switch" "throw" "try")])
-
-;; 7.5 Identifiers
-(define-lex-abbrevs
-  [identifier (:: identifier-letter (:* (:or identifier-letter decimal-digit)))]
-  [identifier-letter (:or (:/ #\a #\z) #\$ #\_)])
+   (:or "class" "const" "enum" "export" "extends" "import" "super")]
+  [future-reserved-word-strict
+   (:or "implements" "interface" "let" "package" "private" "protected"
+        "public" "static" "yield")])
 
 ;; 7.6 Punctuators
-(define-lex-abbrev punctuator
-  (:or #\= #\> #\< "==" "<=" ">="
-       "!=" #\, #\! #\~ #\? #\:
-       #\. "&&" "||" "++" "--" #\+
-       #\- #\* #\/ #\& #\| #\^
-       #\% "<<" ">>" ">>>" "<<="
-       ">>=" ">>>=" #\( #\) #\{
-       #\} #\[ #\] #\;))
+(define-lex-abbrevs
+  [punctuator
+   (:or "{"   "}"    "("   ")"   "["   "]"
+        "."   ";"    ","   "<"   ">"   "<="
+        ">="  "=="   "!="  "===" "!=="
+        "+"   "-"    "*"   "%"   "++"  "--"
+        "<<"  ">>"   ">>>" "&"   "|"   "^"
+        "!"   "~"    "&&"  "||"  "?"   ":"
+        "="   "+="   "-="  "*="  "%="  "<<="
+        ">>=" ">>>=" "&="  "|="  "^=")]
+  [div-punctuator
+   (:or "/"   "/=")])
 
-;; 7.7 Literals
 (define-lex-abbrevs
   [null-literal "null"]
   [boolean-literal (:or "true" "false")]
-  [numeric-literal
-   (:or (:: #\0 (:+ (:/ #\0 #\7)))
-        (:: (:or "0x" "0X") (:+ (:/ #\0 #\9 #\a #\f #\A #\F)))
-        (:: (:or (:: decimal-integer-literal #\. (:* decimal-digit))
-                 (:: #\. (:+ decimal-digit))
-                 decimal-integer-literal)
-            (:? (:: (:or #\e #\E)
-                    (:or #\+ #\- nothing)
-                    (:+ decimal-digit)))))]
+  [numeric-literal (:or decimal-literal hex-integer-literal)]
+  [decimal-literal
+   (:: (:or (:: decimal-integer-literal #\. (:* decimal-digit))
+            (:: #\. (:+ decimal-digit))
+            decimal-integer-literal)
+       (:? (:: (:or #\e #\E)
+               (:or #\+ #\- nothing)
+               (:+ decimal-digit))))]
   [decimal-integer-literal (:or #\0 (:: (:- decimal-digit #\0) (:* decimal-digit)))]
-  [decimal-digit (char-range #\0 #\9)]
-  [string-literal #| FIXME |#
+  [decimal-digit (:/ #\0 #\9)]
+  [hex-integer-literal (:: (:or "0x" "0X") (:+ (:/ #\0 #\9 #\a #\f #\A #\F)))]
+  [string-literal
    (:or (:: #\" (:* (char-complement #\")) #\")
         (:: #\' (:* (char-complement #\')) #\'))])
 
 (define parse-number string->number)
 
 (define (parse-string s)
-  (substring s 1 (sub1 (string-length s))))
+  (read (open-input-string s)))
 
 (define es-lex
   (lexer-src-pos
-   [(:or keyword future-reserved-word punctuator null-literal boolean-literal) lexeme]
+   [(:or keyword future-reserved-word punctuator
+         div-punctuator null-literal boolean-literal)
+    lexeme]
    [identifier (token 'IDENTIFIER (string->symbol lexeme))]
    [numeric-literal (token 'NUMERIC (parse-number lexeme))]
    [string-literal (token 'STRING (parse-string lexeme))]
