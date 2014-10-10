@@ -66,7 +66,7 @@
       (unless (has-property? obj p)
         (put! obj p val)))))
 
-(define-syntax-rule (declare-vars id ...)
+(define-syntax-rule (declare-vars (id ...))
   (create-variables!
    (first scope-chain)
    '((id . undefined) ...)))

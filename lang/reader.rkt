@@ -4,8 +4,8 @@ ecmascript
 #:read-syntax es-read-syntax
 #:whole-body-readers? #t
 
-(require "../private/compile.rkt"
-         "../private/parse.rkt")
+(require "../parse.rkt"
+         "../private/compile.rkt")
 
 (define (es-read in)
   (syntax->datum
@@ -13,7 +13,9 @@ ecmascript
 
 (define (es-read-syntax src in)
   (displayln "reading ecma syntax")
-  (define stx (es-parse in))
+  (define stx
+    (parse-ecmascript in))
   (displayln "compiling ecma")
-  (define compiled (es-compile stx))
+  (define compiled
+    (ecmascript->racket stx))
   compiled)

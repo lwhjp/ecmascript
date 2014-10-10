@@ -2,45 +2,33 @@
 
 (require racket/list
          racket/match
-         syntax/strip-context
-         "syntax.rkt")
+         (prefix-in ecma: "../ast.rkt"))
 
-(provide es-compile)
+(provide ecmascript->racket)
 
-(define (es-compile stx)
-  (map
-   strip-context
+(define (ecmascript->racket stx)
+  (syntax->list
    (compile-program stx)))
-
-(define (extract-id stx)
-  (match stx
-    [(es-id stx name) (quasisyntax/loc stx #,name)]))
 
 (define (extract-statement-vars stmt)
   (match stmt
-    [(es-var-stmt _ (list (es-var-decl _ (es-id _ name) _) ...))
-     name]
+    [(ecma:stmt:vars _ (list (ecma:decl:var _ id _) ...))
+     id]
     [_ #f]))
 
-(define (extract-block-vars block)
+(define (extract-vars elts)
   (apply
    append
    (filter-map
     extract-statement-vars
-    (es-block-statements block))))
+    elts)))
 
-(define (extract-program-vars prog)
-  (apply
-   append
-   (filter-map
-    extract-statement-vars
-    (es-program-elements prog))))
-
-(define (extract-functions prog)
+(define (extract-functions elts)
   (filter-map
-   (λ (elt)
-     (and (es-function? elt) elt))
-   (es-program-elements prog)))
+   (match-lambda
+     [(ecma:decl:fn _ def) def]
+     [_ #f])
+   elts))
 
 (define (add-prefix pref sym)
   (string->symbol
@@ -49,131 +37,156 @@
 
 (define (compile-expression stx)
   (match stx
-    [(es-this stx) (quasisyntax/loc stx this)]
-    [(es-id stx name) (quasisyntax/loc stx (id #,name))]
-    [(es-numeric stx v) (quasisyntax/loc stx #,v)]
-    [(es-string stx v) (quasisyntax/loc stx #,v)]
-    [(es-null stx) (quasisyntax/loc stx null)]
-    [(es-bool stx v) (quasisyntax/loc stx v)]
-    [(es-member-expr stx obj (? es-id? prop))
-     (quasisyntax/loc stx (member #,(compile-expression obj)
-                                  #,(symbol->string (es-id-name prop))))]
-    [(es-member-expr stx obj prop)
-     (quasisyntax/loc stx (member #,(compile-expression obj)
-                                  #,(compile-expression prop)))]
-    [(es-new-expr stx expr args)
-     (quasisyntax/loc stx (new #,(compile-expression expr)
-                               #,@(map compile-expression args)))]
-    [(es-call-expr stx expr args)
-     (quasisyntax/loc stx (call #,(compile-expression expr)
-                                #,@(map compile-expression args)))]
-    [(es-postfix-expr stx expr op)
-     (quasisyntax/loc stx (#,(add-prefix 'post op)
-                           #,(compile-expression expr)))]
-    [(es-unary-expr stx expr op)
-     (quasisyntax/loc stx (#,op #,(compile-expression expr)))]
-    [(es-binary-expr stx left op right)
-     (quasisyntax/loc stx (#,op #,(compile-expression left)
-                                #,(compile-expression right)))]
-    [(es-ternary-expr stx test true false)
-     (quasisyntax/loc stx (?: #,(compile-expression test)
-                              #,(compile-expression true)
-                              #,(compile-expression false)))]
-    [(es-comma-expr stx left right)
-     (quasisyntax/loc stx (\, #,(compile-expression left)
-                              #,(compile-expression right)))]))
+    [(ecma:expr:this loc) (datum->syntax #f 'this loc)]
+    [(ecma:expr:id loc symbol) (datum->syntax #f `(id ,symbol) loc)]
+    [(ecma:expr:null loc) (datum->syntax #f 'null loc)]
+    [(ecma:expr:bool loc v) (datum->syntax #f v loc)]
+    [(ecma:expr:number loc v) (datum->syntax #f v loc)]
+    [(ecma:expr:string loc v) (datum->syntax #f v loc)]
+    [(ecma:expr:member loc obj prop)
+     (datum->syntax #f
+       `(member ,(compile-expression obj)
+                ,(if (symbol? prop)
+                     (datum-intern-literal
+                      (symbol->string prop))
+                     (compile-expression prop)))
+       loc)]
+    [(ecma:expr:new loc expr args)
+     (datum->syntax #f
+       `(new ,(compile-expression expr)
+             ,@(map compile-expression args))
+       loc)]
+    [(ecma:expr:call loc expr args)
+     (datum->syntax #f
+       `(call ,(compile-expression expr)
+              ,@(map compile-expression args))
+       loc)]
+    [(ecma:expr:postfix loc expr op)
+     (datum->syntax #f
+       `(,(add-prefix 'post op)
+         ,(compile-expression expr))
+       loc)]
+    [(ecma:expr:unary loc expr op)
+     (datum->syntax #f
+       `(,op ,(compile-expression expr))
+       loc)]
+    [(ecma:expr:binary loc left op right)
+     (datum->syntax #f
+       `(,op ,(compile-expression left)
+             ,(compile-expression right))
+       loc)]
+    [(ecma:expr:cond loc test true false)
+     (datum->syntax #f
+       `(?: ,(compile-expression test)
+            ,(compile-expression true)
+            ,(compile-expression false))
+       loc)]
+    [(ecma:expr:comma loc left right)
+     (datum->syntax #f
+       `(\, ,(compile-expression left)
+            ,(compile-expression right))
+       loc)]))
 
 (define (compile-statement stx)
   (match stx
-    [(es-block stx stmts)
-     (quasisyntax/loc stx (block #,@(map compile-statement stmts)))]
-    [(es-var-stmt stx (list (es-var-decl dstx id expr) ...))
-     (let ([pairs (filter cdr (map cons id expr))])
-       (if (null? pairs)
-           (quasisyntax/loc stx (empty-statement))
-           (quasisyntax/loc stx
-             (block
-              #,@(map (λ (decl)
-                        #`(put-value
-                           (id #,(extract-id (car decl)))
-                           #,(compile-expression (cdr decl))))
-                      pairs)))))]
-    [(es-empty-stmt stx)
-     (quasisyntax/loc stx (empty-statement))]
-    [(es-expr-stmt stx expr)
-     (quasisyntax/loc stx (get-value #,(compile-expression expr)))]
-    [(es-if stx test true false)
-     (if false
-         (quasisyntax/loc stx
-           (if #,(compile-expression test)
-               #,(compile-statement true)
-               #,(compile-statement false)))
-         (quasisyntax/loc stx
-           (if #,(compile-expression test)
-               #,(compile-statement true))))]
-    [(es-while stx test body)
-     (quasisyntax/loc stx
-       (while #,(compile-expression test)
-              #,(compile-statement body)))]
-    [(es-for stx (list var-decl ...) test step body)
+    [(ecma:stmt:block loc stmts)
+     (datum->syntax #f
+       `(block ,@(map compile-statement stmts))
+       loc)]
+    [(ecma:stmt:vars loc decls)
+     (datum->syntax #f
+       `(block ,@(map compile-variable-declaration decls)))]
+    [(ecma:stmt:empty loc)
+     (datum->syntax #f
+       '(empty-statement)
+       loc)]
+    [(ecma:stmt:expr loc expr)
+     (datum->syntax #f
+       `(get-value ,(compile-expression expr))
+       loc)]
+    [(ecma:stmt:if loc test true false)
+     (datum->syntax #f
+       (if false
+           `(if ,(compile-expression test)
+                ,(compile-statement true)
+                ,(compile-statement false))
+           `(if ,(compile-expression test)
+                ,(compile-statement true)))
+       loc)]
+    [(ecma:stmt:while loc test body)
+     (datum->syntax #f
+       `(while ,(compile-expression test)
+          ,(compile-statement body))
+       loc)]
+    [(ecma:stmt:for loc (list var-decl ...) test step body)
      (error 'TODO-vars)]
-    [(es-for stx init test step body)
-     (quasisyntax/loc stx
-       (for #,@(if init
-                   #`(#:init #,(compile-expression init))
-                   '())
-            #,@(if test
-                   #`(#:test #,(compile-expression test))
-                   '())
-            #,@(if step
-                   #`(#:step #,(compile-expression step))
-                   '())
-         #,(compile-statement body)))]
-    [(es-for-in stx init expr body)
+    [(ecma:stmt:for loc init test update body)
+     (datum->syntax #f
+       `(for #:init ,(and init
+                          (compile-expression init))
+             #:test ,(and test
+                          (compile-expression test))
+             #:update ,(and update
+                            (compile-expression update))
+          ,(compile-statement body)))]
+    [(ecma:stmt:for-in loc i expr body)
      (error 'TODO-for-in)]
-    [(es-continue stx) (quasisyntax/loc stx (continue))]
-    [(es-break stx) (quasisyntax/loc stx (break))]
-    [(es-return stx expr)
-     (if expr
-         (quasisyntax/loc stx (return #,(compile-expression expr)))
-         (quasisyntax/loc stx (return)))]
-    [(es-with stx expr body)
-     (quasisyntax/loc stx
-       (with #,(compile-expression expr)
-             #,@(map compile-expression body)))]))
+    [(ecma:stmt:continue loc label)
+     (datum->syntax #f
+       (if label
+           `(continue ,label)
+           '(continue))
+       loc)]
+    [(ecma:stmt:break loc label)
+     (datum->syntax #f
+       (if label
+           `(break ,label)
+           '(continue)))]
+    [(ecma:stmt:return loc expr)
+     (datum->syntax #f
+       (if expr
+           `(return ,(compile-expression expr))
+           '(return))
+       loc)]
+    [(ecma:stmt:with loc expr body)
+     (datum->syntax #f
+       `(with ,(compile-expression expr)
+          ,(compile-statement body))
+       loc)]))
+
+(define (compile-variable-declaration stx)
+  (match stx
+    [(ecma:decl:var loc id expr)
+     (let ([ret (datum-intern-literal
+                 (symbol->string id))])
+       (datum->syntax #f
+         (if expr
+             `(\, (= (id ,id) ,(compile-expression expr))
+                  ,ret)
+             ret)
+         loc))]))
 
 (define (compile-function stx)
   (match stx
-    [(es-function stx _ args body)
-     (let ([vars (extract-block-vars body)])
-       (quasisyntax/loc stx
-         (function #,(map extract-id args)
-           (declare-vars #,@vars)
-           #,@(map compile-statement (es-block-statements body)))))]))
-
-(define (compile-source-element stx)
-  (if (es-function? stx)
-      (compile-function stx)
-      (compile-statement stx)))
+    [(ecma:fn loc _ params body)
+     (datum->syntax #f
+       `(function ,params
+          (declare-vars ,(extract-vars body))
+          ,@(map compile-statement body)))]))
 
 (define (compile-program prog)
-  (match prog
-    [(es-program stx elts)
-     (let ([fns (extract-functions prog)]
-           [vars (extract-program-vars prog)])
-       (append
-        (list #`(declare-vars #,@vars))
-        (map
+  (datum->syntax #f
+    `((declare-vars ,(extract-vars prog))
+      ,@(map
          (λ (fn)
-           #`(put! global-object
-                   #,(symbol->string
-                      (syntax-e
-                       (extract-id
-                        (es-function-name fn))))
-                   #,(compile-function fn)))
-         fns)
-        (filter-map
+           `(put! global-object
+                  ,(datum-intern-literal
+                    (symbol->string
+                     (ecma:fn-name fn)))
+                  ,(compile-function fn)))
+         (extract-functions prog))
+      ,@(filter-map
          (λ (elt)
-           (and (not (es-function? elt))
+           (and (ecma:stmt? elt)
                 (compile-statement elt)))
-         elts)))]))
+         prog))))

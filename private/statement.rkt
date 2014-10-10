@@ -45,7 +45,7 @@
   (syntax-parse stx
     [(_ (~optional (~seq #:init init))
         (~optional (~seq #:test test))
-        (~optional (~seq #:step step))
+        (~optional (~seq #:update update))
         body0 body ...)
      #`(let/ec escape
          #,(or (attribute init) '(void))
@@ -60,7 +60,7 @@
                            (begin
                              body0 body ...)
                            (break))))])
-              #,(or (attribute step) '(void))
+              #,(or (attribute update) '(void))
               new-rv))))]))
 
 (define-syntax-rule (with expr body0 body ...)
