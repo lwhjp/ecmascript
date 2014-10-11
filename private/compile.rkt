@@ -179,7 +179,7 @@
     `((declare-vars ,(extract-vars prog))
       ,@(map
          (λ (fn)
-           `(put! global-object
+           `(put! (current-global-scope)
                   ,(datum-intern-literal
                     (symbol->string
                      (ecma:fn-name fn)))

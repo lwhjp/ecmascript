@@ -1,0 +1,53 @@
+#lang racket/base
+
+(require (prefix-in ecma:
+           (combine-in
+            "ast.rkt"
+            "private/function.rkt"
+            "private/global.rkt"
+            "private/lang.rkt"
+            "private/object.rkt"))
+         racket/port
+         racket/runtime-path
+         racket/contract/base
+         "parse.rkt"
+         "private/compile.rkt")
+
+(provide/contract
+ (rename ecma:eval eval
+         (->* (string?)
+              (ecma:object? namespace?)
+              any))
+ [make-global-namespace (-> namespace?)])
+
+(define (ecma:eval prog
+                   [scope (ecma:current-global-scope)]
+                   [namespace (make-global-namespace)])
+  (parameterize
+      ([ecma:current-global-scope scope])
+    (eval
+     (datum->syntax #f
+       `(begin-scope (current-global-scope)
+          ,@(ecmascript->racket
+             (call-with-input-string prog
+               parse-ecmascript))))
+     namespace)))
+
+(define-namespace-anchor here)
+(define-runtime-module-path-index lang-module "private/lang.rkt")
+
+(define (make-global-namespace)
+  (parameterize
+      ([current-namespace
+        (namespace-anchor->empty-namespace here)])
+    (namespace-require lang-module)
+    (current-namespace)))
+
+(ecma:put!
+ ecma:global-object
+ "eval"
+ (ecma:make-native-function
+  (λ (this x)
+    (if (string? x)
+        (ecma:eval x) ; FIXME: nested lexical scopes
+        x))))

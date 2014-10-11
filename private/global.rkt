@@ -7,7 +7,8 @@
          "string.rkt"
          "types.rkt")
 
-(provide global-object)
+(provide current-global-scope
+         global-object)
 
 (define object-constructor
   (letrec
@@ -94,3 +95,6 @@
       ; ("Number" . ,(make-property number-constructor))
       ; ("Date" . ,(make-property date-constructor))
       ("Math" . ,(make-property math-object))))))
+
+(define current-global-scope
+  (make-parameter global-object))
