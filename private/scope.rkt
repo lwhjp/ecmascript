@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/list
+(require racket/class
+         racket/list
          racket/match
          racket/stxparam
          "object.rkt"
@@ -12,20 +13,21 @@
          begin-scope
          id
          create-variables!
-         declare-vars)
+         declare-vars
+         declare-fn)
 
 (struct reference (base property) #:transparent)
 
 (define (get-value v)
   (match v
     [(reference 'null _) (error 'undefined)]
-    [(reference base prop) (get base prop)]
+    [(reference base prop) (send base get prop)]
     [_ v]))
 
 (define (do-put-value v w scope)
   (match v
-    [(reference 'null prop) (put! (last scope) prop w)]
-    [(reference base prop) (put! base prop w)]
+    [(reference 'null prop) (send (last scope) put! prop w)]
+    [(reference base prop) (send base put! prop w)]
     [_ (error "not a reference")]))
 
 (define-syntax-rule (put-value v w)
@@ -39,7 +41,7 @@
   (cond
     [(null? scope)
      (reference 'null name)]
-    [(has-property? (car scope) name)
+    [(send (car scope) has-property? name)
      (reference (car scope) name)]
     [else (resolve name (cdr scope))]))
 
@@ -63,10 +65,13 @@
   (for/list ([def defs])
     (match-define (cons name val) def)
     (let ([p (symbol->string name)])
-      (unless (has-property? obj p)
-        (put! obj p val)))))
+      (unless (send obj has-property? p)
+        (send obj put! p val)))))
 
 (define-syntax-rule (declare-vars (id ...))
   (create-variables!
    (first scope-chain)
    '((id . undefined) ...)))
+
+(define-syntax-rule (declare-fn id fn)
+  (send (first scope-chain) put! id fn))

@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/math
+(require racket/class
+         racket/math
          racket/provide
          "function.rkt"
          "object.rkt"
@@ -41,7 +42,7 @@
           [(boolean? v) "boolean"]
           [(number? v) "number"]
           [(string? v) "string"]
-          [(function-object? v) "function"]
+          [(is-a? v function%) "function"]
           [(object? v) "object"]))))
 
 (define (op:++ v)

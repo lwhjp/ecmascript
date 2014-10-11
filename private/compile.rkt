@@ -179,11 +179,11 @@
     `((declare-vars ,(extract-vars prog))
       ,@(map
          (λ (fn)
-           `(put! (current-global-scope)
-                  ,(datum-intern-literal
-                    (symbol->string
-                     (ecma:fn-name fn)))
-                  ,(compile-function fn)))
+           `(declare-fn
+             ,(datum-intern-literal
+               (symbol->string
+                (ecma:fn-name fn)))
+             ,(compile-function fn)))
          (extract-functions prog))
       ,@(filter-map
          (λ (elt)

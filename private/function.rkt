@@ -1,13 +1,14 @@
 #lang racket/base
 
-(require racket/stxparam
+(require racket/class
+         racket/stxparam
          "object.rkt"
          "scope.rkt"
          (for-syntax racket/base))
 
-(provide (struct-out function-object)
-         (struct-out constructor-object)
-         (struct-out activation-object)
+(provide function%
+         constructor%
+         activation%
          this
          return
          function
@@ -16,7 +17,7 @@
          make-native-function
          native-method)
 
-(define-syntax-parameter this
+(define-syntax-parameter this-binding
   (λ (stx)
     (raise-syntax-error #f "invalid outside of function scope" stx)))
 
@@ -24,57 +25,74 @@
   (λ (stx)
     (raise-syntax-error #f "invalid outside of function scope" stx)))
 
-(struct function-object object (proc))
+(define function%
+  (class ecma-object%
+    (init-field call-proc
+                #;scope
+                #;formal-parameters
+                #;code)
 
-(struct constructor-object function-object (proc))
+    (super-new [class "Function"])
+
+    (define/public (call this . args)
+      (apply call-proc this args))
+
+    #;(define/public (has-instance? v)
+      'undefined)))
+
+(define constructor%
+  (class function%
+    (init-field construct-proc)
+
+    (super-new)
+
+    (define/public (construct . args)
+      (apply construct-proc args))))
+
+(define activation%
+  (class ecma-object%
+    (super-new [prototype #f]
+               [class "Object"])))
 
 (define function-prototype-object
-  (function-object
-   "Function"
-   object-prototype-object
-   (make-hash)
-   (λ args
-     'undefined)))
-
-(struct activation-object object ())
+  (new function%
+       [prototype object-prototype-object]
+       [call-proc (λ args
+                    'undefined)]))
 
 (define (make-activation-object f args)
-  (activation-object
-   (object-class object-prototype-object)
-   object-prototype-object
-   (make-hash
-    `(("arguments" . ,(make-arguments-object f args))))))
+  (new activation%
+       [initial-properties
+        `(("arguments" . ,(make-data-property
+                           (make-arguments-object f args))))]))
 
 (define (make-arguments-object f args)
-  (object
-   (object-class object-prototype-object)
-   object-prototype-object
-   (make-hash
-    `(("callee" . ,(property f #f #t #f))
-      ("length" . ,(property (length args) #f #t #f))
-      ,@(for/list ([n (in-naturals)]
-                   [arg (in-list args)])
-          (cons (number->string n)
-                (property arg #f #t #f)))))))
+  (new ecma-object%
+       [prototype #f]
+       [class "Object"]
+       [initial-properties
+        `(("callee" . ,(make-data-property f))
+          ("length" . ,(make-data-property (length args)))
+          ,@(for/list ([n (in-naturals)]
+                       [arg (in-list args)])
+              (cons (number->string n)
+                    (make-data-property arg))))]))
 
 (define (make-function-object proc)
   (letrec
       ([construct
         (λ args
-          (let* ([prot (get f "prototype")]
+          (let* ([prot (send f get "prototype")]
                  [prot (if (object? prot) prot object-prototype-object #|FIXME|#)]
-                 [obj (object
-                       (object-class prot)
-                       prot
-                       (make-hash))]
-                 [r (apply (function-object-proc f) obj args)])
+                 [obj (new ecma-object%
+                           [class (get-field class prot)]
+                           [prototype prot])]
+                 [r (apply (get-field call-proc f) obj args)])
             (if (object? r) r obj)))]
-       [f (constructor-object
-           (object-class function-prototype-object)
-           function-prototype-object
-           (make-hash)
-           proc
-           construct)])
+       [f (new constructor%
+               [prototype function-prototype-object]
+               [call-proc proc]
+               [construct-proc construct])])
     f))
 
 (define (create-arguments! obj args vals)
@@ -95,7 +113,7 @@
                (begin-scope activation
                  (let/ec escape
                    (syntax-parameterize
-                    ([this (make-rename-transformer #'this-arg)]
+                    ([this-binding (make-rename-transformer #'this-arg)]
                      [return (λ (stx)
                                (syntax-case stx ()
                                  [(_) #'(escape 'undefined)]
@@ -103,28 +121,26 @@
                     body0 body ...))))))])
      f))
 
-(define (make-native-constructor call-proc new-proc)
-  (constructor-object
-   (object-class function-prototype-object)
-   function-prototype-object
-   (make-hash)
-   call-proc
-   new-proc))
+(define (make-native-constructor call-proc construct-proc)
+  (new constructor%
+       [prototype function-prototype-object]
+       [call-proc call-proc]
+       [construct-proc construct-proc]))
 
 (define (make-native-function proc)
-  (function-object
-   (object-class function-prototype-object)
-   function-prototype-object
-   (make-hash)
-   proc))
+  (new function%
+       [prototype function-prototype-object]
+       [call-proc proc]))
 
 (define-syntax-rule (native-method args body0 body ...)
-  (make-property
+  (make-data-property
    (make-native-function
     (λ args body0 body ...))))
 
-(put! function-prototype-object
-      "toString"
-      (make-native-function
-       (λ (this)
-         "TODO (function)")))
+(void
+ (send function-prototype-object
+       put!
+       "toString"
+       (make-native-function
+        (λ (this)
+          "TODO (function)"))))

@@ -7,6 +7,7 @@
             "private/global.rkt"
             "private/lang.rkt"
             "private/object.rkt"))
+         racket/class
          racket/port
          racket/runtime-path
          racket/contract/base
@@ -16,7 +17,8 @@
 (provide/contract
  (rename ecma:eval eval
          (->* (string?)
-              (ecma:object? namespace?)
+              ((is-a?/c ecma:ecma-object%)
+               namespace?)
               any))
  [make-global-namespace (-> namespace?)])
 
@@ -43,11 +45,13 @@
     (namespace-require lang-module)
     (current-namespace)))
 
-(ecma:put!
- ecma:global-object
- "eval"
- (ecma:make-native-function
-  (λ (this x)
-    (if (string? x)
-        (ecma:eval x) ; FIXME: nested lexical scopes
-        x))))
+(void
+ (send
+  ecma:global-object
+  put!
+  "eval"
+  (ecma:make-native-function
+   (λ (this x)
+     (if (string? x)
+         (ecma:eval x) ; FIXME: nested lexical scopes
+         x)))))

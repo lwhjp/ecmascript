@@ -14,11 +14,10 @@
          begin-scope
          current-global-scope
          declare-vars
+         declare-fn
          function
-         get
          get-value
          id
-         put!
          return
          this
          #%app

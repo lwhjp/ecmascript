@@ -1,27 +1,30 @@
 #lang racket/base
 
-(require racket/list
+(require racket/class
+         racket/list
          "object.rkt"
          "function.rkt"
          "types.rkt")
 
 (provide (all-defined-out))
 
-(struct string-object object (value))
+(define string%
+  (class ecma-object%
+    (init-field value)
+    (super-new [class "String"])))
 
 (define string-prototype-object
-  (string-object
-   "String"
-   object-prototype-object
-   (make-hash
+  (instantiate string% ("")
+    [prototype object-prototype-object]
+    [initial-properties
     `(("toString" . ,(native-method (this)
-                       (unless (string-object? this)
+                       (unless (is-a? this string%)
                          (error "not a string"))
-                       (string-object-value this)))
+                       (get-field value this)))
       ("valueOf" . ,(native-method (this)
-                      (unless (string-object? this)
+                      (unless (is-a? this string%)
                         (error "not a string"))
-                      (string-object-value this)))
+                      (get-field value this)))
       ("charAt" . ,(native-method (this pos)
                      (let ([s (to-string this)]
                            [p (to-integer pos)])
@@ -59,15 +62,12 @@
       ("toLowerCase" . ,(native-method (this)
                           (string-downcase (to-string this))))
       ("toUpperCase" . ,(native-method (this)
-                          (string-upcase (to-string this))))))
-   ""))
+                          (string-upcase (to-string this)))))]))
 
 (define (make-string-object v)
   (unless (string? v)
     (raise-argument-error 'make-string-object "string?" v))
-  (string-object
-   (object-class string-prototype-object)
-   string-prototype-object
-   (make-hash
-    `(("length" . ,(make-property (string-length v)))))
-   v))
+  (instantiate string% (v)
+    [prototype string-prototype-object]
+    [initial-properties
+     `(("length" . ,(make-data-property (string-length v))))]))

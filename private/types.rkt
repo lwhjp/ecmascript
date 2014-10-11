@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/math
+(require racket/class
+         racket/math
          racket/string
          (only-in "date.rkt" date-object?)
          "function.rkt"
@@ -8,25 +9,11 @@
 
 (provide (all-defined-out))
 
-(define (default-value o [hint (if (date-object? o)
-                                   'string
-                                   'number)])
-  (let/ec return
-    (for ([method (if (eq? 'string hint)
-                      '("toString" "valueOf")
-                      '("valueOf" "toString"))])
-      (define f (get o method))
-      (when (function-object? f)
-        (define v ((function-object-proc f) o))
-        (unless (object? v)
-          (return v))))
-    (error 'default-value "unable to get default value")))
-
 (define (to-primitive v #:preferred-type [preferred #f])
   (if (object? v)
       (if preferred
-          (default-value v preferred)
-          (default-value v))
+          (send v default-value preferred)
+          (send v default-value))
       v))
 
 (define (to-boolean v)

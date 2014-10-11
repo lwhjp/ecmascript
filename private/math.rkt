@@ -1,12 +1,13 @@
 #lang racket/base
 
-(require "object.rkt")
+(require racket/class
+         "object.rkt")
 
 (provide math-object)
 
 (define math-object
-  (object
-   (object-class object-prototype-object)
-   object-prototype-object
-   (make-hash
-    #| TODO |#)))
+  (new ecma-object%
+    [prototype object-prototype-object]
+    [class "Math"]
+    [initial-properties
+     `(#| TODO |#)]))

@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require "boolean.rkt"
+(require racket/class
+         "boolean.rkt"
          "function.rkt"
          "math.rkt"
          "object.rkt"
@@ -12,32 +13,45 @@
 
 (define object-constructor
   (letrec
-      ([call (λ (this [value 'undefined])
-               (if (or (eq? 'null value)
-                       (eq? 'undefined value))
-                   (new value)
-                   (to-object value)))]
-       [new (λ ([value 'undefined])
-              (cond
-                [(object? value) value]
-                [(or (string? value)
-                     (boolean? value)
-                     (number? value))
-                 (to-object value)]
-                [else (object (object-class object-prototype-object)
-                              object-prototype-object
-                              (make-hash))]))])
-    (make-native-constructor call new)))
+      ([call
+        (λ (this [value 'undefined])
+          (if (or (eq? 'null value)
+                  (eq? 'undefined value))
+              (construct value)
+              (to-object value)))]
+       [construct
+        (λ ([value 'undefined])
+          (cond
+            [(is-a? value ecma-object%) value]
+            [(or (string? value)
+                 (boolean? value)
+                 (number? value))
+             (to-object value)]
+            [else
+             (new ecma-object%
+                  [prototype object-prototype-object])]))])
+    (make-native-constructor call construct)))
 
-(put! object-prototype-object "constructor" object-constructor)
-(put! object-prototype-object "toString"
-      (make-native-function
-       (λ (this)
-         (string-append "[object " (object-class this) "]"))))
-(put! object-prototype-object "valueOf"
-      (make-native-function
-       (λ (this)
-         this)))
+(void
+ (send object-prototype-object
+       put!
+       "constructor"
+       object-constructor)
+ (send object-prototype-object
+       put!
+       "toString"
+       (make-native-function
+        (λ (this)
+          (string-append
+           "[object "
+           (get-field class this)
+           "]"))))
+ (send object-prototype-object
+       put!
+       "valueOf"
+       (make-native-function
+        (λ (this)
+          this))))
 
 (define function-constructor
   (letrec
@@ -47,7 +61,11 @@
               (error 'TODO))])
     (make-native-constructor call new)))
 
-(put! function-prototype-object "constructor" function-constructor)
+(void
+ (send function-prototype-object
+       put!
+       "constructor"
+       function-constructor))
 
 ;; TODO: array
 
@@ -61,7 +79,11 @@
               [() (make-string-object "")])])
     (make-native-constructor call new)))
 
-(put! string-prototype-object "constructor" string-constructor)
+(void
+ (send string-prototype-object
+       put!
+       "constructor"
+       string-constructor))
 
 (define boolean-constructor
   (letrec
@@ -71,30 +93,34 @@
               (make-boolean-object (to-boolean value)))])
     (make-native-constructor call new)))
 
-(put! boolean-prototype-object "constructor" boolean-constructor)
+(void
+ (send boolean-prototype-object
+       put!
+       "constructor"
+       boolean-constructor))
 
 (define global-object
-  (object
-   (object-class object-prototype-object)
-   object-prototype-object
-   (make-hash
-    `(("NaN" . ,(make-property +nan.0))
-      ("Infinity" . ,(make-property +inf.0))
-      ; TODO: eval
-      ; TODO: parseInt
-      ; TODO: parseFloat
-      ; TODO: escape
-      ; TODO: unescape
-      ; TODO: isNaN
-      ; TODO: isFinite
-      ("Object" . ,(make-property object-constructor))
-      ("Function" . ,(make-property function-constructor))
-      ; ("Array" . ,(make-property array-constructor))
-      ("String" . ,(make-property string-constructor))
-      ("Boolean" . ,(make-property boolean-constructor))
-      ; ("Number" . ,(make-property number-constructor))
-      ; ("Date" . ,(make-property date-constructor))
-      ("Math" . ,(make-property math-object))))))
+  (new ecma-object%
+    [prototype #f]
+    [class "Object"]
+    [initial-properties
+     `(("NaN" . ,(make-data-property +nan.0))
+       ("Infinity" . ,(make-data-property +inf.0))
+       ; TODO: eval
+       ; TODO: parseInt
+       ; TODO: parseFloat
+       ; TODO: escape
+       ; TODO: unescape
+       ; TODO: isNaN
+       ; TODO: isFinite
+       ("Object" . ,(make-data-property object-constructor))
+       ("Function" . ,(make-data-property function-constructor))
+       ; ("Array" . ,(make-data-property array-constructor))
+       ("String" . ,(make-data-property string-constructor))
+       ("Boolean" . ,(make-data-property boolean-constructor))
+       ; ("Number" . ,(make-data-property number-constructor))
+       ; ("Date" . ,(make-data-property date-constructor))
+       ("Math" . ,(make-data-property math-object)))]))
 
 (define current-global-scope
   (make-parameter global-object))
