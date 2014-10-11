@@ -199,3 +199,8 @@
             (put-value a v)
             v))
         (list op:+ op:- op:* op:/ op:% op:<< op:>> op:>>> op:& op:^ op:\|))))
+
+(define (op:\, left right)
+  (begin
+    (get-value left)
+    (get-value right)))
