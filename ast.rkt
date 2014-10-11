@@ -6,7 +6,7 @@
 
 (struct source-element syntax-element () #:transparent)
 
-(struct expr source-element () #:transparent)
+(struct expr syntax-element () #:transparent)
 (struct expr:this expr () #:transparent)
 (struct expr:id expr (symbol) #:transparent)
 (struct expr:null expr () #:transparent)
@@ -25,7 +25,7 @@
 (struct expr:cond expr (test true false) #:transparent)
 (struct expr:comma expr (left right) #:transparent)
 
-(struct init source-element () #:transparent)
+(struct init syntax-element () #:transparent)
 (struct init:prop init (name value) #:transparent)
 (struct init:get init (prop fn) #:transparent)
 (struct init:set init (prop fn) #:transparent)
