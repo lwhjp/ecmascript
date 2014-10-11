@@ -1,10 +1,10 @@
 #lang racket/base
 
-(require racket/class
+(require (for-syntax racket/base)
+         racket/class
          racket/stxparam
-         "object.rkt"
-         "scope.rkt"
-         (for-syntax racket/base))
+         "environment.rkt"
+         "object.rkt")
 
 (provide function%
          constructor%
@@ -16,10 +16,6 @@
          make-native-constructor
          make-native-function
          native-method)
-
-(define-syntax-parameter this-binding
-  (λ (stx)
-    (raise-syntax-error #f "invalid outside of function scope" stx)))
 
 (define-syntax-parameter return
   (λ (stx)
@@ -102,7 +98,8 @@
                              [val (in-sequences vals
                                                 (in-cycle '(undefined)))])
                        (cons arg val)))])
-    (create-variables! obj (hash->list arg-map))))
+    (for ([(id val) (in-hash arg-map)])
+      (send obj put! (symbol->string id) val))))
 
 (define-syntax-rule (function defined-args body0 body ...)
   (letrec

@@ -11,9 +11,7 @@
 
 (define-syntax-rule (es:module-begin form ...)
   (#%module-begin
-   (begin-scope (current-global-scope)
-     form ...)))
+   form ...))
 
 (define-syntax-rule (es:top-interaction . form)
-  (begin-scope (current-global-scope)
-    (get-value form)))
+  (get-value form))

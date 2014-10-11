@@ -3,13 +3,13 @@
 (require racket/class
          "boolean.rkt"
          "function.rkt"
+         "global-object.rkt"
          "math.rkt"
          "object.rkt"
          "string.rkt"
          "types.rkt")
 
-(provide current-global-scope
-         global-object)
+(provide)
 
 (define object-constructor
   (letrec
@@ -99,28 +99,21 @@
        "constructor"
        boolean-constructor))
 
-(define global-object
-  (new ecma-object%
-    [prototype #f]
-    [class "Object"]
-    [initial-properties
-     `(("NaN" . ,(make-data-property +nan.0))
-       ("Infinity" . ,(make-data-property +inf.0))
-       ; TODO: eval
-       ; TODO: parseInt
-       ; TODO: parseFloat
-       ; TODO: escape
-       ; TODO: unescape
-       ; TODO: isNaN
-       ; TODO: isFinite
-       ("Object" . ,(make-data-property object-constructor))
-       ("Function" . ,(make-data-property function-constructor))
-       ; ("Array" . ,(make-data-property array-constructor))
-       ("String" . ,(make-data-property string-constructor))
-       ("Boolean" . ,(make-data-property boolean-constructor))
-       ; ("Number" . ,(make-data-property number-constructor))
-       ; ("Date" . ,(make-data-property date-constructor))
-       ("Math" . ,(make-data-property math-object)))]))
-
-(define current-global-scope
-  (make-parameter global-object))
+(define-object-properties global-object
+  ["NaN" (make-data-property +nan.0)]
+  ["Infinity" (make-data-property +inf.0)]
+  ; TODO: eval
+  ; TODO: parseInt
+  ; TODO: parseFloat
+  ; TODO: escape
+  ; TODO: unescape
+  ; TODO: isNaN
+  ; TODO: isFinite
+  ["Object" (make-data-property object-constructor)]
+  ["Function" (make-data-property function-constructor)]
+  ; ("Array" (make-data-property array-constructor))
+  ["String" (make-data-property string-constructor)]
+  ["Boolean" (make-data-property boolean-constructor)]
+  ; ("Number" . ,(make-data-property number-constructor))
+  ; ("Date" . ,(make-data-property date-constructor))
+  ["Math" (make-data-property math-object)])

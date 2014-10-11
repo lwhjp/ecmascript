@@ -31,8 +31,7 @@
 
     (init [initial-properties '()])
 
-    (define properties
-      (make-hash initial-properties))
+    (field [properties (make-hash initial-properties)])
 
     (super-new)
 
@@ -204,6 +203,12 @@
                              #| TODO |#)))
                (reject)
                (update-property current desc))])))))
+
+(define-syntax-rule (define-object-properties obj [prop val] ...)
+  (begin
+    (hash-set! (get-field properties obj)
+               prop
+               (make-data-property val)) ...))
 
 (define object-prototype-object
   (new ecma-object%

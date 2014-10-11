@@ -1,9 +1,9 @@
 #lang racket/base
 
-(require racket/stxparam
-         "scope.rkt"
-         (for-syntax racket/base
-                     syntax/parse))
+(require (for-syntax racket/base
+                     syntax/parse)
+         racket/stxparam
+         "environment.rkt")
 
 (provide break
          continue

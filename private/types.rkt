@@ -2,10 +2,7 @@
 
 (require racket/class
          racket/math
-         racket/string
-         (only-in "date.rkt" date-object?)
-         "function.rkt"
-         "object.rkt")
+         racket/string)
 
 (provide (all-defined-out))
 

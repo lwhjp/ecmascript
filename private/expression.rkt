@@ -1,9 +1,9 @@
 #lang racket/base
 
 (require racket/class
+         "environment.rkt"
          "function.rkt"
          "object.rkt"
-         "scope.rkt"
          "types.rkt")
 
 (provide (rename-out

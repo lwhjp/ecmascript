@@ -180,9 +180,7 @@
       ,@(map
          (λ (fn)
            `(declare-fn
-             ,(datum-intern-literal
-               (symbol->string
-                (ecma:fn-name fn)))
+             ,(ecma:fn-name fn)
              ,(compile-function fn)))
          (extract-functions prog))
       ,@(filter-map

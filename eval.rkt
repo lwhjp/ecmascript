@@ -5,6 +5,7 @@
             "ast.rkt"
             "private/function.rkt"
             "private/global.rkt"
+            "private/global-object.rkt"
             "private/lang.rkt"
             "private/object.rkt"))
          racket/class
@@ -23,17 +24,14 @@
  [make-global-namespace (-> namespace?)])
 
 (define (ecma:eval prog
-                   [scope (ecma:current-global-scope)]
+                   [scope ecma:global-object]
                    [namespace (make-global-namespace)])
-  (parameterize
-      ([ecma:current-global-scope scope])
-    (eval
-     (datum->syntax #f
-       `(begin-scope (current-global-scope)
-          ,@(ecmascript->racket
-             (call-with-input-string prog
-               parse-ecmascript))))
-     namespace)))
+  (eval
+   #`(begin
+      #,@(ecmascript->racket
+          (call-with-input-string prog
+            parse-ecmascript)))
+   namespace))
 
 (define-namespace-anchor here)
 (define-runtime-module-path-index lang-module "private/lang.rkt")

@@ -3,9 +3,9 @@
 (require racket/class
          racket/math
          racket/provide
+         "environment.rkt"
          "function.rkt"
          "object.rkt"
-         "scope.rkt"
          "types.rkt"
          (for-syntax racket/base))
 
@@ -16,12 +16,12 @@
 
 (define (op:post++ v)
   (define r (to-number (get-value v)))
-  (put-value v (op:+ r 1))
+  (put-value! v (op:+ r 1))
   r)
 
 (define (op:post-- v)
   (define r (to-number (get-value v)))
-  (put-value v (op:- r 1))
+  (put-value! v (op:- r 1))
   r)
 
 (define (op:delete v)
@@ -48,13 +48,13 @@
 (define (op:++ v)
   (define r
     (op:+ (to-number (get-value v)) 1))
-  (put-value v r)
+  (put-value! v r)
   r)
 
 (define (op:-- v)
   (define r
     (op:- (to-number (get-value v)) 1))
-  (put-value v r)
+  (put-value! v r)
   r)
 
 (define (op:~ v)
@@ -185,7 +185,7 @@
 
 (define (op:= a b)
   (define v (get-value b))
-  (put-value a v)
+  (put-value! a v)
   v)
 
 (define-values (op:+= op:-= op:*= op:/= op:%= op:<<= op:>>=
@@ -197,7 +197,7 @@
             (define v
               (op (get-value a)
                   (get-value b)))
-            (put-value a v)
+            (put-value! a v)
             v))
         (list op:+ op:- op:* op:/ op:% op:<< op:>> op:>>> op:& op:^ op:\|))))
 
