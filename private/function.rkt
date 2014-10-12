@@ -12,7 +12,7 @@
          this
          return
          function
-         function-prototype-object
+         function-prototype
          make-native-constructor
          make-native-function
          native-method)
@@ -50,9 +50,9 @@
     (super-new [prototype #f]
                [class "Object"])))
 
-(define function-prototype-object
+(define function-prototype
   (new function%
-       [prototype object-prototype-object]
+       [prototype object-prototype]
        [call-proc (λ args
                     'undefined)]))
 
@@ -79,14 +79,14 @@
       ([construct
         (λ args
           (let* ([prot (send f get "prototype")]
-                 [prot (if (object? prot) prot object-prototype-object #|FIXME|#)]
+                 [prot (if (object? prot) prot object-prototype #|FIXME|#)]
                  [obj (new ecma-object%
                            [class (get-field class prot)]
                            [prototype prot])]
                  [r (apply (get-field call-proc f) obj args)])
             (if (object? r) r obj)))]
        [f (new constructor%
-               [prototype function-prototype-object]
+               [prototype function-prototype]
                [call-proc proc]
                [construct-proc construct])])
     f))
@@ -120,24 +120,16 @@
 
 (define (make-native-constructor call-proc construct-proc)
   (new constructor%
-       [prototype function-prototype-object]
+       [prototype function-prototype]
        [call-proc call-proc]
        [construct-proc construct-proc]))
 
 (define (make-native-function proc)
   (new function%
-       [prototype function-prototype-object]
+       [prototype function-prototype]
        [call-proc proc]))
 
 (define-syntax-rule (native-method args body0 body ...)
   (make-data-property
    (make-native-function
     (λ args body0 body ...))))
-
-(void
- (send function-prototype-object
-       put!
-       "toString"
-       (make-native-function
-        (λ (this)
-          "TODO (function)"))))

@@ -4,7 +4,6 @@
            (combine-in
             "ast.rkt"
             "private/function.rkt"
-            "private/global.rkt"
             "private/global-object.rkt"
             "private/lang.rkt"
             "private/object.rkt"))

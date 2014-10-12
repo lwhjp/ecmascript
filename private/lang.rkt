@@ -3,8 +3,6 @@
 (require "environment.rkt"
          "expression.rkt"
          "function.rkt"
-         "global.rkt"
-         "object.rkt"
          "operator.rkt"
          "statement.rkt")
 

@@ -210,7 +210,7 @@
                prop
                (make-data-property val)) ...))
 
-(define object-prototype-object
+(define object-prototype
   (new ecma-object%
        [prototype #f]
        [class "Object"]))
