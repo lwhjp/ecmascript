@@ -12,10 +12,16 @@ ecmascript
    (es-read-syntax #f in)))
 
 (define (es-read-syntax src in)
-  (displayln "reading ecma syntax")
   (define stx
     (parse-ecmascript in))
-  (displayln "compiling ecma")
   (define compiled
     (ecmascript->racket stx))
   compiled)
+
+(current-read-interaction
+ (λ (src in)
+   (let ([line (read-line in)])
+     (if (eof-object? line)
+         line
+         #`(begin
+             #,@(es-read-syntax src (open-input-string line)))))))
