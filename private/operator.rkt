@@ -158,6 +158,25 @@
        (not (compare (get-value a)
                      (get-value b)))))))
 
+(define-values (op:=== op:!==)
+  (let ([compare
+         (λ (a b)
+           (cond
+             [(number? a)
+              (and (number? b)
+                   (= a b))]
+             [(string? a)
+              (and (string? b)
+                   (string=? a b))]
+             [else (eq? a b)]))])
+    (values
+     (λ (a b)
+       (compare (get-value a)
+                (get-value b)))
+     (λ (a b)
+       (not (compare (get-value a)
+                     (get-value b)))))))
+
 (define-values (op:& op:^ op:\|)
   (apply
    values
