@@ -6,14 +6,14 @@
 (provide (all-from-out "private/lang.rkt")
 
          (rename-out
-          [es:module-begin #%module-begin]
-          [es:top-interaction #%top-interaction]))
+          [ecma:module-begin #%module-begin]
+          [ecma:top-interaction #%top-interaction]))
 
-(define-syntax-rule (es:module-begin form ...)
+(define-syntax-rule (ecma:module-begin form ...)
   (#%module-begin
    form ...))
 
-(define-syntax-rule (es:top-interaction . form)
+(define-syntax-rule (ecma:top-interaction . form)
   (get-value form))
 
 (module main racket/base
