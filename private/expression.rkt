@@ -2,17 +2,18 @@
 
 (require (for-syntax racket/base)
          racket/class
+         racket/provide
          racket/stxparam
          "environment.rkt"
          "function.rkt"
          "object.rkt"
          "types.rkt")
 
-(provide (rename-out
-          [ecma:this this]
-          [ecma:member member]
-          [ecma:new new]
-          [ecma:call call]))
+(provide (filtered-out
+          (λ (name)
+            (and (regexp-match? #rx"^ecma:" name)
+                 (substring name 5)))
+          (all-defined-out)))
 
 (define-syntax ecma:this
   (make-parameter-rename-transformer #'this-binding))
