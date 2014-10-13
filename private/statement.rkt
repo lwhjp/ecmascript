@@ -12,6 +12,8 @@
                  (substring name 5)))
           (all-defined-out)))
 
+(struct throwable (value) #:transparent)
+
 (define-syntax-parameter stmt:break
   (λ (stx)
     (raise-syntax-error #f "invalid outside of loop" stx)))
@@ -63,3 +65,6 @@
 (define-syntax-rule (stmt:with expr body0 body ...)
   (begin-scope expr
     body0 body ...))
+
+(define-syntax-rule (stmt:throw expr)
+  (raise (throwable (get-value expr))))
