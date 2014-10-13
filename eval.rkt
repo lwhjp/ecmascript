@@ -29,7 +29,7 @@
    #`(begin
       #,@(ecmascript->racket
           (call-with-input-string prog
-            parse-ecmascript)))
+            read-program)))
    namespace))
 
 (define-namespace-anchor here)

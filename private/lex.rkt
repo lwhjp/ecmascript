@@ -4,7 +4,7 @@
          ragg/support
          (prefix-in : parser-tools/lex-sre))
 
-(provide es-lex)
+(provide lex)
 
 (define-lex-abbrev white-space
   (:or #\u0009 #\u000B #\u000C #\u0020 #\u00A0 #\uFEFF))
@@ -70,7 +70,7 @@
 (define (parse-string s)
   (read (open-input-string s)))
 
-(define es-lex
+(define lex
   (lexer-src-pos
    [(:or keyword future-reserved-word punctuator
          div-punctuator null-literal boolean-literal)

@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require parser-tools/lex
+         racket/contract
          racket/generator
          racket/list
          syntax/parse
@@ -9,38 +10,44 @@
          "private/grammar.rkt"
          "private/lex.rkt")
 
-(provide parse-ecmascript)
+(provide/contract
+ [read-program
+  (->* (input-port?)
+       (or/c eof-object? (listof es:source-element?)))])
 
-(define (in-tokens in)
-  (in-producer es-lex 'EOF in))
+(define (read-program [in (current-output-port)])
+  (define prog
+    (parse-program
+     (collapse-syntax
+      (strip-whitespace
+       (parse
+        (insert-block-semicolons
+         (λ ()
+           (lex in))))))))
+  (if (null? prog)
+      eof
+      prog))
 
-(define (insert-block-semicolons seq)
-  (define-values (has-more? next)
-    (sequence-generate seq))
+(define (insert-block-semicolons next-token)
   (define (needs-insert? token)
     (not
      (member token '(EOL ";" "{" "}"))))
-  (in-generator
-   (let loop ([last-non-ws #f])
-     (cond
-       [(has-more?)
-        (let* ([pt (next)]
-               [t (position-token-token pt)])
-          (when (and (equal? "}" t)
-                     (needs-insert? last-non-ws))
-            (yield '";"))
-          (yield pt)
-          (loop (if (memq t '(COMMENT WS))
-                    last-non-ws
-                    t)))]
-       [else
-        (when (needs-insert? last-non-ws)
-          (yield ";"))]))))
-
-(define (port->raw-syntax in)
-  (parse
-   (insert-block-semicolons
-    (in-tokens in))))
+  (generator ()
+   (let loop ([last-non-ws 'EOL])
+     (define pt (next-token))
+     (if (eq? 'EOF pt)
+         (begin
+           (when (needs-insert? last-non-ws)
+             (yield ";"))
+           pt)
+         (let ([t (position-token-token pt)])
+           (when (and (equal? "}" t)
+                      (needs-insert? last-non-ws))
+             (yield ";"))
+           (yield pt)
+           (loop (if (memq t '(COMMENT WS))
+                     last-non-ws
+                     t)))))))
 
 (define (strip-whitespace stx)
   (syntax-parse stx
@@ -73,13 +80,6 @@
            (collapse-syntax (car subs))
            #`(rule #,@(map collapse-syntax subs))))]
     [_ stx]))
-
-(define (parse-ecmascript in)
-  (define stx
-    (collapse-syntax
-     (strip-whitespace
-      (port->raw-syntax in))))
-  (parse-program stx))
 
 (define (stx-loc stx)
   (list
