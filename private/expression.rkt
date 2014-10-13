@@ -21,7 +21,8 @@
 (define (ecma:member obj id)
   (reference
    (to-object (get-value obj))
-   (to-string (get-value id))))
+   (to-string (get-value id))
+   #f))
 
 (define (ecma:new class . args)
   (define classv (get-value class))
