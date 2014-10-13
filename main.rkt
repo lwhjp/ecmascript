@@ -15,3 +15,13 @@
 
 (define-syntax-rule (es:top-interaction . form)
   (get-value form))
+
+(module main racket/base
+  (require racket/cmdline
+           racket/port
+           (prefix-in ecma: "eval.rkt"))
+  (command-line
+   #:args (file)
+   (ecma:eval
+    (call-with-input-file file
+      port->string))))
