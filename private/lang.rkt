@@ -11,9 +11,6 @@
                        "operator.rkt"
                        "statement.rkt")
          function
-         get-value
-         id
          return
-         this
          #%app
          #%datum)

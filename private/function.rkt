@@ -9,7 +9,6 @@
 (provide function%
          constructor%
          activation%
-         this
          return
          function
          function-prototype

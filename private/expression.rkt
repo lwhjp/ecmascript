@@ -1,15 +1,21 @@
 #lang racket/base
 
-(require racket/class
+(require (for-syntax racket/base)
+         racket/class
+         racket/stxparam
          "environment.rkt"
          "function.rkt"
          "object.rkt"
          "types.rkt")
 
 (provide (rename-out
+          [ecma:this this]
           [ecma:member member]
           [ecma:new new]
           [ecma:call call]))
+
+(define-syntax ecma:this
+  (make-parameter-rename-transformer #'this-binding))
 
 (define (ecma:member obj id)
   (reference

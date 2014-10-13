@@ -43,6 +43,7 @@
     [(ecma:expr:bool loc v) (datum->syntax #f v loc)]
     [(ecma:expr:number loc v) (datum->syntax #f v loc)]
     [(ecma:expr:string loc v) (datum->syntax #f v loc)]
+    [(ecma:expr:fn loc def) (compile-function def)]
     [(ecma:expr:member loc obj prop)
      (datum->syntax #f
        `(member ,(compile-expression obj)
@@ -66,7 +67,7 @@
        `(,(add-prefix 'post op)
          ,(compile-expression expr))
        loc)]
-    [(ecma:expr:unary loc expr op)
+    [(ecma:expr:unary loc op expr)
      (datum->syntax #f
        `(,op ,(compile-expression expr))
        loc)]
@@ -152,6 +153,10 @@
      (datum->syntax #f
        `(with ,(compile-expression expr)
           ,(compile-statement body))
+       loc)]
+    [(ecma:stmt:throw loc expr)
+     (datum->syntax #f
+       `(throw ,(compile-expression expr))
        loc)]))
 
 (define (compile-variable-declaration stx)

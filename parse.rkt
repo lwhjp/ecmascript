@@ -70,7 +70,8 @@
        (if (and (= 1 (length subs))
                 (not
                  (memq (syntax-e #'rule)
-                       '(program identifier numeric string
+                       '(program primary-expression
+                         identifier numeric string
                          statement variable-declaration-list
                          variable-declaration-list-no-in
                          variable-declaration
@@ -108,17 +109,22 @@
                       comma-expression member-expression new-expression
                       call-expression postfix-expression unary-expression
                       conditional-expression assignment-expression
-                      assignment-operator expression)
+                      function-expression assignment-operator expression)
     [(primary-expression "this") (ecma:expr:this loc)]
-    [(identifier id) (ecma:expr:id loc (syntax-e #'id))]
+    [(primary-expression (identifier id)) (ecma:expr:id loc (syntax-e #'id))]
     [(primary-expression "null") (ecma:expr:null loc)]
     [(primary-expression "true") (ecma:expr:bool loc #t)]
     [(primary-expression "false") (ecma:expr:bool loc #f)]
-    [(numeric v) (ecma:expr:number loc (datum-intern-literal (syntax-e #'v)))]
-    [(string v) (ecma:expr:string loc (datum-intern-literal (syntax-e #'v)))]
-    [(array-literal "[" (~seq expr ...) "]") (error "TODO: array literal")]
-    [(object-literal "{" (~seq prop ...) "}") (error "TODO: object literal")]
+    [(primary-expression (numeric v))
+     (ecma:expr:number loc (datum-intern-literal (syntax-e #'v)))]
+    [(primary-expression (string v))
+     (ecma:expr:string loc (datum-intern-literal (syntax-e #'v)))]
+    [(primary-expression (array-literal "[" (~seq expr ...) "]"))
+     (error "TODO: array literal")]
+    [(primary-expression (object-literal "{" (~seq prop ...) "}"))
+     (error "TODO: object literal")]
     [(primary-expression "(" expr ")") (parse-expression #'expr)]
+    [(function-expression . _) (ecma:expr:fn loc (parse-function stx))]
     [(_ left "," right)
      (ecma:expr:comma loc (parse-expression #'left) (parse-expression #'right))]
     [(_ obj "[" prop "]")
@@ -215,7 +221,9 @@
     [(switch-statement "(" expr ")" ((~datum case-block) "{" clause ... "}"))
      (error "TODO: switch")]
     [(labelled-statement (identifier label) ":" stmt)
-     (ecma:stmt:labelled (syntax-e #'label) (parse-statement #'stmt))]
+     (ecma:stmt:labelled loc (syntax-e #'label) (parse-statement #'stmt))]
+    [(throw-statement "throw" expr ";")
+     (ecma:stmt:throw loc (parse-expression #'expr))]
     [(try-statement "try" block
                     (~optional ((~datum catch) "catch" "(" (identifier catch-id) ")" catch-block))
                     (~optional ((~datum finally) "finally" finally-block)))
@@ -240,9 +248,10 @@
 
 (define (parse-function stx)
   (syntax-parse stx
-    #:datum-literals (function-declaration formal-parameter-list identifier)
-    [((~datum function-declaration)
-      "function" (identifier id) "("
+    #:datum-literals (function-declaration function-expression
+                      formal-parameter-list identifier)
+    [((~or function-declaration function-expression)
+      "function" (~optional (identifier id)) "("
       (~optional (formal-parameter-list
                   (identifier param0)
                   (~seq "," (identifier param)) ...))
