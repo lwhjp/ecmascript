@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require "eval.rkt"
+         "lib/global.rkt"
          "private/lang.rkt")
 
 (provide (all-from-out "private/lang.rkt")
