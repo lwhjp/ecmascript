@@ -13,7 +13,7 @@ ecmascript
 
 (define (es-read-syntax src in)
   (define stx
-    (read-program in))
+    (read-program src in))
   (define compiled
     (ecmascript->racket stx))
   compiled)

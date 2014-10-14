@@ -28,8 +28,9 @@
   (eval
    #`(begin
       #,@(ecmascript->racket
-          (call-with-input-string prog
-            read-program)))
+          (with-input-from-string prog
+            (λ ()
+              (read-program)))))
    namespace))
 
 (define-namespace-anchor here)

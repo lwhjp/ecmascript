@@ -5,6 +5,7 @@
          racket/generator
          racket/list
          syntax/parse
+         syntax/srcloc
          syntax/stx
          (prefix-in ecma: "ast.rkt")
          "private/grammar.rkt"
@@ -12,21 +13,37 @@
 
 (provide/contract
  [read-program
-  (->* (input-port?)
+  (->* ()
+       (any/c input-port?)
        (or/c eof-object? (listof ecma:source-element?)))])
 
-(define (read-program [in (current-output-port)])
+(define (read-program [source-name (object-name (current-input-port))]
+                      [in (current-input-port)])
+  (define raw
+    (parse
+     (insert-block-semicolons
+      (λ ()
+        (lex in)))))
   (define prog
     (parse-program
      (collapse-syntax
       (strip-whitespace
-       (parse
-        (insert-block-semicolons
-         (λ ()
-           (lex in))))))))
+       (add-source-name source-name raw)))))
   (if (null? prog)
       eof
       prog))
+
+(define (add-source-name src stx)
+  (datum->syntax #f
+    (let ([subs (syntax->list stx)])
+      (if subs
+          (map
+           (λ (s)
+             (add-source-name src s))
+           subs)
+          stx))
+    (update-source-location (stx-loc stx)
+                            #:source src)))
 
 (define (insert-block-semicolons next-token)
   (define (needs-insert? token)
@@ -50,26 +67,29 @@
                      t)))))))
 
 (define (strip-whitespace stx)
-  (syntax-parse stx
-    [(rule sub ...)
-     #`(rule
-        #,@(filter-map
+  (let ([subs (syntax->list stx)])
+    (if subs
+        (datum->syntax #f
+          (cons
+           (car subs)
+           (filter-map
             (λ (stx)
               (syntax-parse stx
                 [((~datum ws) . _) #f]
                 [((~datum ws-no-eol) . _) #f]
                 [_ (strip-whitespace stx)]))
-            (syntax->list #'(sub ...))))]
-    [_ stx]))
+            (cdr subs)))
+          (stx-loc stx))
+        stx)))
 
 (define (collapse-syntax stx)
   (syntax-parse stx
     [((~datum eol-or-semicolon) _) #'";"]
-    [(rule sub ...)
-     (let ([subs (syntax->list #'(sub ...))])
-       (if (and (= 1 (length subs))
+    [(_ . _)
+     (let ([subs (syntax->list stx)])
+       (if (and (= 2 (length subs))
                 (not
-                 (memq (syntax-e #'rule)
+                 (memq (syntax-e (car subs))
                        '(program primary-expression
                          identifier numeric string
                          statement variable-declaration-list
@@ -78,8 +98,12 @@
                          variable-declaration-no-in
                          empty-statement
                          formal-parameter-list))))
-           (collapse-syntax (car subs))
-           #`(rule #,@(map collapse-syntax subs))))]
+           (collapse-syntax (cadr subs))
+           (datum->syntax #f
+             (cons
+              (car subs)
+              (map collapse-syntax (cdr subs)))
+             (stx-loc stx))))]
     [_ stx]))
 
 (define (stx-loc stx)
