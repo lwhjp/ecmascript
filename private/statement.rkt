@@ -4,7 +4,8 @@
                      syntax/parse)
          racket/provide
          racket/stxparam
-         "environment.rkt")
+         "environment.rkt"
+         "types.rkt")
 
 (provide (filtered-out
           (λ (name)
@@ -12,7 +13,7 @@
                  (substring name 5)))
           (all-defined-out)))
 
-(struct throwable (value) #:transparent)
+(struct exn:throw exn (value) #:transparent)
 
 (define-syntax-parameter stmt:break
   (λ (stx)
@@ -67,4 +68,8 @@
     body0 body ...))
 
 (define (stmt:throw expr)
-  (raise (throwable (get-value expr))))
+  (let ([v (get-value expr)])
+    (raise
+     (exn:throw (to-string v)
+                (current-continuation-marks)
+                v))))
