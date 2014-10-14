@@ -8,23 +8,6 @@
 
 (provide (all-defined-out))
 
-(define string%
-  (class ecma-object%
-    (init-field value)
-    (super-new [class "String"])))
-
-(define (make-string-object v)
-  (unless (string? v)
-    (raise-argument-error 'make-string-object "string?" v))
-  (instantiate string% (v)
-    [prototype string-prototype]
-    [initial-properties
-     `(("length" . ,(make-data-property (string-length v))))]))
-
-(define string-prototype
-  (instantiate string% ("")
-    [prototype object-prototype]))
-
 (define string-constructor
   (letrec
       ([call (case-lambda

@@ -2,9 +2,25 @@
 
 (require racket/class
          racket/math
-         racket/string)
+         racket/string
+         "object.rkt")
 
 (provide (all-defined-out))
+
+(define boolean%
+  (class ecma-object%
+    (init-field value)
+    (super-new [class "Boolean"])))
+
+(define boolean-prototype
+  (instantiate boolean% (#f)
+    [prototype object-prototype]))
+
+(define (make-boolean-object v)
+  (unless (boolean? v)
+    (raise-argument-error 'make-boolean-object "boolean?" v))
+  (instantiate boolean% (v)
+    [prototype boolean-prototype]))
 
 (define (to-primitive v #:preferred-type [preferred #f])
   (if (object? v)
@@ -12,6 +28,23 @@
           (send v default-value preferred)
           (send v default-value))
       v))
+
+(define string%
+  (class ecma-object%
+    (init-field value)
+    (super-new [class "String"])))
+
+(define string-prototype
+  (instantiate string% ("")
+    [prototype object-prototype]))
+
+(define (make-string-object v)
+  (unless (string? v)
+    (raise-argument-error 'make-string-object "string?" v))
+  (instantiate string% (v)
+    [prototype string-prototype]
+    [initial-properties
+     `(("length" . ,(make-data-property (string-length v))))]))
 
 (define (to-boolean v)
   (cond
@@ -74,7 +107,7 @@
   (cond
     [(eq? v 'undefined) (error 'to-object "undefined")]
     [(eq? v 'null) (error 'to-object "null")]
-    [(boolean? v) (error 'TODO)]
+    [(boolean? v) (make-boolean-object v)]
     [(number? v) (error 'TODO)]
-    [(string? v) (error 'TODO)]
+    [(string? v) (make-string-object v)]
     [(object? v) v]))

@@ -7,21 +7,6 @@
 
 (provide (all-defined-out))
 
-(define boolean%
-  (class ecma-object%
-    (init-field value)
-    (super-new [class "Boolean"])))
-
-(define (make-boolean-object v)
-  (unless (boolean? v)
-    (raise-argument-error 'make-boolean-object "boolean?" v))
-  (instantiate boolean% (v)
-    [prototype boolean-prototype]))
-
-(define boolean-prototype
-  (instantiate boolean% (#f)
-    [prototype object-prototype]))
-
 (define boolean-constructor
   (letrec
       ([call (λ ([value #f])
