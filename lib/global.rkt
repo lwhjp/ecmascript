@@ -2,10 +2,12 @@
 
 (require racket/class
          "boolean.rkt"
+         "error.rkt"
          "function.rkt"
          "math.rkt"
          "object.rkt"
          "string.rkt"
+         "../private/error.rkt"
          "../private/global-object.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
@@ -32,4 +34,11 @@
   ["Boolean" boolean-constructor]
   ; ["Number" number-constructor]
   ; ["Date" date-constructor]
-  ["Math" math])
+  ["Math" math]
+  ["Error" error-constructor]
+  ["EvalError" eval-error-constructor]
+  ["RangeError" range-error-constructor]
+  ["ReferenceError" reference-error-constructor]
+  ["SyntaxError" syntax-error-constructor]
+  ["TypeError" type-error-constructor]
+  ["URIError" uri-error-constructor])
