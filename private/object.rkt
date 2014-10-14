@@ -85,8 +85,7 @@
           [(not prototype)
            extensible?]
           [else
-           (let ([inherited (and prototype
-                                 (send prototype get-property p))])
+           (let ([inherited (send prototype get-property p)])
              (cond
                [(accessor-property? inherited)
                 (if (accessor-property-set inherited) #t #f)]
@@ -209,7 +208,10 @@
   (begin
     (hash-set! (get-field properties obj)
                prop
-               (make-data-property val)) ...))
+               (make-data-property val
+                                   #:writable #t
+                                   #:enumerable #f
+                                   #:configurable #t)) ...))
 
 (define object-prototype
   (new ecma-object%
