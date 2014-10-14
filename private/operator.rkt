@@ -186,16 +186,17 @@
                 (to-int32 (get-value b)))))
         (list bitwise-and bitwise-xor bitwise-ior))))
 
-(define-syntaxes (op:&& op:\|\|)
-  (apply
-   values
-   (map (λ (op)
-          (λ (stx)
-            (syntax-case stx ()
-              [(_ a b)
-               #`(#,op (to-boolean (get-value a))
-                       (to-boolean (get-value b)))])))
-        (list #'and #'or))))
+(define-syntax-rule (op:&& a b)
+  (let ([lval (get-value a)])
+    (if (to-boolean lval)
+        (get-value b)
+        lval)))
+
+(define-syntax-rule (op:\|\| a b)
+  (let ([lval (get-value a)])
+    (if (to-boolean lval)
+        lval
+        (get-value b))))
 
 (define-syntax-rule (op:?: test true false)
   (if (to-boolean (get-value test))
