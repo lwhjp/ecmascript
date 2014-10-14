@@ -11,6 +11,4 @@
                        "operator.rkt"
                        "statement.rkt")
          function
-         return
-         #%app
-         #%datum)
+         return)

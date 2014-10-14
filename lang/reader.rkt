@@ -17,11 +17,3 @@ ecmascript
   (define compiled
     (ecmascript->racket stx))
   compiled)
-
-(current-read-interaction
- (λ (src in)
-   (let ([line (read-line in)])
-     (if (eof-object? line)
-         line
-         #`(begin
-             #,@(es-read-syntax src (open-input-string line)))))))

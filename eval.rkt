@@ -14,13 +14,14 @@
          "parse.rkt"
          "private/compile.rkt")
 
-(provide/contract
- (rename ecma:eval eval
-         (->* (string?)
-              ((is-a?/c ecma:ecma-object%)
-               namespace?)
-              any))
- [make-global-namespace (-> namespace?)])
+(provide (contract-out
+          (rename ecma:eval eval
+                  (->* (string?)
+                       ((is-a?/c ecma:ecma-object%)
+                        namespace?)
+                       any))
+          [make-global-namespace (-> namespace?)])
+         eval-read-interaction)
 
 (define (ecma:eval prog
                    [scope ecma:global-object]
@@ -34,14 +35,22 @@
    namespace))
 
 (define-namespace-anchor here)
-(define-runtime-module-path-index lang-module "private/lang.rkt")
+(define-runtime-module-path-index main-module "main.rkt")
 
 (define (make-global-namespace)
   (parameterize
       ([current-namespace
         (namespace-anchor->empty-namespace here)])
-    (namespace-require lang-module)
+    (namespace-require main-module)
     (current-namespace)))
+
+(define (eval-read-interaction src in)
+  (let ([line (read-line in)])
+    (if (eof-object? line)
+        line
+        #`(begin
+            #,@(ecmascript->racket
+                (read-program src (open-input-string line)))))))
 
 (void
  (send
