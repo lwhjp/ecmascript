@@ -23,7 +23,7 @@
     [prototype boolean-prototype]))
 
 (define (to-primitive v #:preferred-type [preferred #f])
-  (if (object? v)
+  (if (is-a? v ecma-object%)
       (if preferred
           (send v default-value preferred)
           (send v default-value))
@@ -53,7 +53,7 @@
     [(boolean? v) v]
     [(number? v) (not (or (zero? v) (nan? v)))]
     [(string? v) (not (string=? v ""))]
-    [(object? v) #t]))
+    [(is-a? v ecma-object%) #t]))
 
 (define (to-number v)
   (cond
@@ -62,7 +62,7 @@
     [(boolean? v) (if v 1 0)]
     [(number? v) v]
     [(string? v) (or (string->number (string-trim v)) +nan.0)]
-    [(object? v) (to-number (to-primitive v 'number))]))
+    [(is-a? v ecma-object%) (to-number (to-primitive v 'number))]))
 
 (define (to-integer v)
   (let ([v (to-number v)])
@@ -101,7 +101,7 @@
        [(infinite? v) "Infinity"]
        [else (number->string v)])]
     [(string? v) v]
-    [(object? v) (to-string (to-primitive v #:preferred-type 'string))]))
+    [(is-a? v ecma-object%) (to-string (to-primitive v #:preferred-type 'string))]))
 
 (define (to-object v)
   (cond
@@ -110,4 +110,4 @@
     [(boolean? v) (make-boolean-object v)]
     [(number? v) (error 'TODO)]
     [(string? v) (make-string-object v)]
-    [(object? v) v]))
+    [(is-a? v ecma-object%) v]))

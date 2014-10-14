@@ -31,7 +31,7 @@
     (error 'new "not a constructor"))
   (define obj
     (send classv construct . argsv))
-  (unless (object? obj)
+  (unless (is-a? obj ecma-object%)
     (error 'new "constructor did not produce an object"))
   obj)
 

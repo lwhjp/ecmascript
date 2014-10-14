@@ -43,7 +43,7 @@
           [(number? v) "number"]
           [(string? v) "string"]
           [(is-a? v function%) "function"]
-          [(object? v) "object"]))))
+          [(is-a? v ecma-object%) "object"]))))
 
 (define (op:++ v)
   (define r
@@ -137,17 +137,17 @@
               (cond
                 [(number? b) (= a b)]
                 [(string? b) (op:== a (to-number b))]
-                [(object? b) (op:== a (to-primitive b))]
+                [(is-a? b ecma-object%) (op:== a (to-primitive b))]
                 [else #f])]
              [(string? a)
               (cond
                 [(string? b) (string=? a b)]
                 [(number? b) (op:== (to-number a) b)]
-                [(object? b) (op:== a (to-primitive b))]
+                [(is-a? b ecma-object%) (op:== a (to-primitive b))]
                 [else #f])]
-             [(object? a)
+             [(is-a? a ecma-object%)
               (cond
-                [(object? b) (eq? a b)]
+                [(is-a? b ecma-object%) (eq? a b)]
                 [(or (string? b) (number? b)) (op:== (to-primitive a) b)]
                 [else #f])]))])
     (values

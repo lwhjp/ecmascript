@@ -115,7 +115,7 @@
           (let ([f (send this get method)])
             (when (object-method-arity-includes? f 'call 1)
               (let ([v (send f call this)])
-                (unless (is-a? v object%)
+                (unless (is-a? v ecma-object%)
                   (return v))))))
         (error "type error")))
 

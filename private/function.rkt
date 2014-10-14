@@ -78,12 +78,12 @@
       ([construct
         (λ args
           (let* ([prot (send f get "prototype")]
-                 [prot (if (object? prot) prot object-prototype #|FIXME|#)]
+                 [prot (if (is-a? prot ecma-object%) prot object-prototype #|FIXME|#)]
                  [obj (new ecma-object%
                            [class (get-field class prot)]
                            [prototype prot])]
                  [r (apply (get-field call-proc f) obj args)])
-            (if (object? r) r obj)))]
+            (if (is-a? r ecma-object%) r obj)))]
        [f (new constructor%
                [prototype function-prototype]
                [call-proc proc]
