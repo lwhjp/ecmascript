@@ -66,5 +66,5 @@
   (begin-scope expr
     body0 body ...))
 
-(define-syntax-rule (stmt:throw expr)
+(define (stmt:throw expr)
   (raise (throwable (get-value expr))))
