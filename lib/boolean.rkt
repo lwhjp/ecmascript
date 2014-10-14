@@ -9,11 +9,13 @@
 
 (define boolean-constructor
   (letrec
-      ([call (λ ([value #f])
-               (to-boolean value))]
-       [new (λ ([value #f])
-              (make-boolean-object (to-boolean value)))])
-    (make-native-constructor call new)))
+      ([call
+        (λ (this [value #f])
+          (to-boolean value))]
+       [construct
+        (λ ([value #f])
+          (make-boolean-object (to-boolean value)))])
+    (make-native-constructor call construct)))
 
 (define-object-properties boolean-constructor
   ["prototype" boolean-prototype])

@@ -10,12 +10,13 @@
 
 (define string-constructor
   (letrec
-      ([call (case-lambda
-               [(value) (to-string value)]
-               [() ""])]
-       [construct (case-lambda
-              [(value) (make-string-object (to-string value))]
-              [() (make-string-object "")])])
+      ([call
+        (λ (this [value ""])
+          (to-string value))]
+       [construct
+        (λ ([value ""])
+          (make-string-object
+           (to-string value)))])
     (make-native-constructor call construct)))
 
 (define-object-properties string-constructor
