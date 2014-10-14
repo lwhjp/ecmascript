@@ -36,7 +36,7 @@
     (super-new)
 
     (define/public (get p)
-      (let ([prop (send this get-own-property p)])
+      (let ([prop (send this get-property p)])
         (cond
           [(data-property? prop)
            (data-property-value prop)]
