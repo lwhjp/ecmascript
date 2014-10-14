@@ -88,6 +88,27 @@
                [prototype function-prototype]
                [call-proc proc]
                [construct-proc construct])])
+    ; TODO: length
+    (let ([proto
+           (new ecma-object%
+                [prototype object-prototype]
+                [class "Object"])])
+      (send proto define-own-property
+            "constructor"
+            `(data
+              (value . ,f)
+              (writable . #t)
+              (enumerable . #f)
+              (configurable . #t))
+            #f)
+      (send f define-own-property
+            "prototype"
+            `(data
+              (value . ,proto)
+              (writable . #t)
+              (enumerable . #f)
+              (configurable . #f))
+            #f))
     f))
 
 (define (create-arguments! obj args vals)
