@@ -65,7 +65,11 @@
    (:or (:: #\" (:* (char-complement #\")) #\")
         (:: #\' (:* (char-complement #\')) #\'))])
 
-(define parse-number string->number)
+(define (parse-number s)
+  (cond
+    [(regexp-match? #rx"^0[xX]" s)
+     (string->number (substring s 2) 16)]
+    [else (string->number s)]))
 
 (define (parse-string s)
   (read (open-input-string s)))
