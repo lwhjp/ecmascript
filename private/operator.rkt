@@ -33,7 +33,7 @@
 
 (define (op:typeof v)
   (if (and (reference? v)
-           (eq? 'null (reference-base v)))
+           (eq? 'undefined (reference-base v)))
       "undefined"
       (let ([v (get-value v)])
         (cond
