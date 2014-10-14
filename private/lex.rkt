@@ -62,8 +62,8 @@
   [decimal-digit (:/ #\0 #\9)]
   [hex-integer-literal (:: (:or "0x" "0X") (:+ (:/ #\0 #\9 #\a #\f #\A #\F)))]
   [string-literal
-   (:or (:: #\" (:* (char-complement #\")) #\")
-        (:: #\' (:* (char-complement #\')) #\'))])
+   (:or (:: #\" (:* (:or (:: #\\ any-char) (char-complement #\"))) #\")
+        (:: #\' (:* (:or (:: #\\ any-char) (char-complement #\'))) #\'))])
 
 (define (parse-number s)
   (cond
@@ -72,7 +72,39 @@
     [else (string->number s)]))
 
 (define (parse-string s)
-  (read (open-input-string s)))
+  (define (parse-escape esc)
+    (define c (string-ref esc 1))
+    (case c
+      [(#\u #\x)
+       (string
+        (integer->char
+         (string->number
+          (substring esc 2)
+          16)))]
+      [(#\u000A #\u000D #\u2028 #\u2029) ""]
+      [else
+       (hash-ref
+        #hasheqv((#\b . "\u0008")
+                 (#\t . "\u0009")
+                 (#\n . "\u000A")
+                 (#\v . "\u000B")
+                 (#\f . "\u000C")
+                 (#\r . "\u000D"))
+        c
+        (string c))]))
+  (define end (sub1 (string-length s)))
+  (define escapes
+    (regexp-match-positions*
+     #px"\\\\([^ux]|x[[:xdigit:]]{2}|u[[:xdigit:]]{4})"
+     s 1 end))
+  (let loop ([begin 1]
+             [escapes escapes])
+    (if (null? escapes)
+        (substring s begin end)
+        (string-append
+         (substring s begin (caar escapes))
+         (parse-escape (substring s (caar escapes) (cdar escapes)))
+         (loop (cdar escapes) (cdr escapes))))))
 
 (define lex
   (lexer-src-pos
