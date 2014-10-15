@@ -50,7 +50,7 @@
 (struct stmt:switch stmt (expr cases) #:transparent)
 (struct stmt:labelled stmt (label stmt) #:transparent)
 (struct stmt:throw stmt (expr) #:transparent)
-(struct stmt:try stmt (block catch finally) #:transparent)
+(struct stmt:try stmt (block catch-id catch finally) #:transparent)
 (struct stmt:debugger stmt () #:transparent)
 
 (struct fn syntax-element (name params body) #:transparent)

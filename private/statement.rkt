@@ -2,6 +2,7 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
+         racket/class
          racket/provide
          racket/stxparam
          "environment.rkt"
@@ -73,3 +74,33 @@
      (exn:throw (to-string v)
                 (current-continuation-marks)
                 v))))
+
+(define-syntax (stmt:try stx)
+  (syntax-parse stx
+    [(_ body
+        (~optional (~seq #:catch cid cbody))
+        (~optional (~seq #:finally fbody)))
+     (with-syntax
+         ([handlers
+           (if (attribute cid)
+               #'([exn:throw?
+                   (λ (e)
+                     (declare-vars (cid))
+                     (send variable-environment
+                           set-mutable-binding!
+                           (symbol->string 'cid)
+                           (exn:throw-value e)
+                           #f)
+                     cbody)])
+               #'())]
+          [post
+           (if (attribute fbody)
+               #'(λ ()
+                   fbody)
+               #'void)])
+       #'(dynamic-wind
+          void
+          (λ ()
+            (with-handlers handlers
+              body))
+          post))]))

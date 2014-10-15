@@ -298,10 +298,14 @@
      (ecma:stmt:labelled loc (syntax-e #'label) (parse-statement #'stmt))]
     [(throw-statement "throw" expr ";")
      (ecma:stmt:throw loc (parse-expression #'expr))]
-    [(try-statement "try" block
+    [(try-statement "try" try-block
                     (~optional ((~datum catch) "catch" "(" (identifier catch-id) ")" catch-block))
                     (~optional ((~datum finally) "finally" finally-block)))
-     (error "TODO: try")]
+     (ecma:stmt:try loc
+                    (parse-statement #'try-block)
+                    (and (attribute catch-id) (syntax-e #'catch-id))
+                    (and (attribute catch-block) (parse-statement #'catch-block))
+                    (and (attribute finally-block) (parse-statement #'finally-block)))]
     [(debugger-statement "debugger" ";")
      (ecma:stmt:debugger loc)]))
 

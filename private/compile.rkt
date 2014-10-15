@@ -186,6 +186,12 @@
     [(ecma:stmt:throw loc expr)
      (datum->syntax #f
        `(throw ,(compile-expression expr))
+       loc)]
+    [(ecma:stmt:try loc tb cid cb fb)
+     (datum->syntax #f
+       `(try ,(compile-statement tb)
+             ,@(if cid `(#:catch ,cid ,(compile-statement cb)) '())
+             ,@(if fb `(#:finally ,(compile-statement fb)) '()))
        loc)]))
 
 (define (compile-variable-declaration stx)

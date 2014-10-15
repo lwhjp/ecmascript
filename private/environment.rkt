@@ -227,7 +227,7 @@
   (for ([def defs])
     (match-define (cons name val) def)
     (let ([p (symbol->string name)])
-      (send lex create-mutable-binding! p val))))
+      (send lex create-mutable-binding! p #f))))
 
 (define-syntax-rule (declare-vars (id ...))
   (create-variables!
