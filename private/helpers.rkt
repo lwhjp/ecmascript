@@ -4,11 +4,29 @@
                      syntax/parse
                      syntax/stx)
          racket/class
+         "array.rkt"
          "environment.rkt"
          "object.rkt"
          "types.rkt")
 
 (provide (all-defined-out))
+
+(define (array . elements)
+  (let ([obj (new array%
+                  [prototype array-prototype])])
+    (for ([i (in-naturals)]
+          [elt (in-list elements)]
+          #:unless (eq? 'undefined elt))
+      (send obj define-own-property
+            (to-string i)
+            `(data
+              (value . ,elt)
+              (writable . #t)
+              (enumerable . #t)
+              (configurable . #t))
+            #f))
+    (send obj put! "length" (length elements))
+    obj))
 
 (define-syntax (object stx)
   (define parse-name

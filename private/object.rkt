@@ -169,7 +169,7 @@
           [(null? (cdr desc)) #t]
           [#f #t] ; TODO: step 6
           [(and (not (property-configurable? current))
-                (or (property-configurable? desc)
+                (or (desc-get desc 'configurable #f)
                     (and (memv 'enumerable (cdr desc))
                          (not (eq? (property-enumerable? current)
                                    (memv 'enumerable (cdr desc)))))))

@@ -143,8 +143,8 @@
      (ecma:expr:number loc (datum-intern-literal (syntax-e #'v)))]
     [(primary-expression (string v))
      (ecma:expr:string loc (datum-intern-literal (syntax-e #'v)))]
-    [(primary-expression (array-literal "[" (~seq expr ...) "]"))
-     (error "TODO: array literal")]
+    [(primary-expression (~and ((~datum array-literal) . _) arry))
+     (parse-array-literal #'arry)]
     [(primary-expression (~and ((~datum object-literal) . _) obj))
      (parse-object-literal #'obj)]
     [(primary-expression "(" expr ")") (parse-expression #'expr)]
@@ -185,6 +185,18 @@
     #:datum-literals (arguments)
     [(arguments "(" (~seq (~optional ",") expr) ... ")")
      (stx-map parse-expression #'(expr ...))]))
+
+(define (parse-array-literal stx)
+  (syntax-parse stx
+    [((~datum array-literal) "[" term ... "]")
+     (ecma:expr:array (stx-loc stx)
+       (let loop ([terms (syntax->list #'(term ...))])
+         (cond
+           [(null? terms) '()]
+           [(equal? "," (syntax-e (car terms)))
+            (cons #f (loop (cdr terms)))]
+           [(cons (parse-expression (car terms))
+                  (loop (cddr terms)))])))]))
 
 (define (parse-object-literal stx)
   (define parse-name

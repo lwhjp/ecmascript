@@ -43,6 +43,15 @@
     [(ecma:expr:bool loc v) (datum->syntax #f v loc)]
     [(ecma:expr:number loc v) (datum->syntax #f v loc)]
     [(ecma:expr:string loc v) (datum->syntax #f v loc)]
+    [(ecma:expr:array loc elements)
+     (datum->syntax #f
+       `(array
+         ,@(map (λ (elt)
+                  (if elt
+                      (compile-expression elt)
+                      'undefined))
+                elements))
+       loc)]
     [(ecma:expr:object loc props)
      (datum->syntax #f
        `(object

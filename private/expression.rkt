@@ -24,6 +24,10 @@
    (to-string (get-value id))
    #f))
 
+(define ecma:null 'null)
+
+(define ecma:undefined 'undefined)
+
 (define (ecma:new class . args)
   (define classv (get-value class))
   (define argsv (map get-value args))
