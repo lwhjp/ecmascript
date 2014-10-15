@@ -20,8 +20,8 @@ array-literal: "[" [ws assignment-expression]
 object-literal: "{" (ws property-assignment ws ",")*
                     [ws property-assignment] ws "}"
 property-assignment: property-name ws ":" ws assignment-expression |
-    "get" ws property-name ws "(" ws ")" ws "{" (ws source-element)* ws "}" |
-    "set" ws property-name ws "(" ws identifier ws ")" ws "{" (ws source-element)* ws "}"
+    IDENTIFIER ws property-name ws "(" ws ")" ws "{" (ws source-element)* ws "}" |
+    IDENTIFIER ws property-name ws "(" ws identifier ws ")" ws "{" (ws source-element)* ws "}"
 property-name: identifier | string | numeric
 member-expression:
     primary-expression |

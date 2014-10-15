@@ -43,6 +43,11 @@
     [(ecma:expr:bool loc v) (datum->syntax #f v loc)]
     [(ecma:expr:number loc v) (datum->syntax #f v loc)]
     [(ecma:expr:string loc v) (datum->syntax #f v loc)]
+    [(ecma:expr:object loc props)
+     (datum->syntax #f
+       `(object
+         ,@(map compile-object-property props))
+       loc)]
     [(ecma:expr:fn loc def) (compile-function def)]
     [(ecma:expr:member loc obj prop)
      (datum->syntax #f
@@ -86,6 +91,21 @@
      (datum->syntax #f
        `(\, ,(compile-expression left)
             ,(compile-expression right))
+       loc)]))
+
+(define (compile-object-property stx)
+  (match stx
+    [(ecma:init:obj:prop loc name value)
+     (datum->syntax #f
+       `[,name ,(compile-expression value)]
+       loc)]
+    [(ecma:init:obj:get loc prop fn)
+     (datum->syntax #f
+       `[,prop #:get ,(compile-function fn)]
+       loc)]
+    [(ecma:init:obj:set loc prop fn)
+     (datum->syntax #f
+       `[,prop #:set ,(compile-function fn)]
        loc)]))
 
 (define (compile-statement stx)

@@ -26,9 +26,9 @@
 (struct expr:comma expr (left right) #:transparent)
 
 (struct init syntax-element () #:transparent)
-(struct init:prop init (name value) #:transparent)
-(struct init:get init (prop fn) #:transparent)
-(struct init:set init (prop fn) #:transparent)
+(struct init:obj:prop init (name value) #:transparent)
+(struct init:obj:get init (prop fn) #:transparent)
+(struct init:obj:set init (prop fn) #:transparent)
 
 (struct decl:fn source-element (def) #:transparent)
 (struct decl:var syntax-element (id expr) #:transparent)

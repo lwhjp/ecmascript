@@ -145,8 +145,8 @@
      (ecma:expr:string loc (datum-intern-literal (syntax-e #'v)))]
     [(primary-expression (array-literal "[" (~seq expr ...) "]"))
      (error "TODO: array literal")]
-    [(primary-expression (object-literal "{" (~seq prop ...) "}"))
-     (error "TODO: object literal")]
+    [(primary-expression (~and ((~datum object-literal) . _) obj))
+     (parse-object-literal #'obj)]
     [(primary-expression "(" expr ")") (parse-expression #'expr)]
     [(function-expression . _) (ecma:expr:fn loc (parse-function stx))]
     [(_ left "," right)
@@ -185,6 +185,44 @@
     #:datum-literals (arguments)
     [(arguments "(" (~seq (~optional ",") expr) ... ")")
      (stx-map parse-expression #'(expr ...))]))
+
+(define (parse-object-literal stx)
+  (define parse-name
+    (syntax-parser
+      [((~datum identifier) id) (syntax-e #'id)]
+      [((~datum string) s) (syntax-e #'s)]
+      [((~datum numeric) n) (syntax-e #'n)]))
+  (syntax-parse stx
+    #:datum-literals (object-literal property-assignment)
+    [(object-literal "{" (~seq (~and (property-assignment . _) prop) (~optional ",")) ... "}")
+     (ecma:expr:object
+      (stx-loc stx)
+      (stx-map
+       (λ (pstx)
+         (syntax-parse pstx
+           #:datum-literals (get set)
+           [(_ name ":" expr)
+            (ecma:init:obj:prop
+             (stx-loc pstx)
+             (parse-name #'name)
+             (parse-expression #'expr))]
+           [(_ get name "(" ")" "{" body ... "}")
+            (ecma:init:obj:get
+             (stx-loc pstx)
+             (parse-name #'name)
+             (ecma:fn (stx-loc pstx)
+                      #f
+                      '()
+                      (stx-map parse-source-element #'(body ...))))]
+           [(_ set name "(" ((~datum identifier) id) ")" "{" body ... "}")
+            (ecma:init:obj:set
+             (stx-loc pstx)
+             (parse-name #'name)
+             (ecma:fn (stx-loc pstx)
+                      #f
+                      (list (syntax-e #'id))
+                      (stx-map parse-source-element #'(body ...))))]))
+       #'(prop ...)))]))
 
 (define (parse-statement stx)
   (define loc (stx-loc stx))
