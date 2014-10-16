@@ -5,7 +5,7 @@ source-element: statement | function-declaration
 
 ws: (COMMENT | EOL | WS)*
 ws-no-eol: (COMMENT | WS)*
-eol-or-semicolon: EOL | ";"
+eol-or-semicolon: EOL | ";" | INSERTED-SEMICOLON
 
 ;; Expressions
 
@@ -18,7 +18,7 @@ string: STRING
 array-literal: "[" [ws assignment-expression]
                    (ws "," [ws assignment-expression])* ws "]"
 object-literal: "{" (ws property-assignment ws ",")*
-                    [ws property-assignment] ws "}"
+                    [ws property-assignment] ws [INSERTED-SEMICOLON] "}"
 property-assignment: property-name ws ":" ws assignment-expression |
     IDENTIFIER ws property-name ws "(" ws ")" ws "{" (ws source-element)* ws "}" |
     IDENTIFIER ws property-name ws "(" ws identifier ws ")" ws "{" (ws source-element)* ws "}"

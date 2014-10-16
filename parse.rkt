@@ -55,12 +55,12 @@
      (if (eq? 'EOF pt)
          (begin
            (when (needs-insert? last-non-ws)
-             (yield ";"))
+             (yield 'INSERTED-SEMICOLON))
            pt)
          (let ([t (position-token-token pt)])
            (when (and (equal? "}" t)
                       (needs-insert? last-non-ws))
-             (yield ";"))
+             (yield 'INSERTED-SEMICOLON))
            (yield pt)
            (loop (if (memq t '(COMMENT WS))
                      last-non-ws
@@ -206,7 +206,9 @@
       [((~datum numeric) n) (syntax-e #'n)]))
   (syntax-parse stx
     #:datum-literals (object-literal property-assignment)
-    [(object-literal "{" (~seq (~and (property-assignment . _) prop) (~optional ",")) ... "}")
+    [(object-literal "{" (~seq (~and (property-assignment . _) prop)
+                               (~optional ",")) ...
+                     (~optional (~datum INSERTED-SEMICOLON)) "}")
      (ecma:expr:object
       (stx-loc stx)
       (stx-map
