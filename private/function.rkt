@@ -32,8 +32,18 @@
     (define/public (call this . args)
       (apply call-proc this args))
 
-    #;(define/public (has-instance? v)
-      'undefined)))
+    (define/public (has-instance? v)
+      (and
+       (is-a? v ecma-object%)
+       (let ([o (send this get "prototype")])
+         (unless (is-a? o ecma-object%)
+           (error "type error"))
+         (let loop ([v v])
+           (let ([v (get-field prototype v)])
+             (and
+              v
+              (or (eq? o v)
+                  (loop v))))))))))
 
 (define constructor%
   (class function%
