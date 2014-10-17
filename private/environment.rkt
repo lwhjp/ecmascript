@@ -61,7 +61,10 @@
       [(eq? 'undefined base)
        (if (reference-strict? v)
            (error "reference error")
-           (send global-object put! w #f))]
+           (send global-object put!
+                 (reference-name v)
+                 w
+                 #f))]
       [(is-a? base environment-record%)
        (send base
              set-mutable-binding!
