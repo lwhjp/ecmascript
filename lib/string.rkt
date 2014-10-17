@@ -2,6 +2,7 @@
 
 (require racket/class
          racket/list
+         racket/string
          "../private/function.rkt"
          "../private/object.rkt"
          "../private/types.rkt")
@@ -20,7 +21,11 @@
     (make-native-constructor call construct)))
 
 (define-object-properties string-constructor
-  ["prototype" string-prototype])
+  ["prototype" string-prototype]
+  ["fromCharCode"
+   (native-method (this . args)
+     (list->string
+      (map integer->char args)))])
 
 (define-object-properties string-prototype
   ["constructor" string-constructor]
@@ -49,6 +54,11 @@
            (char->integer
             (string-ref s p))
            +nan.0)))]
+  ["concat"
+   (native-method (this . args)
+     (apply
+      string-append
+      (map to-string (cons this args))))]
   ["indexOf"
    (native-method (this searchString position)
      (let ([s1 (to-string this)]
@@ -70,11 +80,51 @@
          (if r2
              (car (last r2))
              -1))))]
+  ["localeCompare"
+   (native-method (this that)
+     (let ([s (to-string this)]
+           [that (to-string that)])
+       (cond
+         [(string-locale<? s that) -1]
+         [(string-locale=? s that) 0]
+         [else 1])))]
+  ; TODO: match
+  ; TODO: replace
+  ; TODO: search
+  ["slice"
+   (native-method (this start end)
+     (let* ([str (to-string this)]
+            [len (string-length str)]
+            [start (to-integer start)]
+            [end (if (eq? 'undefined end) len (to-integer end))]
+            [from (if (negative? start) (+ len start) start)]
+            [to (if (negative? end) (+ len end) end)]
+            [span (max (- to from) 0)])
+       (substring str from (+ from span))))]
   ; TODO: split
-  ; TODO: substring
+  ["substring"
+   (native-method (this start end)
+     (let* ([s (to-string this)]
+            [len (string-length s)]
+            [int-start (to-integer start)]
+            [int-end (if (eq? 'undefined end) len (to-integer end))]
+            [final-start (min (max int-start 0) len)]
+            [final-end (min (max int-end 0) len)]
+            [from (min final-start final-end)]
+            [to (max final-start final-end)])
+       (substring s from to)))]
   ["toLowerCase"
+   (native-method (this)
+     (string-downcase (to-string this)))]
+  ["toLocaleLowerCase"
    (native-method (this)
      (string-downcase (to-string this)))]
   ["toUpperCase"
    (native-method (this)
-     (string-upcase (to-string this)))])
+     (string-upcase (to-string this)))]
+  ["toLocaleUpperCase"
+   (native-method (this)
+     (string-upcase (to-string this)))]
+  ["trim"
+   (native-method (this)
+     (string-trim (to-string this)))])
