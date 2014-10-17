@@ -2,6 +2,7 @@
 
 (require (for-syntax racket/base)
          racket/class
+         racket/list
          racket/stxparam
          "environment.rkt"
          "object.rkt")
@@ -146,7 +147,15 @@
                                  [(_) #'(escape 'undefined)]
                                  [(_ v) #'(escape v)]))])
                     body0 body ...))))))])
-     f))
+    (send f define-own-property
+          "length"
+          `(data
+            (value . ,(length 'defined-args))
+            (writable . #f)
+            (enumerable . #f)
+            (configurable . #f))
+          #f)
+    f))
 
 (define (make-native-constructor call-proc construct-proc)
   (new constructor%
@@ -154,10 +163,28 @@
        [call-proc call-proc]
        [construct-proc construct-proc]))
 
+(define (typical-arity proc)
+  (let ([arity (procedure-arity proc)])
+    (cond
+      [(list? arity)
+       (argmax typical-arity arity)]
+      [(arity-at-least? arity)
+       (add1 (arity-at-least-value arity))]
+      [else arity])))
+
 (define (make-native-function proc)
-  (new function%
-       [prototype function-prototype]
-       [call-proc proc]))
+  (let ([f (new function%
+                [prototype function-prototype]
+                [call-proc proc])])
+    (send f define-own-property
+          "length"
+          `(data
+            (value . ,(sub1 (typical-arity proc)))
+            (writable . #f)
+            (enumerable . #f)
+            (configurable . #f))
+          #f)
+    f))
 
 (define-syntax-rule (native-method args body0 body ...)
   (make-native-function
