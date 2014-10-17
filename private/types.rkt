@@ -3,24 +3,10 @@
 (require racket/class
          racket/math
          racket/string
+         "global-object.rkt"
          "object.rkt")
 
 (provide (all-defined-out))
-
-(define boolean%
-  (class ecma-object%
-    (init-field value)
-    (super-new [class "Boolean"])))
-
-(define boolean-prototype
-  (instantiate boolean% (#f)
-    [prototype object-prototype]))
-
-(define (make-boolean-object v)
-  (unless (boolean? v)
-    (raise-argument-error 'make-boolean-object "boolean?" v))
-  (instantiate boolean% (v)
-    [prototype boolean-prototype]))
 
 (define (to-primitive v #:preferred-type [preferred #f])
   (if (is-a? v ecma-object%)
@@ -107,7 +93,10 @@
   (cond
     [(eq? v 'undefined) (error 'to-object "undefined")]
     [(eq? v 'null) (error 'to-object "null")]
-    [(boolean? v) (make-boolean-object v)]
+    [(boolean? v)
+     (send (send global-object get "Boolean")
+           construct
+           v)]
     [(number? v) (error 'TODO)]
     [(string? v) (make-string-object v)]
     [(is-a? v ecma-object%) v]))

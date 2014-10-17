@@ -7,6 +7,15 @@
 
 (provide (all-defined-out))
 
+(define boolean%
+  (class ecma-object%
+    (init-field value)
+    (super-new [class "Boolean"])))
+
+(define boolean-prototype
+  (instantiate boolean% (#f)
+    [prototype object-prototype]))
+
 (define boolean-constructor
   (letrec
       ([call
@@ -14,7 +23,8 @@
           (to-boolean value))]
        [construct
         (λ ([value #f])
-          (make-boolean-object (to-boolean value)))])
+          (instantiate boolean% ((to-boolean value))
+            [prototype boolean-prototype]))])
     (make-native-constructor call construct)))
 
 (define-object-properties boolean-constructor
