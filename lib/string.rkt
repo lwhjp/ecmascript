@@ -9,6 +9,17 @@
 
 (provide (all-defined-out))
 
+(define string%
+  (class ecma-object%
+    (init-field value)
+    (super-new [class "String"]
+               [initial-properties
+                `(("length" . ,(make-data-property (string-length value))))])))
+
+(define string-prototype
+  (instantiate string% ("")
+    [prototype object-prototype]))
+
 (define string-constructor
   (letrec
       ([call
@@ -16,8 +27,8 @@
           (to-string value))]
        [construct
         (λ ([value ""])
-          (make-string-object
-           (to-string value)))])
+          (instantiate string% ((to-string value))
+            [prototype string-prototype]))])
     (make-native-constructor call construct)))
 
 (define-object-properties string-constructor

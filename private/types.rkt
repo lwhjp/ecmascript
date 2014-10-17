@@ -15,23 +15,6 @@
           (send v default-value))
       v))
 
-(define string%
-  (class ecma-object%
-    (init-field value)
-    (super-new [class "String"])))
-
-(define string-prototype
-  (instantiate string% ("")
-    [prototype object-prototype]))
-
-(define (make-string-object v)
-  (unless (string? v)
-    (raise-argument-error 'make-string-object "string?" v))
-  (instantiate string% (v)
-    [prototype string-prototype]
-    [initial-properties
-     `(("length" . ,(make-data-property (string-length v))))]))
-
 (define (to-boolean v)
   (cond
     [(eq? v 'undefined) #f]
@@ -98,5 +81,8 @@
            construct
            v)]
     [(number? v) (error 'TODO)]
-    [(string? v) (make-string-object v)]
+    [(string? v)
+     (send (send global-object get "String")
+           construct
+           v)]
     [(is-a? v ecma-object%) v]))
