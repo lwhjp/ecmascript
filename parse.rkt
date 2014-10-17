@@ -196,7 +196,9 @@
            [(equal? "," (syntax-e (car terms)))
             (cons #f (loop (cdr terms)))]
            [(cons (parse-expression (car terms))
-                  (loop (cddr terms)))])))]))
+                  (if (null? (cdr terms))
+                      '()
+                      (loop (cddr terms))))])))]))
 
 (define (parse-object-literal stx)
   (define parse-name
