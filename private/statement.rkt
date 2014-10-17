@@ -68,6 +68,10 @@
   (begin-scope expr
     body0 body ...))
 
+(define-syntax-rule (stmt:with-label label stmt)
+  ; TODO
+  stmt)
+
 (define (stmt:throw expr)
   (let ([v (get-value expr)])
     (raise

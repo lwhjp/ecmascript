@@ -183,6 +183,11 @@
        `(with ,(compile-expression expr)
           ,(compile-statement body))
        loc)]
+    [(ecma:stmt:labelled loc label stmt)
+     (datum->syntax #f
+       `(with-label ,label
+          ,(compile-statement stmt))
+       loc)]
     [(ecma:stmt:throw loc expr)
      (datum->syntax #f
        `(throw ,(compile-expression expr))
