@@ -25,8 +25,25 @@
   (put-value! v (op:- r 1))
   r)
 
-(define (op:delete v)
-  (error 'TODO))
+(define (op:delete ref)
+  (cond
+    [(not (reference? ref)) #t]
+    [(eq? 'undefined (reference-base ref))
+     (if (reference-strict? ref)
+         (raise-native-error 'syntax)
+         #t)]
+    [(is-a? (reference-base ref) environment-record%)
+     (if (reference-strict? ref)
+         (raise-native-error 'syntax)
+         (send (reference-base ref)
+               delete-binding!
+               (reference-name ref)))]
+    [else
+     (send (to-object
+            (reference-base ref))
+           delete!
+           (reference-name ref)
+           (reference-strict? ref))]))
 
 (define (op:void v)
   (get-value v)

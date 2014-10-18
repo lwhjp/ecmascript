@@ -12,6 +12,7 @@
 (provide (struct-out reference)
          get-value
          put-value!
+         environment-record%
          new-declarative-environment
          new-object-environment
          global-environment
