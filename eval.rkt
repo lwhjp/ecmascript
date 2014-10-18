@@ -5,7 +5,6 @@
             "ast.rkt"
             "private/function.rkt"
             "private/global-object.rkt"
-            "private/lang.rkt"
             "private/object.rkt"))
          racket/class
          racket/port

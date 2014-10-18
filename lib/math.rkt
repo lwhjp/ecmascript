@@ -3,7 +3,10 @@
 (require racket/class
          "../private/object.rkt")
 
-(provide (all-defined-out))
+(provide get-properties)
+
+(define (get-properties)
+  `(["Math" . ,math]))
 
 (define math
   (new ecma-object%

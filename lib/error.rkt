@@ -9,7 +9,16 @@
          "../private/statement.rkt"
          "../private/types.rkt")
 
-(provide (all-defined-out))
+(provide get-properties)
+
+(define (get-properties)
+  `(["Error" . ,error-constructor]
+    ["EvalError" . ,eval-error-constructor]
+    ["RangeError" . ,range-error-constructor]
+    ["ReferenceError" . ,reference-error-constructor]
+    ["SyntaxError" . ,syntax-error-constructor]
+    ["TypeError" . ,type-error-constructor]
+    ["URIError" . ,uri-error-constructor]))
 
 (define error%
   (class ecma-object%

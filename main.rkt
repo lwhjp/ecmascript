@@ -1,10 +1,21 @@
 #lang racket/base
 
 (require "eval.rkt"
-         "lib/global.rkt"
-         "private/lang.rkt")
+         "init.rkt"
+         "private/environment.rkt"
+         "private/expression.rkt"
+         "private/function.rkt"
+         "private/helpers.rkt"
+         "private/operator.rkt"
+         "private/statement.rkt")
 
-(provide (all-from-out "private/lang.rkt")
+(provide (all-from-out "private/environment.rkt"
+                       "private/expression.rkt"
+                       "private/helpers.rkt"
+                       "private/operator.rkt"
+                       "private/statement.rkt")
+         function
+         return
 
          (rename-out
           [ecma:module-begin #%module-begin]
@@ -20,13 +31,3 @@
 
 (define-syntax-rule (ecma:top-interaction . form)
   (get-value form))
-
-(module main racket/base
-  (require racket/cmdline
-           racket/port
-           (prefix-in ecma: "eval.rkt"))
-  (command-line
-   #:args (file)
-   (ecma:eval
-    (call-with-input-file file
-      port->string))))

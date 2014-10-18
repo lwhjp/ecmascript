@@ -8,7 +8,10 @@
          "../private/object.rkt"
          "../private/types.rkt")
 
-(provide (all-defined-out))
+(provide get-properties)
+
+(define (get-properties)
+  `(["String" . ,string-constructor]))
 
 (define string%
   (class ecma-object%

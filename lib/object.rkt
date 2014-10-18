@@ -6,7 +6,10 @@
          "../private/object.rkt"
          "../private/types.rkt")
 
-(provide (all-defined-out))
+(provide get-properties)
+
+(define (get-properties)
+  `(["Object" . ,object-constructor]))
 
 (define object-constructor
   (letrec

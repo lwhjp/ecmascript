@@ -3,7 +3,10 @@
 (require "../private/function.rkt"
          "../private/object.rkt")
 
-(provide (all-defined-out))
+(provide get-properties)
+
+(define (get-properties)
+  `(["Function" . ,function-constructor]))
 
 (define function-constructor
   (letrec
