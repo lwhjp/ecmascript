@@ -56,12 +56,12 @@
             (let ([new-rv
                    (let/ec next
                      (syntax-parameterize
-                         ([break (λ (stx) #'(escape rv))]
-                          [continue (λ (stx) #'(next rv))])
+                         ([stmt:break (λ (stx) #'(escape rv))]
+                          [stmt:continue (λ (stx) #'(next rv))])
                        (if #,(or (attribute test) #t)
                            (begin
                              body0 body ...)
-                           (break))))])
+                           (stmt:break))))])
               #,(or (attribute update) '(void))
               new-rv))))]))
 
