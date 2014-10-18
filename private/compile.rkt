@@ -159,8 +159,14 @@
              #:update ,(and update
                             (compile-expression update))
           ,(compile-statement body)))]
-    [(ecma:stmt:for-in loc i expr body)
-     (error 'TODO-for-in)]
+    [(ecma:stmt:for-in loc (ecma:decl:var _ vid vexpr) expr body)
+     (datum->syntax #f
+       `(for-in (id ,vid) ,(compile-expression expr)
+          ,(compile-statement body)))]
+    [(ecma:stmt:for-in loc lhs expr body)
+     (datum->syntax #f
+       `(for-in ,(compile-expression lhs) ,(compile-expression expr)
+          ,(compile-statement body)))]
     [(ecma:stmt:continue loc label)
      (datum->syntax #f
        (if label

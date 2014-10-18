@@ -6,6 +6,7 @@
          racket/provide
          racket/stxparam
          "environment.rkt"
+         "object.rkt"
          "types.rkt")
 
 (provide (filtered-out
@@ -63,6 +64,19 @@
                            (break))))])
               #,(or (attribute update) '(void))
               new-rv))))]))
+
+(define-syntax-rule (stmt:for-in lhs expr body)
+  (let ([exper-value (get-value expr)])
+    (if (or (eq? 'null exper-value)
+            (eq? 'undefined exper-value))
+        (void)
+        (let ([obj (to-object exper-value)])
+          (for/fold ([v (void)])
+                    ([(name prop) (in-hash
+                                   (get-field properties obj))]
+                     #:when (property-enumerable? prop))
+            (put-value! lhs (send obj get name))
+            body)))))
 
 (define-syntax-rule (stmt:with expr body0 body ...)
   (begin-scope expr
