@@ -259,7 +259,17 @@
      (datum->syntax #f
        `(function ,params
           (declare-vars ,(extract-vars body))
-          ,@(map compile-statement body)))]))
+          ,@(map
+             (λ (fn)
+               `(declare-fn
+                 ,(ecma:fn-name fn)
+                 ,(compile-function fn)))
+             (extract-functions body))
+          ,@(filter-map
+             (λ (elt)
+               (and (ecma:stmt? elt)
+                    (compile-statement elt)))
+             body)))]))
 
 (define (compile-program prog)
   (datum->syntax #f
