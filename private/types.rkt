@@ -3,6 +3,7 @@
 (require racket/class
          racket/math
          racket/string
+         "error.rkt"
          "global-object.rkt"
          "object.rkt")
 
@@ -74,8 +75,8 @@
 
 (define (to-object v)
   (cond
-    [(eq? v 'undefined) (error 'to-object "undefined")]
-    [(eq? v 'null) (error 'to-object "null")]
+    [(eq? v 'undefined) (raise-native-error 'type "undefined")]
+    [(eq? v 'null) (raise-native-error 'type "null")]
     [(boolean? v)
      (send (send global-object get "Boolean")
            construct

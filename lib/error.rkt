@@ -82,7 +82,7 @@
    (make-native-function
     (λ (this)
       (unless (is-a? this ecma-object%)
-        (error "type error"))
+        (raise-native-error 'type))
       (define name
         (let ([name (send this get "name")])
           (if (eq? 'undefined name)

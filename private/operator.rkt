@@ -4,6 +4,7 @@
          racket/math
          racket/provide
          "environment.rkt"
+         "error.rkt"
          "function.rkt"
          "object.rkt"
          "types.rkt"
@@ -49,7 +50,7 @@
   (define lval (get-value a))
   (define rval (get-value b))
   (unless (is-a? rval function%)
-    (error "type error"))
+    (raise-native-error 'type))
   (send rval has-instance? lval))
 
 (define (op:++ v)

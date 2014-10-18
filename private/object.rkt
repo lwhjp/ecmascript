@@ -1,7 +1,8 @@
 #lang racket/base
 
 (require (for-syntax racket/base)
-         racket/class)
+         racket/class
+         "error.rkt")
 
 (provide (all-defined-out))
 
@@ -73,7 +74,7 @@
                               (configurable . #t))
                             throw?)))))
           (when throw?
-            (error "type error"))))
+            (raise-native-error 'type))))
 
     (define/public (can-put? p)
       (let ([prop (send this get-own-property p)])
@@ -103,7 +104,7 @@
                 (begin
                   (hash-remove! properties p)
                   #t)
-                (and throw? (error "type error")))
+                (and throw? (raise-native-error 'type)))
             #t)))
 
     (define/public (default-value [hint 'number])
@@ -117,7 +118,7 @@
               (let ([v (send f call this)])
                 (unless (is-a? v ecma-object%)
                   (return v))))))
-        (error "type error")))
+        (raise-native-error 'type)))
 
     (define (generic-desc? desc)
       (and (not (data-desc? desc))
@@ -146,7 +147,7 @@
           (loop (cdr fields)))))
 
     (define/public (define-own-property p desc throw?)
-      (let ([reject (λ () (and throw? (error "type error")))]
+      (let ([reject (λ () (and throw? (raise-native-error 'type)))]
             [current (send this get-own-property p)])
         (cond
           [(not current)

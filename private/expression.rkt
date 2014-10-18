@@ -5,6 +5,7 @@
          racket/provide
          racket/stxparam
          "environment.rkt"
+         "error.rkt"
          "function.rkt"
          "object.rkt"
          "types.rkt")
@@ -32,18 +33,18 @@
   (define classv (get-value class))
   (define argsv (map get-value args))
   (unless (is-a? classv constructor%)
-    (error 'new "not a constructor"))
+    (raise-native-error 'type "not a constructor"))
   (define obj
     (send classv construct . argsv))
   (unless (is-a? obj ecma-object%)
-    (error 'new "constructor did not produce an object"))
+    (raise-native-error 'type "constructor did not produce an object"))
   obj)
 
 (define (ecma:call f . args)
   (define fv (get-value f))
   (define argsv (map get-value args))
   (unless (is-a? fv function%)
-    (error 'call "not a function"))
+    (raise-native-error 'type "not a function"))
   (let ([this (if (and (reference? f)
                        (not (eq? 'null (reference-base f)))
                        (not (is-a? (reference-base f) activation%)))

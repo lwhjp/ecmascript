@@ -5,6 +5,7 @@
          racket/list
          racket/stxparam
          "environment.rkt"
+         "error.rkt"
          "object.rkt")
 
 (provide function%
@@ -38,7 +39,7 @@
        (is-a? v ecma-object%)
        (let ([o (send this get "prototype")])
          (unless (is-a? o ecma-object%)
-           (error "type error"))
+           (raise-native-error 'type))
          (let loop ([v v])
            (let ([v (get-field prototype v)])
              (and

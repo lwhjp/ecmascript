@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require racket/class
+         "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
          "../private/types.rkt")
@@ -45,7 +46,7 @@
       (define o (to-object this))
       (define f (send o get "toString"))
       (unless (is-a? f function%)
-        (error "type error"))
+        (raise-native-error 'type))
       (send f call o)))]
   ["valueOf"
    (make-native-function

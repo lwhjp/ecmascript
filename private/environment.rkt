@@ -4,6 +4,7 @@
          racket/class
          racket/match
          racket/stxparam
+         "error.rkt"
          "global-object.rkt"
          "object.rkt"
          "types.rkt")
@@ -30,7 +31,7 @@
       (let ([base (reference-base v)])
         (cond
           [(eq? 'undefined base)
-           (error "reference error")]
+           (raise-native-error 'reference)]
           [(is-a? base environment-record%)
            (send base
                  get-binding-value
@@ -55,12 +56,12 @@
 
 (define (put-value! v w)
   (unless (reference? v)
-    (error "reference error"))
+    (raise-native-error 'reference))
   (let ([base (reference-base v)])
     (cond
       [(eq? 'undefined base)
        (if (reference-strict? v)
-           (error "reference error")
+           (raise-native-error 'reference)
            (send global-object put!
                  (reference-name v)
                  w
@@ -91,9 +92,9 @@
                          call
                          base
                          w)
-                   (when throw? (error "type error"))))
+                   (when throw? (raise-native-error 'type))))
              (when throw?
-               (error "type error"))))])))
+               (raise-native-error 'type))))])))
 
 (define environment-record%
   (class object%
@@ -123,13 +124,13 @@
         (if (mutable-binding? b)
             (set-mutable-binding-value! b v)
             (when s
-              (error "type error")))))
+              (raise-native-error 'type)))))
     (define/override (get-binding-value n s)
       (let ([b (hash-ref bindings n)])
         (cond
           [(mutable-binding? b) (mutable-binding-value b)]
           [(immutable-binding? b) (immutable-binding-value b)]
-          [else (if s (error "reference error") 'undefined)])))
+          [else (if s (raise-native-error 'reference) 'undefined)])))
     (define/override (delete-binding! n)
       (let ([b (hash-ref bindings n #f)])
         (cond
@@ -168,7 +169,7 @@
     (define/override (get-binding-value n s)
       (if (send binding-object has-property? n)
           (send binding-object get n)
-          (if s (error "reference error") 'undefined)))
+          (if s (raise-native-error 'reference) 'undefined)))
     (define/override (delete-binding! n)
       (send binding-object delete! n #f))
     (define/override (implicit-this-value)

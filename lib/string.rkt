@@ -3,6 +3,7 @@
 (require racket/class
          racket/list
          racket/string
+         "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
          "../private/types.rkt")
@@ -43,12 +44,12 @@
   ["toString"
    (native-method (this)
      (unless (is-a? this string%)
-       (error "not a string"))
+       (raise-native-error 'type "not a string"))
      (get-field value this))]
   ["valueOf"
    (native-method (this)
      (unless (is-a? this string%)
-       (error "not a string"))
+       (raise-native-error 'type "not a string"))
      (get-field value this))]
   ["charAt"
    (native-method (this pos)
