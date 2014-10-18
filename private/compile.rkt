@@ -12,14 +12,39 @@
 
 (define (extract-statement-vars stmt)
   (match stmt
+    [(ecma:stmt:block _ stmts)
+     (apply append (map extract-statement-vars stmts))]
     [(ecma:stmt:vars _ (list (ecma:decl:var _ id _) ...))
      id]
-    [_ #f]))
+    [(ecma:stmt:if _ _ true false)
+     (append (extract-statement-vars true)
+             (extract-statement-vars false))]
+    [(ecma:stmt:do _ body _)
+     (extract-statement-vars body)]
+    [(ecma:stmt:while _ _ body)
+     (extract-statement-vars body)]
+    [(ecma:stmt:for _ (list (ecma:decl:var _ id _) ...) _ _ body)
+     (append id (extract-statement-vars body))]
+    [(ecma:stmt:for _ _ _ _ body)
+     (extract-statement-vars body)]
+    [(ecma:stmt:for-in _ i _ body)
+     (cons i (extract-statement-vars body))]
+    [(ecma:stmt:with _ _ body)
+     (extract-statement-vars body)]
+    [(ecma:stmt:switch _ _ cases)
+     (apply append (map extract-statement-vars cases))]
+    [(ecma:stmt:labelled _ _ stmt)
+     (extract-statement-vars stmt)]
+    [(ecma:stmt:try _ block _ catch finally)
+     (append (extract-statement-vars block)
+             (extract-statement-vars catch)
+             (extract-statement-vars finally))]
+    [_ '()]))
 
 (define (extract-vars elts)
   (apply
    append
-   (filter-map
+   (map
     extract-statement-vars
     elts)))
 
@@ -124,8 +149,7 @@
        `(block ,@(map compile-statement stmts))
        loc)]
     [(ecma:stmt:vars loc decls)
-     (datum->syntax #f
-       `(block ,@(map compile-variable-declaration decls)))]
+     (compile-variable-declaration-list decls loc)]
     [(ecma:stmt:empty loc)
      (datum->syntax #f
        '(empty-statement)
@@ -148,8 +172,14 @@
        `(while ,(compile-expression test)
           ,(compile-statement body))
        loc)]
-    [(ecma:stmt:for loc (list var-decl ...) test step body)
-     (error 'TODO-vars)]
+    [(ecma:stmt:for loc (list var-decl ...) test update body)
+     (datum->syntax #f
+       `(for #:init ,(compile-variable-declaration-list var-decl loc)
+             #:test ,(and test
+                          (compile-expression test))
+             #:update ,(and update
+                            (compile-expression update))
+          ,(compile-statement body)))]
     [(ecma:stmt:for loc init test update body)
      (datum->syntax #f
        `(for #:init ,(and init
@@ -205,17 +235,23 @@
              ,@(if fb `(#:finally ,(compile-statement fb)) '()))
        loc)]))
 
-(define (compile-variable-declaration stx)
-  (match stx
-    [(ecma:decl:var loc id expr)
-     (let ([ret (datum-intern-literal
-                 (symbol->string id))])
-       (datum->syntax #f
-         (if expr
-             `(\, (= (id ,id) ,(compile-expression expr))
-                  ,ret)
-             ret)
-         loc))]))
+(define (compile-variable-declaration-list stx loc)
+  (let ([assignments
+         (filter-map
+          (λ (decl)
+            (match-define (ecma:decl:var loc id expr) decl)
+            (and expr
+                 (datum->syntax #f
+                   `(put-value! (id ,id)
+                                (get-value
+                                 ,(compile-expression expr)))
+                   loc)))
+          stx)])
+    (datum->syntax #f
+      (if (null? assignments)
+          '(empty-statement)
+          `(block ,@assignments))
+      loc)))
 
 (define (compile-function stx)
   (match stx

@@ -21,7 +21,6 @@
          this-binding
          begin-scope
          id
-         create-variables!
          declare-vars
          declare-fn)
 
@@ -228,20 +227,23 @@
           name
           #f))]))
 
-(define (create-variables! lex defs)
-  (for ([def defs])
-    (match-define (cons name val) def)
-    (let ([p (symbol->string name)])
-      (send lex create-mutable-binding! p #f))))
+(define (create-variables! env-rec ids)
+  (for ([id (in-list (map symbol->string ids))])
+    (send env-rec create-mutable-binding! id #f)))
 
 (define-syntax-rule (declare-vars (id ...))
   (create-variables!
    variable-environment
-   '((id . undefined) ...)))
+   '(id ...)))
+
+(define (create-function! env-rec id fn)
+  (let ([name (symbol->string id)])
+    (void
+     (send env-rec create-mutable-binding! name #f)
+     (send env-rec set-mutable-binding! name fn #f))))
 
 (define-syntax-rule (declare-fn id fn)
-  (send variable-environment
-        set-mutable-binding!
-        (symbol->string 'id)
-        fn
-        #f))
+  (create-function!
+   variable-environment
+   'id
+   fn))
