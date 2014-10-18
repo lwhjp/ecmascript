@@ -6,6 +6,7 @@
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/statement.rkt"
          "../private/types.rkt")
 
 (provide (all-defined-out))
@@ -15,24 +16,25 @@
     (super-new [class "Error"])))
 
 (define (make-error-prototype+constructor name super-prototype)
-  (let ([prototype
-         (new error%
-              [prototype super-prototype])]
-        [constructor
-         (letrec
-             ([call
-               (λ (this . args)
-                 (apply construct args))]
-              [construct
-               (λ (message)
-                 (new error%
-                      [prototype function-prototype]
-                      [initial-properties
-                       (if (eq? 'undefined message)
-                           '()
-                           `(("message" . ,(make-data-property
-                                            (to-string message)))))]))])
-           (make-native-constructor call construct))])
+  (letrec
+      ([prototype
+        (new error%
+             [prototype super-prototype])]
+       [constructor
+        (letrec
+            ([call
+              (λ (this . args)
+                (apply construct args))]
+             [construct
+              (λ ([message 'undefined])
+                (new error%
+                     [prototype prototype]
+                     [initial-properties
+                      (if (eq? 'undefined message)
+                          '()
+                          `(("message" . ,(make-data-property
+                                           (to-string message)))))]))])
+          (make-native-constructor call construct))])
     (define-object-properties prototype
       ["constructor" constructor]
       ["name" name]
@@ -65,7 +67,8 @@
                (values proto
                        cons
                        (λ (msg)
-                         (send cons-id new msg)))))))]))
+                         (throw
+                          (send cons-id construct msg))))))))]))
 
 (define-native-error "Eval")
 (define-native-error "Range")
