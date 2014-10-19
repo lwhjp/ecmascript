@@ -58,7 +58,10 @@
                      (syntax-parameterize
                          ([stmt:break (λ (stx) #'(escape rv))]
                           [stmt:continue (λ (stx) #'(next rv))])
-                       (if #,(or (attribute test) #t)
+                       (if #,(if (attribute test)
+                                 #'(to-boolean
+                                    (get-value test))
+                                 #t)
                            (begin
                              body0 body ...)
                            (stmt:break))))])
