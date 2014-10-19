@@ -117,7 +117,9 @@
    (map (λ (op)
           (λ (n m)
             (op (to-int32 (get-value n))
-                (to-uint32 (get-value m)))))
+                (bitwise-and
+                 #x1F
+                 (to-uint32 (get-value m))))))
         (list (λ (n m)
                 (arithmetic-shift n m))
               (λ (n m)
