@@ -91,12 +91,15 @@
 (define (op:! v)
   (not (to-boolean (get-value v))))
 
-(define (op:+ a b)
-  (let ([l (to-primitive (get-value a))]
-        [r (to-primitive (get-value b))])
-    (if (or (string? l) (string? r))
-        (string-append (to-string l) (to-string r))
-        (+ (to-number l) (to-number r)))))
+(define op:+
+  (case-lambda
+    [(x) (to-number (get-value x))]
+    [(a b)
+     (let ([l (to-primitive (get-value a))]
+           [r (to-primitive (get-value b))])
+       (if (or (string? l) (string? r))
+           (string-append (to-string l) (to-string r))
+           (+ (to-number l) (to-number r))))]))
 
 (define-values (op:- op:* op:/ op:%)
   (apply
