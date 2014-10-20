@@ -27,7 +27,7 @@
      (append id (extract-statement-vars body))]
     [(ecma:stmt:for _ _ _ _ body)
      (extract-statement-vars body)]
-    [(ecma:stmt:for-in _ i _ body)
+    [(ecma:stmt:for-in _ (ecma:decl:var _ i _) _ body)
      (cons i (extract-statement-vars body))]
     [(ecma:stmt:with _ _ body)
      (extract-statement-vars body)]
