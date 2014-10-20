@@ -25,9 +25,10 @@
   (λ (stx)
     (raise-syntax-error #f "invalid outside of loop" stx)))
 
-(define-syntax-rule (stmt:block stmt0 stmt ...)
-  (begin
-    stmt0 stmt ...))
+(define-syntax stmt:block
+  (syntax-rules ()
+    [(_) (void)]
+    [(_ stmt ...) (begin stmt ...)]))
 
 (define (stmt:empty-statement)
   (void))
@@ -39,16 +40,16 @@
     [(_ test true false)
      #'(if test true false)]))
 
-(define-syntax-rule (stmt:while test body0 body ...)
+(define-syntax-rule (stmt:while test body ...)
   (stmt:for #:test test
-    body0 body ...))
+    body ...))
 
 (define-syntax (stmt:for stx)
   (syntax-parse stx
     [(_ (~optional (~seq #:init init))
         (~optional (~seq #:test test))
         (~optional (~seq #:update update))
-        body0 body ...)
+        body ...)
      #`(let/ec escape
          #,(or (attribute init) '(void))
          (let loop ([rv (void)])
@@ -62,8 +63,8 @@
                                  #'(to-boolean
                                     (get-value test))
                                  #t)
-                           (begin
-                             body0 body ...)
+                           (stmt:block
+                            body ...)
                            (stmt:break))))])
               #,(or (attribute update) '(void))
               new-rv))))]))
