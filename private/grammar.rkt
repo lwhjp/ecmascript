@@ -12,9 +12,10 @@ eol-or-semicolon: EOL | ";" | INSERTED-SEMICOLON
 primary-expression: "this" | identifier | literal | array-literal
     | object-literal | "(" ws expression ws ")"
 identifier: IDENTIFIER
-literal: "null" | "true" | "false" | numeric | string
+literal: "null" | "true" | "false" | numeric | string | regexp
 numeric: NUMERIC
 string: STRING
+regexp: REGEXP
 array-literal: "[" [ws assignment-expression]
                    (ws "," [ws assignment-expression])* ws "]"
 object-literal: "{" (ws property-assignment ws ",")*

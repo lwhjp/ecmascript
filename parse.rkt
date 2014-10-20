@@ -88,10 +88,11 @@
     [(_ . _)
      (let ([subs (syntax->list stx)])
        (if (and (= 2 (length subs))
+                (identifier? (car subs))
                 (not
                  (memq (syntax-e (car subs))
                        '(program primary-expression
-                         identifier numeric string
+                         identifier numeric string regexp
                          statement variable-declaration-list
                          variable-declaration-list-no-in
                          variable-declaration
@@ -129,7 +130,7 @@
 (define (parse-expression stx)
   (define loc (stx-loc stx))
   (syntax-parse stx
-    #:datum-literals (primary-expression identifier numeric string
+    #:datum-literals (primary-expression identifier numeric string regexp
                       comma-expression member-expression new-expression
                       call-expression postfix-expression unary-expression
                       conditional-expression assignment-expression
@@ -143,6 +144,10 @@
      (ecma:expr:number loc (datum-intern-literal (syntax-e #'v)))]
     [(primary-expression (string v))
      (ecma:expr:string loc (datum-intern-literal (syntax-e #'v)))]
+    [(primary-expression (regexp (pattern flags)))
+     (ecma:expr:regexp loc
+                       (datum-intern-literal (syntax-e #'pattern))
+                       (syntax->datum #'flags))]
     [(primary-expression (~and ((~datum array-literal) . _) arry))
      (parse-array-literal #'arry)]
     [(primary-expression (~and ((~datum object-literal) . _) obj))

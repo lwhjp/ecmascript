@@ -68,6 +68,8 @@
     [(ecma:expr:bool loc v) (datum->syntax #f v loc)]
     [(ecma:expr:number loc v) (datum->syntax #f v loc)]
     [(ecma:expr:string loc v) (datum->syntax #f v loc)]
+    [(ecma:expr:regexp loc pattern flags)
+     (datum->syntax #f `(regexp ,pattern ,flags) loc)]
     [(ecma:expr:array loc elements)
      (datum->syntax #f
        `(array

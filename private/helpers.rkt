@@ -4,14 +4,19 @@
                      syntax/parse
                      syntax/stx)
          racket/class
+         racket/provide
          "array.rkt"
          "environment.rkt"
          "object.rkt"
          "types.rkt")
 
-(provide (all-defined-out))
+(provide (filtered-out
+          (λ (name)
+            (and (regexp-match? #rx"^ecma:" name)
+                 (substring name 5)))
+          (all-defined-out)))
 
-(define (array . elements)
+(define (ecma:array . elements)
   (let ([obj (new array%
                   [prototype array-prototype])])
     (for ([i (in-naturals)]
@@ -28,7 +33,7 @@
     (send obj put! "length" (length elements))
     obj))
 
-(define-syntax (object stx)
+(define-syntax (ecma:object stx)
   (define parse-name
     (syntax-parser
       [v:id (symbol->string (syntax-e #'v))]
@@ -66,3 +71,6 @@
                  pdesc
                  #f) ...
            obj))]))
+
+(define (ecma:regexp pattern flags)
+  (send (get-value (id RegExp)) construct pattern flags))

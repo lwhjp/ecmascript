@@ -13,6 +13,7 @@
 (struct expr:bool expr (value) #:transparent)
 (struct expr:number expr (value) #:transparent)
 (struct expr:string expr (value) #:transparent)
+(struct expr:regexp expr (pattern flags) #:transparent)
 (struct expr:array expr (elements) #:transparent)
 (struct expr:object expr (properties) #:transparent)
 (struct expr:fn expr (def) #:transparent)

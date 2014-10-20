@@ -41,6 +41,7 @@
 (define-runtime-module-path lib:math "lib/math.rkt")
 (define-runtime-module-path lib:number "lib/number.rkt")
 (define-runtime-module-path lib:object "lib/object.rkt")
+(define-runtime-module-path lib:regexp "lib/regexp.rkt")
 (define-runtime-module-path lib:string "lib/string.rkt")
 
 (for-each import-library
@@ -50,4 +51,5 @@
                 lib:math
                 lib:number
                 lib:object
+                lib:regexp
                 lib:string))

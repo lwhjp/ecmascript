@@ -63,7 +63,9 @@
   [hex-integer-literal (:: (:or "0x" "0X") (:+ (:/ #\0 #\9 #\a #\f #\A #\F)))]
   [string-literal
    (:or (:: #\" (:* (:or (:: #\\ any-char) (char-complement #\"))) #\")
-        (:: #\' (:* (:or (:: #\\ any-char) (char-complement #\'))) #\'))])
+        (:: #\' (:* (:or (:: #\\ any-char) (char-complement #\'))) #\'))]
+  [regexp-literal
+   (:: #\/ (:+ (:or (:: #\\ any-char) (char-complement #\/))) #\/ (:* identifier-part))])
 
 (define (parse-number s)
   (cond
@@ -106,6 +108,11 @@
          (parse-escape (substring s (caar escapes) (cdar escapes)))
          (loop (cdar escapes) (cdr escapes))))))
 
+(define (parse-regexp s)
+  (define m
+    (regexp-match #rx"^\\/(.+?)\\/([^\\/]*)$" s))
+  (list (cadr m) (caddr m)))
+
 (define lex
   (lexer-src-pos
    [(:or keyword future-reserved-word punctuator
@@ -114,6 +121,7 @@
    [identifier (token 'IDENTIFIER (string->symbol lexeme))]
    [numeric-literal (token 'NUMERIC (parse-number lexeme))]
    [string-literal (token 'STRING (parse-string lexeme))]
+   [regexp-literal (token 'REGEXP (parse-regexp lexeme))]
    [comment 'COMMENT]
    [line-terminator 'EOL]
    [(:+ white-space) 'WS]
