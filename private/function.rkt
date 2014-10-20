@@ -39,7 +39,7 @@
        (is-a? v ecma-object%)
        (let ([o (send this get "prototype")])
          (unless (is-a? o ecma-object%)
-           (raise-native-error 'type))
+           (raise-native-error 'type "not an object"))
          (let loop ([v v])
            (let ([v (get-field prototype v)])
              (and

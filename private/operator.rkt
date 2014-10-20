@@ -67,7 +67,7 @@
   (define lval (get-value a))
   (define rval (get-value b))
   (unless (is-a? rval function%)
-    (raise-native-error 'type))
+    (raise-native-error 'type "not a function"))
   (send rval has-instance? lval))
 
 (define (op:++ v)

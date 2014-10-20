@@ -91,7 +91,7 @@
    (make-native-function
     (λ (this)
       (unless (is-a? this ecma-object%)
-        (raise-native-error 'type))
+        (raise-native-error 'type "this: not an object"))
       (define name
         (let ([name (send this get "name")])
           (if (eq? 'undefined name)
@@ -115,4 +115,7 @@
      [(syntax) (throw-syntax-error message)]
      [(type) (throw-type-error message)]
      [(uri) (throw-uri-error message)]
-     [else (error 'native-error-handler "unknown error type: ~a" type)])))
+     [else
+      (error 'native-error-handler
+             "unknown error type: ~a"
+             type)])))

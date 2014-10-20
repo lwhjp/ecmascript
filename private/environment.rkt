@@ -31,7 +31,11 @@
       (let ([base (reference-base v)])
         (cond
           [(eq? 'undefined base)
-           (raise-native-error 'reference)]
+           (raise-native-error
+            'reference
+            (format
+             "~a: undefined"
+             (reference-name v)))]
           [(is-a? base environment-record%)
            (send base
                  get-binding-value
@@ -56,12 +60,12 @@
 
 (define (put-value! v w)
   (unless (reference? v)
-    (raise-native-error 'reference))
+    (raise-native-error 'reference "not a reference"))
   (let ([base (reference-base v)])
     (cond
       [(eq? 'undefined base)
        (if (reference-strict? v)
-           (raise-native-error 'reference)
+           (raise-native-error 'reference "not bound")
            (send global-object put!
                  (reference-name v)
                  w
@@ -92,7 +96,8 @@
                          call
                          base
                          w)
-                   (when throw? (raise-native-error 'type))))
+                   (when throw?
+                     (raise-native-error 'type))))
              (when throw?
                (raise-native-error 'type))))])))
 
@@ -124,13 +129,19 @@
         (if (mutable-binding? b)
             (set-mutable-binding-value! b v)
             (when s
-              (raise-native-error 'type)))))
+              (raise-native-error
+               'type
+               (format "~a: not a mutable binding" n))))))
     (define/override (get-binding-value n s)
       (let ([b (hash-ref bindings n)])
         (cond
           [(mutable-binding? b) (mutable-binding-value b)]
           [(immutable-binding? b) (immutable-binding-value b)]
-          [else (if s (raise-native-error 'reference) 'undefined)])))
+          [else (if s
+                    (raise-native-error
+                     'reference
+                     (format "~a: not bound" n))
+                    'undefined)])))
     (define/override (delete-binding! n)
       (let ([b (hash-ref bindings n #f)])
         (cond
@@ -169,7 +180,11 @@
     (define/override (get-binding-value n s)
       (if (send binding-object has-property? n)
           (send binding-object get n)
-          (if s (raise-native-error 'reference) 'undefined)))
+          (if s
+              (raise-native-error
+               'reference
+               (format "~a: undefined" n))
+              'undefined)))
     (define/override (delete-binding! n)
       (send binding-object delete! n #f))
     (define/override (implicit-this-value)

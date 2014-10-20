@@ -49,7 +49,7 @@
       (define o (to-object this))
       (define f (send o get "toString"))
       (unless (is-a? f function%)
-        (raise-native-error 'type))
+        (raise-native-error 'type "toString: not a function"))
       (send f call o)))]
   ["valueOf"
    (make-native-function

@@ -74,7 +74,9 @@
                               (configurable . #t))
                             throw?)))))
           (when throw?
-            (raise-native-error 'type))))
+            (raise-native-error
+             'type
+             (format "~a: can't put" p)))))
 
     (define/public (can-put? p)
       (let ([prop (send this get-own-property p)])
@@ -104,7 +106,10 @@
                 (begin
                   (hash-remove! properties p)
                   #t)
-                (and throw? (raise-native-error 'type)))
+                (and throw?
+                     (raise-native-error
+                      'type
+                      (format "~a: not configurable" p))))
             #t)))
 
     (define/public (default-value [hint 'number])
