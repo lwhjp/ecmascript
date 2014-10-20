@@ -9,7 +9,7 @@
 
 (provide (all-defined-out))
 
-(define (to-primitive v #:preferred-type [preferred #f])
+(define (to-primitive v [preferred #f])
   (if (is-a? v ecma-object%)
       (if preferred
           (send v default-value preferred)
@@ -71,7 +71,7 @@
        [(infinite? v) "Infinity"]
        [else (number->string v)])]
     [(string? v) v]
-    [(is-a? v ecma-object%) (to-string (to-primitive v #:preferred-type 'string))]))
+    [(is-a? v ecma-object%) (to-string (to-primitive v 'string))]))
 
 (define (to-object v)
   (cond
