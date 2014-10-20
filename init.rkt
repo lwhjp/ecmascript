@@ -39,6 +39,7 @@
 (define-runtime-module-path lib:error "lib/error.rkt")
 (define-runtime-module-path lib:function "lib/function.rkt")
 (define-runtime-module-path lib:math "lib/math.rkt")
+(define-runtime-module-path lib:number "lib/number.rkt")
 (define-runtime-module-path lib:object "lib/object.rkt")
 (define-runtime-module-path lib:string "lib/string.rkt")
 
@@ -47,5 +48,6 @@
                 lib:error
                 lib:function
                 lib:math
+                lib:number
                 lib:object
                 lib:string))
