@@ -35,6 +35,7 @@
   ; TODO: isFinite
   )
 
+(define-runtime-module-path lib:array "lib/array.rkt")
 (define-runtime-module-path lib:boolean "lib/boolean.rkt")
 (define-runtime-module-path lib:error "lib/error.rkt")
 (define-runtime-module-path lib:function "lib/function.rkt")
@@ -45,7 +46,8 @@
 (define-runtime-module-path lib:string "lib/string.rkt")
 
 (for-each import-library
-          (list lib:boolean
+          (list lib:array
+                lib:boolean
                 lib:error
                 lib:function
                 lib:math
