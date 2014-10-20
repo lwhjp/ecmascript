@@ -4,7 +4,8 @@
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
-         "../private/types.rkt")
+         "../private/types.rkt"
+         (prefix-in ecma: "../private/helpers.rkt"))
 
 (provide get-properties)
 
@@ -30,8 +31,41 @@
                   [class "Object"])]))])
     (make-native-constructor call construct)))
 
+(define (check-is-object o)
+  (unless (is-a? o ecma-object%)
+    (raise-native-error 'type "not an object")))
+
 (define-object-properties object-constructor
-  ["prototype" object-prototype])
+  ["prototype" object-prototype]
+  ["getPrototypeOf"
+   (native-method (this o)
+     (check-is-object o)
+     (get-field prototype o))]
+  ; TODO: getOwnPropertyDescriptor
+  ["getOwnPropertyNames"
+   (native-method (this o)
+     (check-is-object o)
+     (apply
+      ecma:array
+      (hash-keys (get-field properties o))))]
+  ; TODO: defineProperty
+  ; TODO: defineProperties
+  ; TODO: seal
+  ; TODO: freeze
+  ; TODO: preventExtensions
+  ["isExtensible"
+   (native-method (this o)
+     (check-is-object o)
+     (get-field extensible? o))]
+  ["keys"
+   (native-method (this o)
+     (check-is-object o)
+     (apply
+      ecma:array
+      (for/list ([(name prop) (in-hash
+                               (get-field properties o))]
+                 #:when (property-enumerable? prop))
+        name)))])
 
 (define-object-properties object-prototype
   ["constructor" object-constructor]
