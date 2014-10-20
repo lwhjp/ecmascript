@@ -207,7 +207,7 @@
      (datum->syntax #f
        (if label
            `(break ,label)
-           '(continue)))]
+           '(break)))]
     [(ecma:stmt:return loc expr)
      (datum->syntax #f
        (if expr
