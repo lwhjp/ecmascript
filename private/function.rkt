@@ -174,18 +174,31 @@
       [else arity])))
 
 (define (make-native-function proc)
-  (let ([f (new function%
-                [prototype function-prototype]
-                [call-proc proc])])
-    (send f define-own-property
-          "length"
-          `(data
-            (value . ,(sub1 (typical-arity proc)))
-            (writable . #f)
-            (enumerable . #f)
-            (configurable . #f))
-          #f)
-    f))
+  (define arity
+    (sub1 (typical-arity proc)))
+  (define wrapper
+    (λ (this . args)
+      (if (procedure-arity-includes? proc (add1 (length args)))
+          (apply proc this args)
+      (apply
+       proc
+       this
+       (for/list ([i (in-range arity)]
+                  [arg (in-sequences args (in-cycle '(undefined)))])
+         arg)))))
+  (define f
+    (new function%
+         [prototype function-prototype]
+         [call-proc wrapper]))
+  (send f define-own-property
+        "length"
+        `(data
+          (value . ,typical-arity)
+          (writable . #f)
+          (enumerable . #f)
+          (configurable . #f))
+        #f)
+  f)
 
 (define-syntax-rule (native-method args body0 body ...)
   (make-native-function
