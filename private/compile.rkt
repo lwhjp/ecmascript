@@ -1,10 +1,14 @@
 #lang racket/base
 
-(require racket/list
+(require racket/contract
+         racket/list
          racket/match
          (prefix-in ecma: "../ast.rkt"))
 
-(provide ecmascript->racket)
+(provide/contract
+ [ecmascript->racket
+  (-> (listof ecma:source-element?)
+      (listof syntax?))])
 
 (define (ecmascript->racket stx)
   (syntax->list

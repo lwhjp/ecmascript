@@ -25,13 +25,15 @@
 (define (ecma:eval prog
                    [scope ecma:global-object]
                    [namespace (make-global-namespace)])
-  (eval
-   #`(begin
-      #,@(ecmascript->racket
-          (with-input-from-string prog
-            (λ ()
-              (read-program)))))
-   namespace))
+  (let ([stx (with-input-from-string prog
+               (λ ()
+                 (read-program)))])
+    (if (eof-object? stx)
+        (void)
+        (eval
+         #`(begin
+             #,@(ecmascript->racket stx))
+         namespace))))
 
 (define-namespace-anchor here)
 (define-runtime-module-path-index main-module "main.rkt")

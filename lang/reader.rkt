@@ -8,12 +8,13 @@ ecmascript
          "../private/compile.rkt")
 
 (define (es-read in)
-  (syntax->datum
-   (es-read-syntax #f in)))
+  (let ([stx (es-read-syntax #f in)])
+    (if (eof-object? stx)
+        eof
+        (syntax->datum stx))))
 
 (define (es-read-syntax src in)
-  (define stx
-    (read-program src in))
-  (define compiled
-    (ecmascript->racket stx))
-  compiled)
+  (let ([ast (read-program src in)])
+    (if (eof-object? ast)
+        eof
+        (ecmascript->racket ast))))
