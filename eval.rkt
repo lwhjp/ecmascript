@@ -11,7 +11,8 @@
          racket/runtime-path
          racket/contract/base
          "parse.rkt"
-         "private/compile.rkt")
+         "private/compile.rkt"
+         "private/read.rkt")
 
 (provide (contract-out
           (rename ecma:eval eval
@@ -27,12 +28,11 @@
                    [namespace (make-global-namespace)])
   (let ([stx (with-input-from-string prog
                (λ ()
-                 (read-program)))])
+                 (ecma:read-syntax)))])
     (if (eof-object? stx)
         (void)
         (eval
-         #`(begin
-             #,@(ecmascript->racket stx))
+         #`(begin #,@stx)
          namespace))))
 
 (define-namespace-anchor here)
