@@ -115,6 +115,9 @@
 
 (define lex
   (lexer-src-pos
+   [(:+ white-space) 'WS]
+   [line-terminator 'EOL]
+   [comment 'COMMENT]
    [(:or keyword future-reserved-word punctuator
          div-punctuator null-literal boolean-literal)
     lexeme]
@@ -122,7 +125,4 @@
    [numeric-literal (token 'NUMERIC (parse-number lexeme))]
    [string-literal (token 'STRING (parse-string lexeme))]
    [regexp-literal (token 'REGEXP (parse-regexp lexeme))]
-   [comment 'COMMENT]
-   [line-terminator 'EOL]
-   [(:+ white-space) 'WS]
    [(eof) (return-without-pos 'EOF)]))
