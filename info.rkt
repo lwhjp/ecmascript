@@ -1,3 +1,3 @@
 #lang info
 (define collection "ecmascript")
-(define deps '("base" "parser-tools-lib" "ragg"))
+(define deps '("base" "math-lib" "parser-tools-lib" "ragg"))
