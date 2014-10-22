@@ -4,8 +4,10 @@
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
-         "../private/types.rkt"
-         [prefix-in ecma: "../private/helpers.rkt"])
+         (prefix-in ecma:
+                    (combine-in
+                     "../private/helpers.rkt"
+                     "../types.rkt")))
 
 (provide get-properties)
 
@@ -86,10 +88,10 @@
                (if (eq? 'undefined flags)
                    (get-field pattern pattern)
                    (raise-native-error 'type))]
-              [else (to-string pattern)]))
+              [else (ecma:to-string pattern)]))
           (make-regexp-object
            p
-           (if (eq? 'undefined flags) "" (to-string flags))
+           (if (eq? 'undefined flags) "" (ecma:to-string flags))
            regexp-prototype))])
     (make-native-constructor call construct)))
 
@@ -108,8 +110,8 @@
    (native-method (this)
      (string-append
       "/"
-      (to-string (send this get "source"))
+      (ecma:to-string (send this get "source"))
       "/"
-      (if (to-boolean (send this get "global")) "g" "")
-      (if (to-boolean (send this get "ignoreCase")) "i" "")
-      (if (to-boolean (send this get "multiline")) "m" "")))])
+      (if (ecma:to-boolean (send this get "global")) "g" "")
+      (if (ecma:to-boolean (send this get "ignoreCase")) "i" "")
+      (if (ecma:to-boolean (send this get "multiline")) "m" "")))])

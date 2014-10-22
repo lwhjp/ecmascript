@@ -11,6 +11,8 @@
 (provide function%
          constructor%
          activation%
+         function?
+         constructor?
          return
          function
          function-prototype
@@ -60,6 +62,12 @@
   (class ecma-object%
     (super-new [prototype #f]
                [class "Object"])))
+
+(define (function? v)
+  (is-a? v function%))
+
+(define (constructor? v)
+  (is-a? v constructor%))
 
 (define function-prototype
   (new function%

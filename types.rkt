@@ -1,13 +1,45 @@
 #lang racket/base
 
-(require racket/class
+(require (only-in racket/class
+                  is-a?
+                  send)
          racket/math
          racket/string
-         "error.rkt"
-         "global-object.rkt"
-         "object.rkt")
+         "private/error.rkt"
+         "private/global-object.rkt"
+         "private/object.rkt")
 
-(provide (all-defined-out))
+(provide (all-defined-out)
+         boolean?
+         number?
+         string?)
+
+(define undefined 'undefined)
+
+(define null 'null)
+
+(define (defined? v)
+  (not (eq? 'undefined v)))
+
+(define (undefined? v)
+  (eq? 'undefined v))
+
+(define (null? v)
+  (eq? 'null v))
+
+(define (primitive-value? v)
+  (or (undefined? v)
+      (null? v)
+      (boolean? v)
+      (number? v)
+      (string? v)))
+
+(define (object? v)
+  (is-a? v ecma-object%))
+
+(define (value? v)
+  (or (primitive-value? v)
+      (object? v)))
 
 (define (to-primitive v [preferred #f])
   (if (is-a? v ecma-object%)
@@ -23,7 +55,7 @@
     [(boolean? v) v]
     [(number? v) (not (or (zero? v) (nan? v)))]
     [(string? v) (not (string=? v ""))]
-    [(is-a? v ecma-object%) #t]))
+    [(object? v) #t]))
 
 (define (to-number v)
   (cond
@@ -32,7 +64,7 @@
     [(boolean? v) (if v 1 0)]
     [(number? v) v]
     [(string? v) (or (string->number (string-trim v)) +nan.0)]
-    [(is-a? v ecma-object%) (to-number (to-primitive v 'number))]))
+    [(object? v) (to-number (to-primitive v 'number))]))
 
 (define (to-integer v)
   (let ([v (to-number v)])
@@ -71,7 +103,7 @@
        [(infinite? v) "Infinity"]
        [else (number->string v)])]
     [(string? v) v]
-    [(is-a? v ecma-object%) (to-string (to-primitive v 'string))]))
+    [(object? v) (to-string (to-primitive v 'string))]))
 
 (define (to-object v)
   (cond
@@ -86,4 +118,4 @@
      (send (send global-object get "String")
            construct
            v)]
-    [(is-a? v ecma-object%) v]))
+    [(object? v) v]))

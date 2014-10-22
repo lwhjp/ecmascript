@@ -7,7 +7,7 @@
          "../private/function.rkt"
          "../private/object.rkt"
          "../private/statement.rkt"
-         "../private/types.rkt")
+         (prefix-in ecma: "../types.rkt"))
 
 (provide get-properties)
 
@@ -42,7 +42,7 @@
                       (if (eq? 'undefined message)
                           '()
                           `(("message" . ,(make-data-property
-                                           (to-string message)))))]))])
+                                           (ecma:to-string message)))))]))])
           (make-native-constructor call construct))])
     (define-object-properties prototype
       ["constructor" constructor]
@@ -94,14 +94,14 @@
         (raise-native-error 'type "this: not an object"))
       (define name
         (let ([name (send this get "name")])
-          (if (eq? 'undefined name)
+          (if (ecma:undefined? name)
               "Error"
-              (to-string name))))
+              (ecma:to-string name))))
       (define msg
         (let ([msg (send this get "message")])
-          (if (eq? 'undefined msg)
+          (if (ecma:undefined? msg)
               ""
-              (to-string msg))))
+              (ecma:to-string msg))))
       (cond
         [(string=? "" name) msg]
         [(string=? "" msg) name]

@@ -2,12 +2,11 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
-         racket/class
          racket/provide
          racket/stxparam
          "environment.rkt"
          "object.rkt"
-         "types.rkt")
+         "../types.rkt")
 
 (provide (filtered-out
           (λ (name)

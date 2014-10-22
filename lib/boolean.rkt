@@ -3,7 +3,7 @@
 (require racket/class
          "../private/function.rkt"
          "../private/object.rkt"
-         "../private/types.rkt")
+         (prefix-in ecma: "../types.rkt"))
 
 (provide get-properties)
 
@@ -23,10 +23,10 @@
   (letrec
       ([call
         (λ (this [value #f])
-          (to-boolean value))]
+          (ecma:to-boolean value))]
        [construct
         (λ ([value #f])
-          (instantiate boolean% ((to-boolean value))
+          (instantiate boolean% ((ecma:to-boolean value))
             [prototype boolean-prototype]))])
     (make-native-constructor call construct)))
 

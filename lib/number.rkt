@@ -4,7 +4,7 @@
          racket/class
          "../private/function.rkt"
          "../private/object.rkt"
-         "../private/types.rkt")
+         (prefix-in ecma: "../types.rkt"))
 
 (provide get-properties)
 
@@ -24,10 +24,10 @@
   (letrec
       ([call
         (λ (this [value 0])
-          (to-number value))]
+          (ecma:to-number value))]
        [construct
         (λ ([value 0])
-          (instantiate number% ((to-number value))
+          (instantiate number% ((ecma:to-number value))
             [prototype number-prototype]))])
     (make-native-constructor call construct)))
 
@@ -43,11 +43,11 @@
   ["constructor" number-constructor]
   ["toString"
    (native-method (this radix)
-     (if (= 10 (to-number radix))
-         (to-string (get-field value this))
+     (if (= 10 (ecma:to-number radix))
+         (ecma:to-string (get-field value this))
          (number->string
           (get-field value this)
-          (to-number radix))))]
+          (ecma:to-number radix))))]
   ["toLocaleString"
    (native-method (this)
      (number->string (get-field value this)))]
@@ -58,7 +58,7 @@
    (native-method (this fractionDigits)
      (real->decimal-string
       (get-field value this)
-      (to-integer fractionDigits)))]
+      (ecma:to-integer fractionDigits)))]
   ["toExponential"
    (native-method (this fractionDigits)
      (number->string (get-field value this)))]

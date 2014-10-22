@@ -1,13 +1,13 @@
 #lang racket/base
 
-(require racket/class
+(require (only-in racket/class is-a? send)
          racket/math
          racket/provide
          "environment.rkt"
          "error.rkt"
          "function.rkt"
          "object.rkt"
-         "types.rkt"
+         "../types.rkt"
          (for-syntax racket/base))
 
 (provide (filtered-out

@@ -7,7 +7,7 @@
          "error.rkt"
          "global-object.rkt"
          "object.rkt"
-         "types.rkt")
+         (prefix-in ecma: "../types.rkt"))
 
 (provide (struct-out reference)
          get-value
@@ -44,7 +44,7 @@
           [(is-a? base ecma-object%)
            (send base get (reference-name v))]
           [else
-           (let ([o (to-object base)]
+           (let ([o (ecma:to-object base)]
                  [p (reference-name v)])
              (let ([prop (send o get-property p)])
                (cond
@@ -83,7 +83,7 @@
              w
              (reference-strict? v))]
       [else
-       (let ([o (to-object base)]
+       (let ([o (ecma:to-object base)]
              [p (reference-name v)]
              [throw? (reference-strict? v)])
          (if (and

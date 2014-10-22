@@ -1,16 +1,16 @@
 #lang racket/base
 
-(require racket/class
+(require (only-in racket/class is-a? send)
          racket/string
          "../private/array.rkt"
          "../private/environment.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
-         "../private/types.rkt"
          [prefix-in ecma:
                     (combine-in
                      "../private/expression.rkt"
-                     "../private/helpers.rkt")])
+                     "../private/helpers.rkt"
+                     "../types.rkt")])
 
 (provide get-properties)
 
@@ -37,7 +37,7 @@
   ["constructor" array-constructor]
   ["toString"
    (native-method (this)
-     (let* ([array (to-object this)]
+     (let* ([array (ecma:to-object this)]
             [func (send array get "join")])
        (if (is-a? func function%)
            (send func call this)
@@ -56,16 +56,16 @@
    (native-method (this separator)
      (string-join
       (for/list ([i (in-range
-                     (to-uint32
+                     (ecma:to-uint32
                       (send this get "length")))])
         (let ([elt (send this get (number->string i))])
-          (if (or (eq? 'undefined elt)
-                  (eq? 'null elt))
+          (if (or (ecma:undefined? elt)
+                  (ecma:null? elt))
               ""
-              (to-string elt))))
+              (ecma:to-string elt))))
       (if (eq? 'undefined separator)
           ","
-          (to-string separator))))]
+          (ecma:to-string separator))))]
   ; TODO: pop
   ; TODO: push
   ; TODO: reverse

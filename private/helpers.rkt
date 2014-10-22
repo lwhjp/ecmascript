@@ -8,7 +8,7 @@
          "array.rkt"
          "environment.rkt"
          "object.rkt"
-         "types.rkt")
+         (prefix-in ecma: "../types.rkt"))
 
 (provide (filtered-out
           (λ (name)
@@ -23,7 +23,7 @@
           [elt (in-list elements)]
           #:unless (eq? 'undefined elt))
       (send obj define-own-property
-            (to-string i)
+            (ecma:to-string i)
             `(data
               (value . ,elt)
               (writable . #t)

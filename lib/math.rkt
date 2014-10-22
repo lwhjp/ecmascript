@@ -4,7 +4,7 @@
          racket/math
          "../private/function.rkt"
          "../private/object.rkt"
-         "../private/types.rkt")
+         (prefix-in ecma: "../types.rkt"))
 
 (provide get-properties)
 
@@ -18,7 +18,7 @@
 
 (define-syntax-rule (wrap-math fn arg ...)
   (native-method (this arg ...)
-    (fn (to-number arg) ...)))
+    (fn (ecma:to-number arg) ...)))
 
 (define-object-properties math
   ["E" (exp 1)]

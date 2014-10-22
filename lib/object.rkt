@@ -4,8 +4,10 @@
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
-         "../private/types.rkt"
-         (prefix-in ecma: "../private/helpers.rkt"))
+         (prefix-in ecma:
+                    (combine-in
+                     "../private/helpers.rkt"
+                     "../types.rkt")))
 
 (provide get-properties)
 
@@ -24,7 +26,7 @@
             [(or (string? value)
                  (boolean? value)
                  (number? value))
-             (to-object value)]
+             (ecma:to-object value)]
             [else
              (new ecma-object%
                   [prototype object-prototype]
@@ -76,11 +78,11 @@
         [(eq? 'undefined this) "[object Undefined]"]
         [(eq? 'null this) "[object Null]"]
         [(format "[object ~a]"
-                 (get-field class (to-object this)))])))]
+                 (get-field class (ecma:to-object this)))])))]
   ["toLocaleString"
    (make-native-function
     (λ (this)
-      (define o (to-object this))
+      (define o (ecma:to-object this))
       (define f (send o get "toString"))
       (unless (is-a? f function%)
         (raise-native-error 'type "toString: not a function"))
@@ -88,19 +90,19 @@
   ["valueOf"
    (make-native-function
     (λ (this)
-      (to-object this)))]
+      (ecma:to-object this)))]
   ["hasOwnProperty"
    (make-native-function
     (λ (this v)
       (property?
-       (send (to-object this)
+       (send (ecma:to-object this)
              get-own-property
-             (to-string v)))))]
+             (ecma:to-string v)))))]
   ["isPrototypeOf"
    (make-native-function
     (λ (this v)
       (and (is-a? v ecma-object%)
-           (let ([o (to-object this)])
+           (let ([o (ecma:to-object this)])
              (let loop ([v (get-field prototype v)])
                (and (not (eq? 'null v))
                     (or (eq? o v)
@@ -109,8 +111,8 @@
    (make-native-function
     (λ (this v)
       (define prop
-        (send (to-object this)
+        (send (ecma:to-object this)
               get-own-property
-              (to-string v)))
+              (ecma:to-string v)))
       (and (property? prop)
            (property-enumerable? prop))))])
