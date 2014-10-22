@@ -182,7 +182,7 @@
 
 @defstruct*[(stmt:debugger stmt) ()]{}
 
-@subsection{Functions}
+@subsection{Function definitions}
 
 @defstruct*[(fn syntax-element)
             ([name symbol?]

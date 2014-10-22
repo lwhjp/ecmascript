@@ -18,7 +18,6 @@
          global-environment
          variable-environment
          lexical-environment
-         this-binding
          begin-scope
          id
          declare-vars
@@ -217,9 +216,6 @@
 
 (define-syntax-parameter lexical-environment
   (make-rename-transformer #'global-environment))
-
-(define-syntax-parameter this-binding
-  (make-rename-transformer #'global-object))
 
 (define-syntax (begin-scope stx)
   (syntax-case stx ()

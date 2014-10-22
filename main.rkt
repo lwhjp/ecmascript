@@ -1,10 +1,10 @@
 #lang racket/base
 
 (require "eval.rkt"
+         "function.rkt"
          "init.rkt"
          "private/environment.rkt"
          "private/expression.rkt"
-         "private/function.rkt"
          "private/helpers.rkt"
          "private/operator.rkt"
          "private/statement.rkt")
@@ -16,6 +16,9 @@
                        "private/statement.rkt")
          function
          return
+         this
+         call
+         new
 
          (rename-out
           [ecma:module-begin #%module-begin]
