@@ -8,7 +8,6 @@
          "../private/object.rkt"
          [prefix-in ecma:
                     (combine-in
-                     "../private/expression.rkt"
                      "../private/helpers.rkt"
                      "../types.rkt")])
 
@@ -42,9 +41,9 @@
        (if (is-a? func function%)
            (send func call this)
            (send (get-value
-                  (ecma:member
-                   (ecma:member (id Object)
-                                "prototype")
+                  (member
+                   (member (id Object)
+                           "prototype")
                    "toString"))
                  call
                  this))))]

@@ -4,13 +4,11 @@
          "function.rkt"
          "init.rkt"
          "private/environment.rkt"
-         "private/expression.rkt"
          "private/helpers.rkt"
          "private/operator.rkt"
          "private/statement.rkt")
 
 (provide (all-from-out "private/environment.rkt"
-                       "private/expression.rkt"
                        "private/helpers.rkt"
                        "private/operator.rkt"
                        "private/statement.rkt")

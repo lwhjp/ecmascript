@@ -20,6 +20,7 @@
          lexical-environment
          begin-scope
          id
+         member
          declare-vars
          declare-fn)
 
@@ -246,6 +247,12 @@
   (create-variables!
    variable-environment
    '(id ...)))
+
+(define (member obj id)
+  (reference
+   (ecma:to-object (get-value obj))
+   (ecma:to-string (get-value id))
+   #f))
 
 (define (create-function! env-rec id fn)
   (let ([name (symbol->string id)])
