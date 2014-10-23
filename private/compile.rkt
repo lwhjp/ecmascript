@@ -11,8 +11,7 @@
       (listof syntax?))])
 
 (define (ecmascript->racket stx)
-  (syntax->list
-   (compile-program stx)))
+  (list (compile-program stx)))
 
 (define (extract-statement-vars stmt)
   (match stmt
@@ -264,7 +263,7 @@
     [(ecma:fn loc _ params body)
      (datum->syntax #f
        `(function ,params
-          (declare-vars ,(extract-vars body))
+          #:vars ,(extract-vars body)
           ,@(map
              (λ (fn)
                `(declare-fn
@@ -279,7 +278,8 @@
 
 (define (compile-program prog)
   (datum->syntax #f
-    `((declare-vars ,(extract-vars prog))
+    `(begin-scope global-object
+       #:vars ,(extract-vars prog)
       ,@(map
          (λ (fn)
            `(declare-fn

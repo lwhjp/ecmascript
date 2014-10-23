@@ -111,9 +111,15 @@ This module contains definitions which conflict with the
 
 @defmodule[ecmascript/function]
 
-@defform[(function (id ...) body ...)]{
+@defform[(function (id ...) maybe-vars body ...+)
+         #:grammar
+         [(maybe-vars (code:line) (code:line #:vars (var-id ...)))]]{
   Produces an ECMAScript function. Each parameter @racket[id] is bound
-  in the ECMAScript environment, but is not bound as a Racket variable.
+  as a parameter in the ECMAScript environment, but is not bound as a
+  Racket variable.
+
+  If @racket[maybe-vars] is provided, each @racket[var-id] is
+  initialized as an ECMAScript variable binding.
 }
 
 @defform*[((return)

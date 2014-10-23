@@ -29,6 +29,10 @@
     [(_) (void)]
     [(_ stmt ...) (begin stmt ...)]))
 
+(define-syntax-rule (var [var-id init] ...)
+  (begin
+    (put-value! (id var-id) (get-value init)) ...))
+
 (define (stmt:empty-statement)
   (void))
 

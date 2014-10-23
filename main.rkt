@@ -4,14 +4,23 @@
          "function.rkt"
          "init.rkt"
          "private/environment.rkt"
+         "private/global-object.rkt"
          "private/helpers.rkt"
          "private/operator.rkt"
          "private/statement.rkt")
 
-(provide (all-from-out "private/environment.rkt"
-                       "private/helpers.rkt"
+(provide (all-from-out "private/helpers.rkt"
                        "private/operator.rkt"
                        "private/statement.rkt")
+         ; TODO: several of these should be removed
+         global-object
+         get-value
+         put-value!
+         begin-scope
+         id
+         member
+         declare-fn
+
          function
          return
          this

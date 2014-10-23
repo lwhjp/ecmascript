@@ -36,11 +36,13 @@
 
 (define-syntax function
   (syntax-parser
-   [(_ params) #'(function params (void))]
-   [(_ (~! param:id ...) body:expr ...+)
-    #'(make-function '(param ...)
+   [(_ (~! param:id ...)
+       (~optional (~seq #:vars (var-id:id ...)))
+       body:expr ...+)
+    #`(make-function '(param ...)
         (λ (this-arg activation)
           (begin-scope activation
+            #,@(if (attribute var-id) #'(#:vars (var-id ...)) #'())
             (let/ec escape
               (syntax-parameterize
                   ([this (make-rename-transformer #'this-arg)]

@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require (for-syntax racket/base)
+(require (for-syntax racket/base
+                     syntax/parse)
          racket/class
          racket/match
          racket/stxparam
@@ -21,7 +22,6 @@
          begin-scope
          id
          member
-         declare-vars
          declare-fn)
 
 (struct reference (base name strict?) #:transparent)
@@ -219,13 +219,16 @@
   (make-rename-transformer #'global-environment))
 
 (define-syntax (begin-scope stx)
-  (syntax-case stx ()
-    [(_ obj form0 form ...)
-     #'(let ([new-scope (new-object-environment obj lexical-environment)])
+  (syntax-parse stx
+    [(_ scope-obj (~optional (~seq #:vars (var-id:id ...))) form ...)
+     #'(let ([new-scope (new-object-environment
+                         scope-obj
+                         lexical-environment)])
          (syntax-parameterize
-          ([variable-environment (make-rename-transformer #'new-scope)]
-           [lexical-environment (make-rename-transformer #'new-scope)])
-          form0 form ...))]))
+             ([variable-environment (make-rename-transformer #'new-scope)]
+              [lexical-environment (make-rename-transformer #'new-scope)])
+           (create-variables! variable-environment '(var-id ...))
+           form ...))]))
 
 (define-syntax (id stx)
   (syntax-case stx ()
@@ -242,11 +245,6 @@
 (define (create-variables! env-rec ids)
   (for ([id (in-list (map symbol->string ids))])
     (send env-rec create-mutable-binding! id #f)))
-
-(define-syntax-rule (declare-vars (id ...))
-  (create-variables!
-   variable-environment
-   '(id ...)))
 
 (define (member obj id)
   (reference
