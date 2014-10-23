@@ -25,16 +25,14 @@
 
 (define-syntax return
   (λ (stx)
-    (syntax-parse stx
-      [(_ (~optional v))
-       (unless (syntax-parameter-value #'return-binding)
-         (raise-syntax-error
-          #f
-          "not permitted outside of function body"
-          stx))
-       (if (attribute v)
-           #'(return-binding (get-value v))
-           #'(return-binding))])))
+    (unless (syntax-parameter-value #'return-binding)
+      (raise-syntax-error
+       #f
+       "not permitted outside of function body"
+       stx))
+    (syntax-case stx ()
+      [(_) #'(return-binding)]
+      [(_ v) #'(return-binding (get-value v))])))
 
 (define-syntax function
   (syntax-parser
