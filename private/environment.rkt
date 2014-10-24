@@ -8,8 +8,7 @@
          "object.rkt"
          (prefix-in ecma: "../types.rkt"))
 
-(provide (struct-out reference)
-         get-value
+(provide get-value
          put-value!
          environment-record%
          new-declarative-environment
@@ -21,28 +20,26 @@
          create-variables!
          member)
 
-(struct reference (base name strict?) #:transparent)
-
 (define (get-value v)
-  (if (reference? v)
-      (let ([base (reference-base v)])
+  (if (ecma:reference? v)
+      (let ([base (ecma:reference-base v)])
         (cond
           [(eq? 'undefined base)
            (raise-native-error
             'reference
             (format
              "~a: undefined"
-             (reference-name v)))]
+             (ecma:reference-name v)))]
           [(is-a? base environment-record%)
            (send base
                  get-binding-value
-                 (reference-name v)
-                 (reference-strict? v))]
+                 (ecma:reference-name v)
+                 (ecma:reference-strict? v))]
           [(is-a? base ecma-object%)
-           (send base get (reference-name v))]
+           (send base get (ecma:reference-name v))]
           [else
            (let ([o (ecma:to-object base)]
-                 [p (reference-name v)])
+                 [p (ecma:reference-name v)])
              (let ([prop (send o get-property p)])
                (cond
                  [(data-property? prop)
@@ -56,33 +53,33 @@
       v))
 
 (define (put-value! v w)
-  (unless (reference? v)
+  (unless (ecma:reference? v)
     (raise-native-error 'reference "not a reference"))
-  (let ([base (reference-base v)])
+  (let ([base (ecma:reference-base v)])
     (cond
       [(eq? 'undefined base)
-       (if (reference-strict? v)
+       (if (ecma:reference-strict? v)
            (raise-native-error 'reference "not bound")
            (send global-object put!
-                 (reference-name v)
+                 (ecma:reference-name v)
                  w
                  #f))]
       [(is-a? base environment-record%)
        (send base
              set-mutable-binding!
-             (reference-name v)
+             (ecma:reference-name v)
              w
-             (reference-strict? v))]
+             (ecma:reference-strict? v))]
       [(is-a? base ecma-object%)
        (send base
              put!
-             (reference-name v)
+             (ecma:reference-name v)
              w
-             (reference-strict? v))]
+             (ecma:reference-strict? v))]
       [else
        (let ([o (ecma:to-object base)]
-             [p (reference-name v)]
-             [throw? (reference-strict? v)])
+             [p (ecma:reference-name v)]
+             [throw? (ecma:reference-strict? v)])
          (if (and
               (send o can-put? p)
               (not (data-property?
@@ -198,9 +195,9 @@
 
 (define (get-identifier-reference lex name strict?)
   (if (eq? 'null lex)
-      (reference 'undefined name strict?)
+      (ecma:reference 'undefined name strict?)
       (if (send lex has-binding? name)
-          (reference lex name strict?)
+          (ecma:reference lex name strict?)
           (get-identifier-reference
            (get-field outer lex)
            name
@@ -232,7 +229,7 @@
     (send env-rec create-mutable-binding! id #f)))
 
 (define (member obj id)
-  (reference
+  (ecma:reference
    (ecma:to-object (get-value obj))
    (ecma:to-string (get-value id))
    #f))

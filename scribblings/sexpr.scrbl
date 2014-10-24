@@ -64,6 +64,13 @@ This module contains definitions which conflict with the
   @racket[primitive-value?] or @racket[object?] is true), @racket[#f] otherwise.
 }
 
+@defstruct[reference
+           ([base (or/c object? (is-a?/c environment-record%) undefined?)]
+            [name string?]
+            [strict? boolean?])]{
+  An ECMAScript reference.
+}
+
 @defproc[(to-primitive [v value?] [preferred (or/c 'number 'string #f) #f]) primitive-value?]{
   Converts @racket[v] to a primitive value. If @racket[preferred] is
   @racket['number] or @racket['string], the conversion process may

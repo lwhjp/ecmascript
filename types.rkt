@@ -41,6 +41,8 @@
   (or (primitive-value? v)
       (object? v)))
 
+(struct reference (base name strict?) #:transparent)
+
 (define (to-primitive v [preferred #f])
   (if (is-a? v ecma-object%)
       (if preferred
