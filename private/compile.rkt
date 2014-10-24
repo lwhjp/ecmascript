@@ -51,13 +51,6 @@
     extract-statement-vars
     elts)))
 
-(define (extract-functions elts)
-  (filter-map
-   (match-lambda
-     [(ecma:decl:fn _ def) def]
-     [_ #f])
-   elts))
-
 (define (add-prefix pref sym)
   (string->symbol
    (string-append (symbol->string pref)
@@ -258,36 +251,28 @@
           `(block ,@assignments))
       loc)))
 
+(define (compile-body elts)
+  (map
+   (match-lambda
+     [(? ecma:stmt? stmt) (compile-statement stmt)]
+     [(? ecma:decl:fn? fn) (compile-function (ecma:decl:fn-def fn))])
+   elts))
+
 (define (compile-function stx)
-  (match stx
-    [(ecma:fn loc _ params body)
-     (datum->syntax #f
-       `(function ,params
-          #:vars ,(extract-vars body)
-          ,@(map
-             (λ (fn)
-               `(declare-fn
-                 ,(ecma:fn-name fn)
-                 ,(compile-function fn)))
-             (extract-functions body))
-          ,@(filter-map
-             (λ (elt)
-               (and (ecma:stmt? elt)
-                    (compile-statement elt)))
-             body)))]))
+  (match-define (ecma:fn loc name params body) stx)
+  (let ([vars (extract-vars body)]
+        [compiled-body (compile-body body)])
+    (datum->syntax #f
+      (if name
+          `(function ,name ,params
+                     #:vars ,vars
+             ,@compiled-body)
+          `(function ,params
+                     #:vars ,vars
+             ,@compiled-body)))))
 
 (define (compile-program prog)
   (datum->syntax #f
     `(begin-scope global-object
        #:vars ,(extract-vars prog)
-      ,@(map
-         (λ (fn)
-           `(declare-fn
-             ,(ecma:fn-name fn)
-             ,(compile-function fn)))
-         (extract-functions prog))
-      ,@(filter-map
-         (λ (elt)
-           (and (ecma:stmt? elt)
-                (compile-statement elt)))
-         prog))))
+       ,@(compile-body prog))))

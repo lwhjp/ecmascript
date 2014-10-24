@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require (for-syntax racket/base)
+(require (for-syntax racket/base
+                     syntax/parse)
          racket/class
          racket/list
          racket/stxparam
@@ -13,6 +14,10 @@
          activation%
          function-prototype
          make-function
+         this-binding
+         return
+         function
+         begin-scope
          make-native-constructor
          make-native-function
          native-method)
@@ -152,6 +157,75 @@
                        (cons arg val)))])
     (for ([(id val) (in-hash arg-map)])
       (send obj put! (symbol->string id) val))))
+
+(define-syntax-parameter this-binding
+  (make-rename-transformer #'global-object))
+
+(define-syntax-parameter return-binding #f)
+
+(define-syntax return
+  (λ (stx)
+    (unless (syntax-parameter-value #'return-binding)
+      (raise-syntax-error
+       #f
+       "not permitted outside of function body"
+       stx))
+    (syntax-case stx ()
+      [(_) #'(return-binding)]
+      [(_ v) #'(return-binding (get-value v))])))
+
+(define-syntax function
+  (syntax-parser
+   [(_ (~! param:id ...)
+       (~optional (~seq #:vars (var-id:id ...)))
+       body:expr ...+)
+    #`(make-function '(param ...)
+        (λ (this-arg activation)
+          (begin-scope activation
+            #,@(if (attribute var-id) #'(#:vars (var-id ...)) #'())
+            (let/ec escape
+              (syntax-parameterize
+                  ([this-binding (make-rename-transformer #'this-arg)]
+                   [return-binding (make-rename-transformer #'escape)])
+                body ...)))))]))
+
+(define-syntax (begin-scope stx)
+  (syntax-parse stx
+    [(_ scope-obj (~optional (~seq #:vars (var-id:id ...))) form ...)
+     #'(let ([new-scope (new-object-environment
+                         scope-obj
+                         lexical-environment)])
+         (syntax-parameterize
+             ([variable-environment (make-rename-transformer #'new-scope)]
+              [lexical-environment (make-rename-transformer #'new-scope)])
+           (reorder-functions () ()
+             (create-variables! variable-environment '(var-id ...))
+             form ...)))]))
+
+(define-syntax reorder-functions
+  (syntax-parser
+   #:literals (function)
+   [(_ ([fn-id fn-def] ...) (form ...))
+    #'(begin
+        (create-function! variable-environment 'fn-id fn-def) ...
+        form ...)]
+   [(_ (fns ...) collected-forms
+       (function fn-id:id . rest)
+       form ...)
+    #'(reorder-functions (fns ... [fn-id (function . rest)])
+                         collected-forms
+        form ...)]
+   [(_ collected-fns (collected-form ...)
+       form rest ...)
+    #'(reorder-functions collected-fns
+                         (collected-form ... form)
+        rest ...)]))
+
+(define (create-function! env-rec id fn)
+  (let ([name (symbol->string id)])
+    (void
+     (send env-rec create-mutable-binding! name #f)
+     (send env-rec set-mutable-binding! name fn #f))))
 
 (define (make-native-constructor call-proc construct-proc)
   (new native-constructor%

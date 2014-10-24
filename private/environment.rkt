@@ -1,9 +1,7 @@
 #lang racket/base
 
-(require (for-syntax racket/base
-                     syntax/parse)
+(require (for-syntax racket/base)
          racket/class
-         racket/match
          racket/stxparam
          "error.rkt"
          "global-object.rkt"
@@ -19,10 +17,9 @@
          global-environment
          variable-environment
          lexical-environment
-         begin-scope
          id
-         member
-         declare-fn)
+         create-variables!
+         member)
 
 (struct reference (base name strict?) #:transparent)
 
@@ -218,18 +215,6 @@
 (define-syntax-parameter lexical-environment
   (make-rename-transformer #'global-environment))
 
-(define-syntax (begin-scope stx)
-  (syntax-parse stx
-    [(_ scope-obj (~optional (~seq #:vars (var-id:id ...))) form ...)
-     #'(let ([new-scope (new-object-environment
-                         scope-obj
-                         lexical-environment)])
-         (syntax-parameterize
-             ([variable-environment (make-rename-transformer #'new-scope)]
-              [lexical-environment (make-rename-transformer #'new-scope)])
-           (create-variables! variable-environment '(var-id ...))
-           form ...))]))
-
 (define-syntax (id stx)
   (syntax-case stx ()
     [(_ sym)
@@ -251,15 +236,3 @@
    (ecma:to-object (get-value obj))
    (ecma:to-string (get-value id))
    #f))
-
-(define (create-function! env-rec id fn)
-  (let ([name (symbol->string id)])
-    (void
-     (send env-rec create-mutable-binding! name #f)
-     (send env-rec set-mutable-binding! name fn #f))))
-
-(define-syntax-rule (declare-fn id fn)
-  (create-function!
-   variable-environment
-   'id
-   fn))

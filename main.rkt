@@ -4,6 +4,7 @@
          "function.rkt"
          "init.rkt"
          "private/environment.rkt"
+         "private/function.rkt"
          "private/global-object.rkt"
          "private/helpers.rkt"
          "private/operator.rkt"
@@ -19,7 +20,6 @@
          begin-scope
          id
          member
-         declare-fn
 
          function
          return
