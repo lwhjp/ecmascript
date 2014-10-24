@@ -2,9 +2,11 @@
 
 @title{ECMAScript}
 
-@section{Overview}
-
 See the spec at @url{http://www.ecma-international.org/ecma-262/5.1/}.
+
+@(table-of-contents)
+
+@include-section["types.scrbl"]
 
 @include-section["syntax.scrbl"]
 

@@ -3,6 +3,7 @@
 (require "eval.rkt"
          "function.rkt"
          "init.rkt"
+         "types.rkt"
          "private/environment.rkt"
          "private/function.rkt"
          "private/global-object.rkt"
@@ -20,6 +21,9 @@
          begin-scope
          id
          member
+
+         undefined
+         null
 
          function
          return
