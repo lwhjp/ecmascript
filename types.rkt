@@ -115,7 +115,10 @@
      (send (send global-object get "Boolean")
            construct
            v)]
-    [(number? v) (error 'TODO)]
+    [(number? v)
+     (send (send global-object get "Number")
+           construct
+           v)]
     [(string? v)
      (send (send global-object get "String")
            construct
