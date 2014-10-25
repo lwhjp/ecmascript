@@ -211,20 +211,28 @@
 
 (define-syntax function
   (syntax-parser
-   [(_ (~! param:id ...)
+   [(_ (~optional name:id)
+       (param:id ...)
        (~optional (~seq #:vars (var-id:id ...)))
        body:expr ...+)
-    #`(make-function '(param ...)
-        (λ (this-arg bind-args)
-          (let ([local-env (new-declarative-environment lexical-environment)])
-            (bind-args local-env)
-            (begin-scope local-env
-              #,@(if (attribute var-id) #'(#:vars (var-id ...)) #'())
-              (let/ec escape
-                (syntax-parameterize
-                    ([this-binding (make-rename-transformer #'this-arg)]
-                     [return-binding (make-rename-transformer #'escape)])
-                  body ...))))))]))
+    #`(let ([scope-env (new-declarative-environment lexical-environment)])
+        (let ([f (make-function '(param ...)
+                   (λ (this-arg bind-args)
+                     (let ([local-env (new-declarative-environment scope-env)])
+                       (bind-args local-env)
+                       (begin-scope local-env
+                         #,@(if (attribute var-id) #'(#:vars (var-id ...)) #'())
+                         (let/ec escape
+                           (syntax-parameterize
+                               ([this-binding (make-rename-transformer #'this-arg)]
+                                [return-binding (make-rename-transformer #'escape)])
+                             body ...))))))])
+          #,@(if (attribute name)
+                 (with-syntax ([idstr (symbol->string (syntax-e (attribute name)))])
+                   #'((send scope-env create-immutable-binding! idstr)
+                      (send scope-env initialize-immutable-binding! idstr f)))
+                 #'())
+          f))]))
 
 (define-syntax (begin-scope stx)
   (syntax-parse stx
