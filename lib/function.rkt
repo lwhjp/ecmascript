@@ -1,7 +1,11 @@
 #lang racket/base
 
-(require "../private/function.rkt"
-         "../private/object.rkt")
+(require racket/match
+         racket/string
+         "../private/function.rkt"
+         "../private/object.rkt"
+         "../eval.rkt"
+         "../types.rkt")
 
 (provide get-properties)
 
@@ -15,7 +19,15 @@
           (apply construct args))]
        [construct
         (λ args
-          (error 'todo))])
+          (define-values (params body)
+            (match args
+              [(list) (values "" "")]
+              [(list ps ... body)
+               (values (string-join (map to-string ps) ",")
+                       (to-string body))]))
+          (let ([def (format "function(~a){~a};" params body)])
+            (displayln def)
+            (eval def)))])
     (make-native-constructor call construct)))
 
 (define-object-properties function-constructor
