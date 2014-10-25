@@ -2,6 +2,7 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
+         (only-in racket/class get-field send)
          racket/provide
          racket/stxparam
          "environment.rkt"
