@@ -5,8 +5,10 @@
          racket/class
          racket/list
          racket/stxparam
+         (prefix-in ecma: "../types.rkt")
          "environment.rkt"
          "error.rkt"
+         "global-object.rkt"
          "object.rkt")
 
 (provide function%
@@ -32,9 +34,14 @@
     (super-new [class "Function"])
 
     (define/public (call this-arg . args)
-      (let ([activation (make-activation-object this args)])
-        (create-arguments! activation formal-parameters args)
-        (call-proc this-arg activation)))
+      (call-proc
+       (cond
+         [(or (ecma:null? this-arg) (ecma:undefined? this-arg))
+          global-object]
+         [(ecma:object? this-arg) this-arg]
+         [else (ecma:to-object this-arg)])
+       (λ (env)
+         (bind-arguments! env args))))
 
     (define/public (has-instance? v)
       (and
@@ -47,7 +54,20 @@
              (and
               v
               (or (eq? o v)
-                  (loop v))))))))))
+                  (loop v))))))))
+
+    (define (bind-arguments! env args)
+      (for ([arg-name (in-list (map symbol->string formal-parameters))]
+            [v (in-sequences (in-list args)
+                             (in-cycle (list ecma:undefined)))])
+        (unless (send env has-binding? arg-name)
+          (send env create-mutable-binding! arg-name))
+        (send env set-mutable-binding! arg-name v #f))
+      (unless (send env has-binding? "arguments")
+          (send env create-immutable-binding! "arguments"))
+        (send env initialize-immutable-binding!
+              "arguments"
+              (make-arguments-object this args)))))
 
 (define constructor%
   (class function%
@@ -95,23 +115,48 @@
                     'undefined)]
        [formal-parameters '()]))
 
-(define (make-activation-object f args)
-  (new activation%
-       [initial-properties
-        `(("arguments" . ,(make-data-property
-                           (make-arguments-object f args))))]))
+(define arguments-object%
+  (class ecma-object%
+    (init-field arg-map)
+    (super-new [class "Arguments"]
+               [prototype object-prototype])
+    (define/override (get p)
+      (hash-ref arg-map
+                p
+                (λ ()
+                  (super get p))))
+    (define/override (get-own-property p)
+      (let ([prop (super get-own-property p)])
+        (and
+         prop
+         (let ([arg (hash-ref arg-map p 'undefined)])
+           (if (ecma:defined? arg)
+               (struct-copy data-property prop [value arg])
+               prop)))))))
 
 (define (make-arguments-object f args)
-  (new ecma-object%
-       [prototype #f]
-       [class "Object"]
-       [initial-properties
-        `(("callee" . ,(make-data-property f))
-          ("length" . ,(make-data-property (length args)))
-          ,@(for/list ([n (in-naturals)]
-                       [arg (in-list args)])
-              (cons (number->string n)
-                    (make-data-property arg))))]))
+  (let* ([arg-map
+          (make-hash
+           (reverse
+            (for/list ([arg (in-list args)]
+                       [name (in-list (get-field formal-parameters f))])
+              (cons (symbol->string name) arg))))]
+         [arg-obj (instantiate arguments-object% (arg-map))])
+    (send arg-obj define-own-property
+          "length"
+          `(data (value . ,(length args))
+                 (writable . #t)
+                 (enumerable . #f)
+                 (configurable . #t))
+          #f)
+    (send arg-obj define-own-property
+          "callee"
+          `(data (value . ,f)
+                 (writable . #t)
+                 (enumerable . #f)
+                 (configurable . #t))
+          #f)
+    arg-obj))
 
 (define (make-function params proc)
   (let ([f (new constructor%
@@ -148,16 +193,6 @@
           #f)
     f))
 
-(define (create-arguments! obj args vals)
-  ;; Use the last value (possibly not supplied) for repeated argument names
-  (let ([arg-map (make-immutable-hasheq
-                  (for/list ([arg (in-list args)]
-                             [val (in-sequences vals
-                                                (in-cycle '(undefined)))])
-                       (cons arg val)))])
-    (for ([(id val) (in-hash arg-map)])
-      (send obj put! (symbol->string id) val))))
-
 (define-syntax-parameter this-binding
   (make-rename-transformer #'global-object))
 
@@ -180,21 +215,21 @@
        (~optional (~seq #:vars (var-id:id ...)))
        body:expr ...+)
     #`(make-function '(param ...)
-        (λ (this-arg activation)
-          (begin-scope activation
-            #,@(if (attribute var-id) #'(#:vars (var-id ...)) #'())
-            (let/ec escape
-              (syntax-parameterize
-                  ([this-binding (make-rename-transformer #'this-arg)]
-                   [return-binding (make-rename-transformer #'escape)])
-                body ...)))))]))
+        (λ (this-arg bind-args)
+          (let ([local-env (new-declarative-environment lexical-environment)])
+            (bind-args local-env)
+            (begin-scope local-env
+              #,@(if (attribute var-id) #'(#:vars (var-id ...)) #'())
+              (let/ec escape
+                (syntax-parameterize
+                    ([this-binding (make-rename-transformer #'this-arg)]
+                     [return-binding (make-rename-transformer #'escape)])
+                  body ...))))))]))
 
 (define-syntax (begin-scope stx)
   (syntax-parse stx
-    [(_ scope-obj (~optional (~seq #:vars (var-id:id ...))) form ...)
-     #'(let ([new-scope (new-object-environment
-                         scope-obj
-                         lexical-environment)])
+    [(_ new-env (~optional (~seq #:vars (var-id:id ...))) form ...)
+     #'(let ([new-scope new-env])
          (syntax-parameterize
              ([variable-environment (make-rename-transformer #'new-scope)]
               [lexical-environment (make-rename-transformer #'new-scope)])

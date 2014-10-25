@@ -273,6 +273,6 @@
 
 (define (compile-program prog)
   (datum->syntax #f
-    `(begin-scope global-object
+    `(begin-scope (new-object-environment global-object lexical-environment)
        #:vars ,(extract-vars prog)
        ,@(compile-body prog))))

@@ -16,6 +16,8 @@
                        "private/statement.rkt")
          ; TODO: several of these should be removed
          global-object
+         new-object-environment
+         lexical-environment
          get-value
          put-value!
          begin-scope

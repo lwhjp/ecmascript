@@ -116,7 +116,7 @@
     (super-new)
     (define/override (has-binding? n)
       (hash-has-key? bindings n))
-    (define/override (create-mutable-binding! n d)
+    (define/override (create-mutable-binding! n [d #f])
       (hash-set! bindings n (mutable-binding 'undefined d)))
     (define/override (set-mutable-binding! n v s)
       (let ([b (hash-ref bindings n)])
