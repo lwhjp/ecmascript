@@ -223,3 +223,79 @@
   (new ecma-object%
        [prototype #f]
        [class "Object"]))
+
+(define (from-property-descriptor desc)
+  (if desc
+      (let ([obj (new ecma-object% [class "Object"] [prototype object-prototype])])
+        (if (data-property? desc)
+            (begin
+              (send obj define-own-property "value"
+                    `(data (value . ,(data-property-value desc))
+                           (writable . #t)
+                           (enumerable . #t)
+                           (configurable . #t))
+                    #f)
+              (send obj define-own-property "writable"
+                    `(data (value . ,(data-property-writable? desc))
+                           (writable . #t)
+                           (enumerable . #t)
+                           (configurable . #t))
+                    #f))
+            (begin
+              (send obj define-own-property "get"
+                    `(data (value . ,(accessor-property-get desc))
+                           (writable . #t)
+                           (enumerable . #t)
+                           (configurable . #t))
+                    #f)
+              (send obj define-own-property "set"
+                    `(data (value . ,(accessor-property-set desc))
+                           (writable . #t)
+                           (enumerable . #t)
+                           (configurable . #t))
+                    #f)))
+        (send obj define-own-property "enumerable"
+              `(data (value . ,(property-enumerable? desc))
+                     (writable . #t)
+                     (enumerable . #t)
+                     (configurable . #t))
+              #f)
+        (send obj define-own-property "configurable"
+              `(data (value . ,(property-configurable? desc))
+                     (writable . #t)
+                     (enumerable . #t)
+                     (configurable . #t))
+              #f)
+        obj)
+      'undefined))
+
+(define (to-property-descriptor obj)
+  (unless (is-a? obj ecma-object%)
+    (raise-native-error 'type "not an object"))
+  (let ([oprops (get-field properties obj)])
+    (define-values (enumerable? configurable?
+                    value writable? get set)
+      (apply
+       values
+       (map
+        (λ (name)
+          (hash-ref oprops name 'undefined))
+        '("enumerable" "configurable"
+          "value" "writable" "get" "set"))))
+    (define-values (kind attrs)
+      (cond
+        [(or (not (eq? 'undefined value))
+             (not (eq? 'undefined writable?)))
+         (values 'data
+                 (append
+                  (if (eq? 'undefined value) '() `((value . ,value)))
+                  (if (eq? 'undefined writable?) '() `((writable . ,writable?)))))]
+        [else
+         (values 'accessor
+                 (append
+                  (if (eq? 'undefined get) '() `((get . ,get)))
+                  (if (eq? 'undefined set) '() `((set . ,set)))))]))
+    (cons kind
+          (append attrs
+                  (if (eq? 'undefined enumerable?) '() `((enumerable . ,enumerable?)))
+                  (if (eq? 'undefined configurable?) '() `((configurable . ,configurable?)))))))
