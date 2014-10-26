@@ -220,12 +220,12 @@
                    (λ (this-arg bind-args)
                      (let ([local-env (new-declarative-environment scope-env)])
                        (bind-args local-env)
-                       (begin-scope local-env
-                         #,@(if (attribute var-id) #'(#:vars (var-id ...)) #'())
-                         (let/ec escape
-                           (syntax-parameterize
-                               ([this-binding (make-rename-transformer #'this-arg)]
-                                [return-binding (make-rename-transformer #'escape)])
+                       (let/ec escape
+                         (syntax-parameterize
+                             ([this-binding (make-rename-transformer #'this-arg)]
+                              [return-binding (make-rename-transformer #'escape)])
+                           (begin-scope local-env
+                             #,@(if (attribute var-id) #'(#:vars (var-id ...)) #'())
                              #,@(or (attribute body) #'(ecma:undefined))))))))])
           #,@(if (attribute name)
                  (with-syntax ([idstr (symbol->string (syntax-e (attribute name)))])
