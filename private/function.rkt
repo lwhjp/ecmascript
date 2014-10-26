@@ -214,7 +214,7 @@
    [(_ (~optional name:id)
        (param:id ...)
        (~optional (~seq #:vars (var-id:id ...)))
-       body:expr ...+)
+       (~optional (~seq body:expr ...+)))
     #`(let ([scope-env (new-declarative-environment lexical-environment)])
         (let ([f (make-function '(param ...)
                    (λ (this-arg bind-args)
@@ -226,7 +226,7 @@
                            (syntax-parameterize
                                ([this-binding (make-rename-transformer #'this-arg)]
                                 [return-binding (make-rename-transformer #'escape)])
-                             body ...))))))])
+                             #,@(or (attribute body) #'(ecma:undefined))))))))])
           #,@(if (attribute name)
                  (with-syntax ([idstr (symbol->string (syntax-e (attribute name)))])
                    #'((send scope-env create-immutable-binding! idstr)
