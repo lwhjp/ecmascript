@@ -6,6 +6,7 @@
          racket/provide
          racket/stxparam
          "environment.rkt"
+         "function.rkt"
          "object.rkt"
          "../types.rkt")
 
@@ -109,15 +110,14 @@
      (with-syntax
          ([handlers
            (if (attribute cid)
-               #'([exn:throw?
-                   (λ (e)
-                     (declare-vars (cid))
-                     (send variable-environment
-                           set-mutable-binding!
-                           (symbol->string 'cid)
-                           (exn:throw-value e)
-                           #f)
-                     cbody)])
+               (with-syntax ([eid (symbol->string (syntax-e (attribute cid)))])
+                 #'([exn:throw?
+                     (λ (e)
+                       (let ([env (new-declarative-environment lexical-environment)])
+                         (send env create-mutable-binding! eid)
+                         (send env set-mutable-binding! eid (exn:throw-value e) #f)
+                         (begin-scope env
+                           cbody)))]))
                #'())]
           [post
            (if (attribute fbody)

@@ -237,13 +237,14 @@
 (define-syntax (begin-scope stx)
   (syntax-parse stx
     [(_ new-env (~optional (~seq #:vars (var-id:id ...))) form ...)
-     #'(let ([new-scope new-env])
-         (syntax-parameterize
-             ([variable-environment (make-rename-transformer #'new-scope)]
-              [lexical-environment (make-rename-transformer #'new-scope)])
-           (reorder-functions () ()
-             (create-variables! variable-environment '(var-id ...))
-             form ...)))]))
+     (with-syntax ([var-ids (or (attribute var-id) '())])
+       #'(let ([new-scope new-env])
+           (syntax-parameterize
+               ([variable-environment (make-rename-transformer #'new-scope)]
+                [lexical-environment (make-rename-transformer #'new-scope)])
+             (reorder-functions () ()
+               (create-variables! variable-environment 'var-ids)
+               form ...))))]))
 
 (define-syntax reorder-functions
   (syntax-parser
