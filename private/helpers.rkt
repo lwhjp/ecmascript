@@ -38,7 +38,7 @@
     (syntax-parser
       [v:id (symbol->string (syntax-e #'v))]
       [v:str #'v]
-      [v:number #'(to-string v)]))
+      [v:number #'(ecma:to-string v)]))
   (define parse-def
     (syntax-parser
       [(expr)
