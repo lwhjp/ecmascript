@@ -18,13 +18,39 @@
 
 (struct exn:throw exn (value) #:transparent)
 
-(define-syntax-parameter stmt:break
-  (λ (stx)
-    (raise-syntax-error #f "invalid outside of loop" stx)))
+(define-syntax-parameter break-bindings '())
 
-(define-syntax-parameter stmt:continue
-  (λ (stx)
-    (raise-syntax-error #f "invalid outside of loop" stx)))
+(define-syntax-parameter continue-bindings '())
+
+(define-syntax-parameter return-value #f)
+
+(define-syntax (stmt:break stx)
+  (let ([breaks (syntax-parameter-value #'break-bindings)])
+    (when (null? breaks)
+      (raise-syntax-error #f "invalid outside of loop" stx))
+    (syntax-case stx ()
+      [(_) #`(#,(cdar breaks)
+              return-value)]
+      [(_ label)
+       (let ([loop (assv (syntax-e #'label) breaks)])
+         (unless loop
+           (raise-syntax-error #f "no such label" stx #'label))
+         (with-syntax ([break-binding (cdr loop)])
+           #'(break-binding return-value)))])))
+
+(define-syntax (stmt:continue stx)
+  (let ([continues (syntax-parameter-value #'continue-bindings)])
+    (when (null? continues)
+      (raise-syntax-error #f "invalid outside of loop" stx))
+    (syntax-case stx ()
+      [(_) #`(#,(cdar continues)
+              return-value)]
+      [(_ label)
+       (let ([loop (assv (syntax-e #'label) continues)])
+         (unless loop
+           (raise-syntax-error #f "no such label" stx #'label))
+         (with-syntax ([continue-binding (cdr loop)])
+           #'(continue-binding return-value)))])))
 
 (define-syntax stmt:block
   (syntax-rules ()
@@ -62,8 +88,15 @@
             (let ([new-rv
                    (let/ec next
                      (syntax-parameterize
-                         ([stmt:break (λ (stx) #'(escape rv))]
-                          [stmt:continue (λ (stx) #'(next rv))])
+                         ([break-bindings (cons
+                                           (cons '#,(syntax-property stx 'label)
+                                                 #'escape)
+                                           (syntax-parameter-value #'break-bindings))]
+                          [continue-bindings (cons
+                                              (cons '#,(syntax-property stx 'label)
+                                                    #'next)
+                                              (syntax-parameter-value #'continue-bindings))]
+                          [return-value (make-rename-transformer #'rv)])
                        (if #,(if (attribute test)
                                  #'(to-boolean
                                     (get-value test))
@@ -91,9 +124,12 @@
   (begin-scope (new-object-environment (get-value expr) lexical-environment)
     body0 body ...))
 
-(define-syntax-rule (stmt:with-label label stmt)
-  ; TODO
-  stmt)
+(define-syntax (stmt:label stx)
+  (syntax-case stx ()
+    [(_ label stmt)
+     (unless (identifier? #'label)
+       (raise-syntax-error #f 'syntax "invalid label" stx #'label))
+     (syntax-property #'stmt 'label (syntax-e #'label))]))
 
 (define (stmt:throw expr)
   (let ([v (get-value expr)])

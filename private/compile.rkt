@@ -219,7 +219,7 @@
        loc)]
     [(ecma:stmt:labelled loc label stmt)
      (datum->syntax #f
-       `(with-label ,label
+       `(label ,label
           ,(compile-statement stmt))
        loc)]
     [(ecma:stmt:throw loc expr)
