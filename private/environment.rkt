@@ -228,8 +228,12 @@
   (for ([id (in-list (map symbol->string ids))])
     (send env-rec create-mutable-binding! id #f)))
 
-(define (member obj id)
-  (ecma:reference
-   (ecma:to-object (get-value obj))
-   (ecma:to-string (get-value id))
-   #f))
+(define-syntax (member stx)
+  (syntax-case stx ()
+    [(_ base prop)
+     #`(ecma:reference
+        (ecma:to-object (get-value base))
+        #,(if (identifier? #'prop)
+              (symbol->string (syntax-e #'prop))
+              #'(ecma:to-string (get-value prop)))
+        #f)]))
