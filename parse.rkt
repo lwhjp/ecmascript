@@ -151,14 +151,20 @@
     [(primary-expression (string v))
      (ast:expression:literal loc (ast:literal:string loc (datum-intern-literal (syntax-e #'v))))]
     [(primary-expression (regexp (pattern flags)))
-     (ast:literal:regexp
+     (ast:expression:literal
       loc
-      (datum-intern-literal (syntax-e #'pattern))
-      (syntax->datum #'flags))]
+      (ast:literal:regexp
+       loc
+       (datum-intern-literal (syntax-e #'pattern))
+       (syntax->datum #'flags)))]
     [(primary-expression (~and ((~datum array-literal) . _) arry))
-     (parse-array-literal #'arry)]
+     (ast:expression:literal
+      loc
+      (parse-array-literal #'arry))]
     [(primary-expression (~and ((~datum object-literal) . _) obj))
-     (parse-object-literal #'obj)]
+     (ast:expression:literal
+      loc
+      (parse-object-literal #'obj))]
     [(primary-expression "(" expr ")")
      (parse-expression #'expr)]
     [(function-expression . _)
