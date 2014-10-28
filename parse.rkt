@@ -7,7 +7,7 @@
          syntax/parse
          syntax/srcloc
          syntax/stx
-         (prefix-in ecma: "ast.rkt")
+         (prefix-in ast: "ast.rkt")
          "private/grammar.rkt"
          "private/lex.rkt")
 
@@ -15,7 +15,8 @@
  [read-program
   (->* ()
        (any/c input-port?)
-       (or/c eof-object? (listof ecma:source-element?)))])
+       (or/c (listof (or/c ast:function? ast:statement?))
+             eof-object?))])
 
 (define (read-program [source-name (object-name (current-input-port))]
                       [in (current-input-port)])
@@ -125,7 +126,7 @@
     [((~datum statement) . _)
      (parse-statement stx)]
     [((~datum function-declaration) . _)
-     (ecma:decl:fn (stx-loc stx) (parse-function stx))]))
+     (parse-function stx)]))
 
 (define (parse-expression stx)
   (define loc (stx-loc stx))
@@ -135,55 +136,90 @@
                       call-expression postfix-expression unary-expression
                       conditional-expression assignment-expression
                       function-expression assignment-operator expression)
-    [(primary-expression "this") (ecma:expr:this loc)]
-    [(primary-expression (identifier id)) (ecma:expr:id loc (syntax-e #'id))]
-    [(primary-expression "null") (ecma:expr:null loc)]
-    [(primary-expression "true") (ecma:expr:bool loc #t)]
-    [(primary-expression "false") (ecma:expr:bool loc #f)]
+    [(primary-expression "this")
+     (ast:expression:this loc)]
+    [(primary-expression (identifier id))
+     (ast:expression:reference loc (ast:identifier loc (syntax-e #'id)))]
+    [(primary-expression "null")
+     (ast:expression:literal loc (ast:literal:null loc))]
+    [(primary-expression "true")
+     (ast:expression:literal loc (ast:literal:boolean loc #t))]
+    [(primary-expression "false")
+     (ast:expression:literal loc (ast:literal:boolean loc #f))]
     [(primary-expression (numeric v))
-     (ecma:expr:number loc (datum-intern-literal (syntax-e #'v)))]
+     (ast:expression:literal loc (ast:literal:number loc (datum-intern-literal (syntax-e #'v))))]
     [(primary-expression (string v))
-     (ecma:expr:string loc (datum-intern-literal (syntax-e #'v)))]
+     (ast:expression:literal loc (ast:literal:string loc (datum-intern-literal (syntax-e #'v))))]
     [(primary-expression (regexp (pattern flags)))
-     (ecma:expr:regexp loc
-                       (datum-intern-literal (syntax-e #'pattern))
-                       (syntax->datum #'flags))]
+     (ast:literal:regexp
+      loc
+      (datum-intern-literal (syntax-e #'pattern))
+      (syntax->datum #'flags))]
     [(primary-expression (~and ((~datum array-literal) . _) arry))
      (parse-array-literal #'arry)]
     [(primary-expression (~and ((~datum object-literal) . _) obj))
      (parse-object-literal #'obj)]
-    [(primary-expression "(" expr ")") (parse-expression #'expr)]
-    [(function-expression . _) (ecma:expr:fn loc (parse-function stx))]
+    [(primary-expression "(" expr ")")
+     (parse-expression #'expr)]
+    [(function-expression . _)
+     (ast:expression:function
+      loc
+      (parse-function stx))]
     [(_ left "," right)
-     (ecma:expr:comma loc (parse-expression #'left) (parse-expression #'right))]
+     (ast:expression:comma
+      loc
+      (parse-expression #'left)
+      (parse-expression #'right))]
     [(_ obj "[" prop "]")
-     (ecma:expr:member loc (parse-expression #'obj) (parse-expression #'prop))]
+     (ast:expression:member-reference
+      loc
+      (parse-expression #'obj)
+      (parse-expression #'prop))]
     [(_ obj "." (identifier prop))
-     (ecma:expr:member loc (parse-expression #'obj) (syntax-e #'prop))]
+     (ast:expression:member-reference
+      loc
+      (parse-expression #'obj)
+      (ast:identifier (stx-loc #'prop) (syntax-e #'prop)))]
     [(_ "new" expr (~optional args))
-     (ecma:expr:new loc (parse-expression #'expr)
-                    (if (attribute args)
-                        (parse-arguments #'args)
-                        '()))]
+     (ast:expression:new
+      loc
+      (parse-expression #'expr)
+      (if (attribute args)
+          (parse-arguments #'args)
+          '()))]
     [(call-expression expr args)
-     (ecma:expr:call loc (parse-expression #'expr) (parse-arguments #'args))]
+     (ast:expression:call
+      loc
+      (parse-expression #'expr)
+      (parse-arguments #'args))]
     [(postfix-expression expr op)
-     (ecma:expr:postfix loc (parse-expression #'expr) (string->symbol (syntax-e #'op)))]
+     (ast:expression:postfix
+      loc
+      (parse-expression #'expr)
+      (ast:operator (stx-loc #'op) (string->symbol (syntax-e #'op))))]
     [(unary-expression op expr)
-     (ecma:expr:unary loc (string->symbol (syntax-e #'op))
-                      (parse-expression #'expr))]
+     (ast:expression:unary
+      loc
+      (ast:operator (stx-loc #'op) (string->symbol (syntax-e #'op)))
+      (parse-expression #'expr))]
     [(_ left (assignment-operator op) right)
-     (ecma:expr:binary loc (parse-expression #'left)
-                       (string->symbol (syntax-e #'op))
-                       (parse-expression #'right))]
+     (ast:expression:binary
+      loc
+      (parse-expression #'left)
+      (ast:operator (stx-loc #'op) (string->symbol (syntax-e #'op)))
+      (parse-expression #'right))]
     [(_ left op:str right)
-     (ecma:expr:binary loc (parse-expression #'left)
-                       (string->symbol (syntax-e #'op))
-                       (parse-expression #'right))]
+     (ast:expression:binary
+      loc
+      (parse-expression #'left)
+      (ast:operator (stx-loc #'op) (string->symbol (syntax-e #'op)))
+      (parse-expression #'right))]
     [(_ test "?" true ":" false)
-     (ecma:expr:cond loc (parse-expression #'test)
-                     (parse-expression #'true)
-                     (parse-expression #'false))]))
+     (ast:expression:conditional
+      loc
+      (parse-expression #'test)
+      (parse-expression #'true)
+      (parse-expression #'false))]))
 
 (define (parse-arguments stx)
   (syntax-parse stx
@@ -194,55 +230,62 @@
 (define (parse-array-literal stx)
   (syntax-parse stx
     [((~datum array-literal) "[" term ... "]")
-     (ecma:expr:array (stx-loc stx)
-       (let loop ([terms (syntax->list #'(term ...))])
-         (cond
-           [(null? terms) '()]
-           [(equal? "," (syntax-e (car terms)))
-            (cons #f (loop (cdr terms)))]
-           [(cons (parse-expression (car terms))
-                  (if (null? (cdr terms))
-                      '()
-                      (loop (cddr terms))))])))]))
+     (ast:literal:array
+      (stx-loc stx)
+      (let loop ([terms (syntax->list #'(term ...))])
+        (cond
+          [(null? terms) '()]
+          [(equal? "," (syntax-e (car terms)))
+           (cons #f (loop (cdr terms)))]
+          [(cons (parse-expression (car terms))
+                 (if (null? (cdr terms))
+                     '()
+                     (loop (cddr terms))))])))]))
 
 (define (parse-object-literal stx)
-  (define parse-name
-    (syntax-parser
-      [((~datum identifier) id) (syntax-e #'id)]
-      [((~datum string) s) (syntax-e #'s)]
-      [((~datum numeric) n) (syntax-e #'n)]))
+  (define-syntax-class property-name
+    #:attributes (ast)
+    #:datum-literals (identifier string numeric)
+    [pattern (identifier id)
+             #:attr ast (ast:identifier (stx-loc #'id) (syntax-e #'id))]
+    [pattern (string s)
+             #:attr ast (ast:literal:string (stx-loc #'s) (syntax-e #'s))]
+    [pattern (numeric n)
+             #:attr ast (ast:literal:number (stx-loc #'n) (syntax-e #'n))])
   (syntax-parse stx
     #:datum-literals (object-literal property-assignment)
     [(object-literal "{" (~seq (~and (property-assignment . _) prop)
                                (~optional ",")) ...
                      (~optional (~datum INSERTED-SEMICOLON)) "}")
-     (ecma:expr:object
+     (ast:literal:object
       (stx-loc stx)
       (stx-map
        (λ (pstx)
          (syntax-parse pstx
            #:datum-literals (get set)
-           [(_ name ":" expr)
-            (ecma:init:obj:prop
+           [(_ name:property-name ":" expr)
+            (ast:property-initializer:data
              (stx-loc pstx)
-             (parse-name #'name)
+             (attribute name.ast)
              (parse-expression #'expr))]
-           [(_ get name "(" ")" "{" body ... "}")
-            (ecma:init:obj:get
+           [(_ get name:property-name "(" ")" "{" body ... "}")
+            (ast:property-initializer:get
              (stx-loc pstx)
-             (parse-name #'name)
-             (ecma:fn (stx-loc pstx)
-                      #f
-                      '()
-                      (stx-map parse-source-element #'(body ...))))]
-           [(_ set name "(" ((~datum identifier) id) ")" "{" body ... "}")
-            (ecma:init:obj:set
+             (attribute name.ast)
+             (ast:function
+              (stx-loc pstx)
+              #f
+              '()
+              (stx-map parse-source-element #'(body ...))))]
+           [(_ set name:property-name "(" ((~datum identifier) id) ")" "{" body ... "}")
+            (ast:property-initializer:set
              (stx-loc pstx)
-             (parse-name #'name)
-             (ecma:fn (stx-loc pstx)
-                      #f
-                      (list (syntax-e #'id))
-                      (stx-map parse-source-element #'(body ...))))]))
+             (attribute name.ast)
+             (ast:function
+              (stx-loc pstx)
+              #f
+              (list (ast:identifier (stx-loc #'id) (syntax-e #'id)))
+              (stx-map parse-source-element #'(body ...))))]))
        #'(prop ...)))]))
 
 (define (parse-statement stx)
@@ -257,66 +300,92 @@
     [(statement s)
      (parse-statement #'s)]
     [(block "{" stmt ... "}")
-     (ecma:stmt:block loc (stx-map parse-statement #'(stmt ...)))]
+     (ast:statement:block loc (stx-map parse-statement #'(stmt ...)))]
     [(variable-statement "var" declist ";")
-     (ecma:stmt:vars loc (parse-variable-declaration-list #'declist))]
+     (ast:statement:var loc (parse-variable-declaration-list #'declist))]
     [(empty-statement ";")
-     (ecma:stmt:empty loc)]
+     (ast:statement:empty loc)]
     [(expression-statement expr ";")
-     (ecma:stmt:expr loc (parse-expression #'expr))]
+     (ast:statement:expression loc (parse-expression #'expr))]
     [(if-statement "if" "(" test ")" true (~optional (~seq "else" false)))
-     (ecma:stmt:if loc (parse-expression #'test)
-                   (parse-statement #'true)
-                   (and (attribute false) (parse-statement #'false)))]
+     (ast:statement:if
+      loc
+      (parse-expression #'test)
+      (parse-statement #'true)
+      (and (attribute false) (parse-statement #'false)))]
     [(iteration-statement "do" stmt "while" "(" test ")" ";")
-     (ecma:stmt:do loc (parse-expression #'stmt)
-                   (parse-expression #'test))]
+     (ast:statement:do
+      loc
+      (parse-expression #'stmt)
+      (parse-expression #'test))]
     [(iteration-statement "while" "(" test ")" body)
-     (ecma:stmt:while loc (parse-expression #'test)
-                      (parse-statement #'body))]
+     (ast:statement:while
+      loc
+      (parse-expression #'test)
+      (parse-statement #'body))]
     [(iteration-statement "for" "(" "var" declist ";" (~optional test) ";" (~optional step) ")" body)
-     (ecma:stmt:for loc (parse-variable-declaration-list #'declist)
-                    (and (attribute test) (parse-expression #'test))
-                    (and (attribute step) (parse-expression #'step))
-                    (parse-statement #'body))]
+     (ast:statement:for
+      loc
+      (parse-variable-declaration-list #'declist)
+      (and (attribute test) (parse-expression #'test))
+      (and (attribute step) (parse-expression #'step))
+      (parse-statement #'body))]
     [(iteration-statement "for" "(" (~optional init) ";" (~optional test) ";" (~optional step) ")" body)
-     (ecma:stmt:for loc (and (attribute init) (parse-expression #'init))
-                    (and (attribute test) (parse-expression #'test))
-                    (and (attribute step) (parse-expression #'step))
-                    (parse-statement #'body))]
+     (ast:statement:for
+      loc
+      (and (attribute init) (parse-expression #'init))
+      (and (attribute test) (parse-expression #'test))
+      (and (attribute step) (parse-expression #'step))
+      (parse-statement #'body))]
     [(iteration-statement "for" "(" "var" decl "in" expr ")" body)
-     (ecma:stmt:for-in loc (parse-variable-declaration #'decl)
-                       (parse-expression #'expr)
-                       (parse-statement #'body))]
+     (ast:statement:for-in
+      loc
+      (parse-variable-declaration #'decl)
+      (parse-expression #'expr)
+      (parse-statement #'body))]
     [(iteration-statement "for" "(" init "in" expr ")" body)
-     (ecma:stmt:for-in loc (parse-expression #'init)
-                       (parse-expression #'expr)
-                       (parse-statement #'body))]
+     (ast:statement:for-in
+      loc
+      (parse-expression #'init)
+      (parse-expression #'expr)
+      (parse-statement #'body))]
     [(continue-statement "continue" (~optional (identifier id)) ";")
-     (ecma:stmt:continue loc (and (attribute id) (syntax-e #'id)))]
+     (ast:statement:continue
+      loc
+      (and (attribute id) (ast:identifier (stx-loc #'id) (syntax-e #'id))))]
     [(break-statement "break" (~optional (identifier id)) ";")
-     (ecma:stmt:break loc (and (attribute id) (syntax-e #'id)))]
+     (ast:statement:break
+      loc
+      (and (attribute id) (ast:identifier (stx-loc #'id) (syntax-e #'id))))]
     [(return-statement "return" (~optional expr) ";")
-     (ecma:stmt:return loc (and (attribute expr) (parse-expression #'expr)))]
+     (ast:statement:return
+      loc
+      (and (attribute expr) (parse-expression #'expr)))]
     [(with-statement "with" "(" expr ")" body)
-     (ecma:stmt:with loc (parse-expression #'expr)
-                     (parse-statement #'body))]
+     (ast:statement:with
+      loc
+      (parse-expression #'expr)
+      (parse-statement #'body))]
     [(switch-statement "(" expr ")" ((~datum case-block) "{" clause ... "}"))
      (error "TODO: switch")]
     [(labelled-statement (identifier label) ":" stmt)
-     (ecma:stmt:labelled loc (syntax-e #'label) (parse-statement #'stmt))]
+     (ast:statement:label
+      loc
+      (ast:identifier (stx-loc #'label) (syntax-e #'label))
+      (parse-statement #'stmt))]
     [(throw-statement "throw" expr ";")
-     (ecma:stmt:throw loc (parse-expression #'expr))]
+     (ast:statement:throw loc (parse-expression #'expr))]
     [(try-statement "try" try-block
                     (~optional ((~datum catch) "catch" "(" (identifier catch-id) ")" catch-block))
                     (~optional ((~datum finally) "finally" finally-block)))
-     (ecma:stmt:try loc
-                    (parse-statement #'try-block)
-                    (and (attribute catch-id) (syntax-e #'catch-id))
-                    (and (attribute catch-block) (parse-statement #'catch-block))
-                    (and (attribute finally-block) (parse-statement #'finally-block)))]
+     (ast:statement:try
+      loc
+      (parse-statement #'try-block)
+      (and (attribute catch-id) (ast:identifier (stx-loc #'catch-id) (syntax-e #'catch-id)))
+      (and (attribute catch-block) (parse-statement #'catch-block))
+      (and (attribute finally-block) (parse-statement #'finally-block)))]
     [(debugger-statement "debugger" ";")
-     (ecma:stmt:debugger loc)]))
+     (ast:statement:debugger loc)]))
 
 (define (parse-variable-declaration-list stx)
   (syntax-parse stx
@@ -330,8 +399,10 @@
     [((~or (~datum variable-declaration)
            (~datum variable-declaration-no-in))
       ((~datum identifier) id) (~optional (~seq "=" expr)))
-     (ecma:decl:var (stx-loc stx) (syntax-e #'id)
-                    (and (attribute expr) (parse-expression #'expr)))]))
+     (ast:variable-declaration
+      (stx-loc stx)
+      (ast:identifier (stx-loc #'id) (syntax-e #'id))
+      (and (attribute expr) (parse-expression #'expr)))]))
 
 (define (parse-function stx)
   (syntax-parse stx
@@ -343,8 +414,13 @@
                   (identifier param0)
                   (~seq "," (identifier param)) ...))
       ")" "{" body ... "}")
-     (ecma:fn (stx-loc stx) (and (attribute id) (syntax-e #'id))
-              (if (attribute param0)
-                  (stx-map syntax-e #'(param0 param ...))
-                  '())
-              (stx-map parse-source-element #'(body ...)))]))
+     (ast:function
+      (stx-loc stx)
+      (and (attribute id) (ast:identifier (stx-loc #'id) (syntax-e #'id)))
+      (if (attribute param0)
+          (stx-map
+           (λ (pstx)
+             (ast:identifier (stx-loc pstx) (syntax-e pstx)))
+           #'(param0 param ...))
+          '())
+      (stx-map parse-source-element #'(body ...)))]))

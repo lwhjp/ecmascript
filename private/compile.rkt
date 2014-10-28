@@ -3,11 +3,11 @@
 (require racket/contract
          racket/list
          racket/match
-         (prefix-in ecma: "../ast.rkt"))
+         (prefix-in ast: "../ast.rkt"))
 
 (provide/contract
  [ecmascript->racket
-  (-> (listof ecma:source-element?)
+  (-> (listof (or/c ast:function? ast:statement?))
       (listof syntax?))])
 
 (define (ecmascript->racket stx)
@@ -15,30 +15,30 @@
 
 (define (extract-statement-vars stmt)
   (match stmt
-    [(ecma:stmt:block _ stmts)
+    [(ast:statement:block _ stmts)
      (apply append (map extract-statement-vars stmts))]
-    [(ecma:stmt:vars _ (list (ecma:decl:var _ id _) ...))
+    [(ast:statement:var _ (list (ast:variable-declaration _ id _) ...))
      id]
-    [(ecma:stmt:if _ _ true false)
+    [(ast:statement:if _ _ true false)
      (append (extract-statement-vars true)
              (extract-statement-vars false))]
-    [(ecma:stmt:do _ body _)
+    [(ast:statement:do _ body _)
      (extract-statement-vars body)]
-    [(ecma:stmt:while _ _ body)
+    [(ast:statement:while _ _ body)
      (extract-statement-vars body)]
-    [(ecma:stmt:for _ (list (ecma:decl:var _ id _) ...) _ _ body)
+    [(ast:statement:for _ (list (ast:variable-declaration _ id _) ...) _ _ body)
      (append id (extract-statement-vars body))]
-    [(ecma:stmt:for _ _ _ _ body)
+    [(ast:statement:for _ _ _ _ body)
      (extract-statement-vars body)]
-    [(ecma:stmt:for-in _ (ecma:decl:var _ i _) _ body)
+    [(ast:statement:for-in _ (ast:variable-declaration _ i _) _ body)
      (cons i (extract-statement-vars body))]
-    [(ecma:stmt:with _ _ body)
+    [(ast:statement:with _ _ body)
      (extract-statement-vars body)]
-    [(ecma:stmt:switch _ _ cases)
+    [(ast:statement:switch _ _ cases)
      (apply append (map extract-statement-vars cases))]
-    [(ecma:stmt:labelled _ _ stmt)
+    [(ast:statement:label _ _ stmt)
      (extract-statement-vars stmt)]
-    [(ecma:stmt:try _ block _ catch finally)
+    [(ast:statement:try _ block _ catch finally)
      (append (extract-statement-vars block)
              (extract-statement-vars catch)
              (extract-statement-vars finally))]
@@ -51,6 +51,10 @@
     extract-statement-vars
     elts)))
 
+(define (compile-identifier id)
+  (match-define (ast:identifier loc sym) id)
+  (datum->syntax #f sym loc))
+
 (define (add-prefix pref sym)
   (string->symbol
    (string-append (symbol->string pref)
@@ -58,15 +62,21 @@
 
 (define (compile-expression stx)
   (match stx
-    [(ecma:expr:this loc) (datum->syntax #f 'this loc)]
-    [(ecma:expr:id loc symbol) (datum->syntax #f `(id ,symbol) loc)]
-    [(ecma:expr:null loc) (datum->syntax #f 'null loc)]
-    [(ecma:expr:bool loc v) (datum->syntax #f v loc)]
-    [(ecma:expr:number loc v) (datum->syntax #f v loc)]
-    [(ecma:expr:string loc v) (datum->syntax #f v loc)]
-    [(ecma:expr:regexp loc pattern flags)
+    [(ast:expression:this loc)
+     (datum->syntax #f 'this loc)]
+    [(ast:expression:reference loc id)
+     (datum->syntax #f `(id ,(compile-identifier id)) loc)]
+    [(ast:expression:literal _ (ast:literal:null loc))
+     (datum->syntax #f 'null loc)]
+    [(ast:expression:literal _ (ast:literal:boolean loc v))
+     (datum->syntax #f v loc)]
+    [(ast:expression:literal _ (ast:literal:number loc v))
+     (datum->syntax #f v loc)]
+    [(ast:expression:literal _ (ast:literal:string loc v))
+     (datum->syntax #f v loc)]
+    [(ast:expression:literal _ (ast:literal:regexp loc pattern flags))
      (datum->syntax #f `(regexp ,pattern ,flags) loc)]
-    [(ecma:expr:array loc elements)
+    [(ast:expression:literal _ (ast:literal:array loc elements))
      (datum->syntax #f
        `(array
          ,@(map (λ (elt)
@@ -75,88 +85,100 @@
                       'undefined))
                 elements))
        loc)]
-    [(ecma:expr:object loc props)
+    [(ast:expression:literal _ (ast:literal:object loc props))
      (datum->syntax #f
        `(object
          ,@(map compile-object-property props))
        loc)]
-    [(ecma:expr:fn loc def) (compile-function def)]
-    [(ecma:expr:member loc obj prop)
+    [(ast:expression:function _ fn) (compile-function fn)]
+    [(ast:expression:member-reference loc obj prop)
      (datum->syntax #f
        `(member ,(compile-expression obj)
-                ,(if (symbol? prop)
-                     (datum-intern-literal
-                      (symbol->string prop))
+                ,(if (ast:identifier? prop)
+                     (compile-identifier prop)
                      (compile-expression prop)))
        loc)]
-    [(ecma:expr:new loc expr args)
+    [(ast:expression:new loc expr args)
      (datum->syntax #f
        `(new ,(compile-expression expr)
              ,@(map compile-expression args))
        loc)]
-    [(ecma:expr:call loc expr args)
+    [(ast:expression:call loc expr args)
      (datum->syntax #f
        `(call ,(compile-expression expr)
               ,@(map compile-expression args))
        loc)]
-    [(ecma:expr:postfix loc expr op)
+    [(ast:expression:postfix loc expr op)
      (datum->syntax #f
-       `(,(add-prefix 'post op)
+       `(,(datum->syntax #f
+            (add-prefix 'post (ast:operator-symbol op))
+            (ast:syntax-element-location op))
          ,(compile-expression expr))
        loc)]
-    [(ecma:expr:unary loc op expr)
+    [(ast:expression:unary loc op expr)
      (datum->syntax #f
-       `(,op ,(compile-expression expr))
+       `(,(datum->syntax #f
+            (ast:operator-symbol op)
+            (ast:syntax-element-location op))
+         ,(compile-expression expr))
        loc)]
-    [(ecma:expr:binary loc left op right)
+    [(ast:expression:binary loc left op right)
      (datum->syntax #f
-       `(,op ,(compile-expression left)
-             ,(compile-expression right))
+       `(,(datum->syntax #f
+            (ast:operator-symbol op)
+            (ast:syntax-element-location op))
+         ,(compile-expression left)
+         ,(compile-expression right))
        loc)]
-    [(ecma:expr:cond loc test true false)
+    [(ast:expression:conditional loc test true false)
      (datum->syntax #f
        `(?: ,(compile-expression test)
             ,(compile-expression true)
             ,(compile-expression false))
        loc)]
-    [(ecma:expr:comma loc left right)
+    [(ast:expression:comma loc left right)
      (datum->syntax #f
        `(\, ,(compile-expression left)
             ,(compile-expression right))
        loc)]))
 
 (define (compile-object-property stx)
+  (define name-stx
+    (match (ast:property-initializer-name stx)
+      [(ast:identifier loc sym) (datum->syntax #f sym loc)]
+      [(ast:literal:string loc v) (datum->syntax #f v loc)]
+      [(ast:literal:number loc v) (datum->syntax #f v loc)]))
   (match stx
-    [(ecma:init:obj:prop loc name value)
+    [(ast:property-initializer:data loc _ value)
      (datum->syntax #f
-       `[,name ,(compile-expression value)]
+       `[,name-stx ,(compile-expression value)]
        loc)]
-    [(ecma:init:obj:get loc prop fn)
+    [(ast:property-initializer:get loc _ fn)
      (datum->syntax #f
-       `[,prop #:get ,(compile-function fn)]
+       `[,name-stx #:get ,(compile-function fn)]
        loc)]
-    [(ecma:init:obj:set loc prop fn)
+    [(ast:property-initializer:set loc _ fn)
      (datum->syntax #f
-       `[,prop #:set ,(compile-function fn)]
+       `[,name-stx #:set ,(compile-function fn)]
        loc)]))
 
 (define (compile-statement stx)
   (match stx
-    [(ecma:stmt:block loc stmts)
+    [(ast:statement:block loc stmts)
      (datum->syntax #f
        `(block ,@(map compile-statement stmts))
        loc)]
-    [(ecma:stmt:vars loc decls)
+    [(ast:statement:var loc decls)
      (compile-variable-declaration-list decls loc)]
-    [(ecma:stmt:empty loc)
+    [(ast:statement:empty loc)
      (datum->syntax #f
        '(empty-statement)
        loc)]
-    [(ecma:stmt:expr loc expr)
+    [(ast:statement:expression loc expr)
      (datum->syntax #f
        `(get-value ,(compile-expression expr))
        loc)]
-    [(ecma:stmt:if loc test true false)
+    [(ast:statement:if loc test true false)
      (datum->syntax #f
        (if false
            `(if ,(compile-expression test)
@@ -165,12 +187,12 @@
            `(if ,(compile-expression test)
                 ,(compile-statement true)))
        loc)]
-    [(ecma:stmt:while loc test body)
+    [(ast:statement:while loc test body)
      (datum->syntax #f
        `(while ,(compile-expression test)
           ,(compile-statement body))
        loc)]
-    [(ecma:stmt:for loc (list var-decl ...) test update body)
+    [(ast:statement:for loc (list var-decl ...) test update body)
      (datum->syntax #f
        `(for #:init ,(compile-variable-declaration-list var-decl loc)
              #:test ,(and test
@@ -178,7 +200,7 @@
              #:update ,(and update
                             (compile-expression update))
           ,(compile-statement body)))]
-    [(ecma:stmt:for loc init test update body)
+    [(ast:statement:for loc init test update body)
      (datum->syntax #f
        `(for #:init ,(and init
                           (compile-expression init))
@@ -187,49 +209,53 @@
              #:update ,(and update
                             (compile-expression update))
           ,(compile-statement body)))]
-    [(ecma:stmt:for-in loc (ecma:decl:var _ vid vexpr) expr body)
+    [(ast:statement:for-in loc (ast:variable-declaration _ vid vexpr) expr body)
      (datum->syntax #f
-       `(for-in (id ,vid) ,(compile-expression expr)
+       `(for-in (id ,(compile-identifier vid))
+                ,(compile-expression expr)
           ,(compile-statement body)))]
-    [(ecma:stmt:for-in loc lhs expr body)
+    [(ast:statement:for-in loc lhs expr body)
      (datum->syntax #f
        `(for-in ,(compile-expression lhs) ,(compile-expression expr)
           ,(compile-statement body)))]
-    [(ecma:stmt:continue loc label)
+    [(ast:statement:continue loc label)
      (datum->syntax #f
        (if label
-           `(continue ,label)
+           `(continue ,(compile-identifier label))
            '(continue))
        loc)]
-    [(ecma:stmt:break loc label)
+    [(ast:statement:break loc label)
      (datum->syntax #f
        (if label
-           `(break ,label)
+           `(break ,(compile-identifier label))
            '(break)))]
-    [(ecma:stmt:return loc expr)
+    [(ast:statement:return loc expr)
      (datum->syntax #f
        (if expr
            `(return ,(compile-expression expr))
            '(return))
        loc)]
-    [(ecma:stmt:with loc expr body)
+    [(ast:statement:with loc expr body)
      (datum->syntax #f
        `(with ,(compile-expression expr)
           ,(compile-statement body))
        loc)]
-    [(ecma:stmt:labelled loc label stmt)
+    [(ast:statement:label loc label stmt)
      (datum->syntax #f
-       `(label ,label
+       `(label ,(compile-identifier label)
           ,(compile-statement stmt))
        loc)]
-    [(ecma:stmt:throw loc expr)
+    [(ast:statement:throw loc expr)
      (datum->syntax #f
        `(throw ,(compile-expression expr))
        loc)]
-    [(ecma:stmt:try loc tb cid cb fb)
+    [(ast:statement:try loc tb cid cb fb)
      (datum->syntax #f
        `(try ,(compile-statement tb)
-             ,@(if cid `(#:catch ,cid ,(compile-statement cb)) '())
+             ,@(if cid
+                   `(#:catch ,(compile-identifier cid)
+                             ,(compile-statement cb))
+                   '())
              ,@(if fb `(#:finally ,(compile-statement fb)) '()))
        loc)]))
 
@@ -237,12 +263,12 @@
   (let ([assignments
          (filter-map
           (λ (decl)
-            (match-define (ecma:decl:var loc id expr) decl)
+            (match-define (ast:variable-declaration loc id expr) decl)
             (and expr
                  (datum->syntax #f
-                   `(put-value! (id ,id)
-                                (get-value
-                                 ,(compile-expression expr)))
+                   `(put-value!
+                     (id ,(compile-identifier id))
+                     (get-value ,(compile-expression expr)))
                    loc)))
           stx)])
     (datum->syntax #f
@@ -254,25 +280,26 @@
 (define (compile-body elts)
   (map
    (match-lambda
-     [(? ecma:stmt? stmt) (compile-statement stmt)]
-     [(? ecma:decl:fn? fn) (compile-function (ecma:decl:fn-def fn))])
+     [(? ast:statement? stmt) (compile-statement stmt)]
+     [(? ast:function? fn) (compile-function fn)])
    elts))
 
 (define (compile-function stx)
-  (match-define (ecma:fn loc name params body) stx)
+  (match-define (ast:function loc name params body) stx)
   (let ([vars (extract-vars body)]
         [compiled-body (compile-body body)])
     (datum->syntax #f
       (if name
-          `(function ,name ,params
-                     #:vars ,vars
+          `(function ,(compile-identifier name)
+                     ,(map compile-identifier params)
+                     #:vars ,(map compile-identifier vars)
              ,@compiled-body)
-          `(function ,params
-                     #:vars ,vars
+          `(function ,(map compile-identifier params)
+                     #:vars ,(map compile-identifier vars)
              ,@compiled-body)))))
 
 (define (compile-program prog)
   (datum->syntax #f
     `(begin-scope (new-object-environment global-object lexical-environment)
-       #:vars ,(extract-vars prog)
+       #:vars ,(map compile-identifier (extract-vars prog))
        ,@(compile-body prog))))

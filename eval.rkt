@@ -2,7 +2,6 @@
 
 (require (prefix-in ecma:
            (combine-in
-            "ast.rkt"
             "private/function.rkt"
             "private/global-object.rkt"
             "private/object.rkt"))

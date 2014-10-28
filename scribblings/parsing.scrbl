@@ -1,8 +1,11 @@
 #lang scribble/manual
-@(require (for-label racket/base
-                     racket/contract
-                     "../ast.rkt"
-                     "../parse.rkt"))
+@(require (for-label "../ast.rkt"
+                     (only-in "../main.rkt"
+                              this
+                              return)
+                     "../parse.rkt"
+                     "../private/statement.rkt"
+                     "../types.rkt"))
 
 @title{Parsing ECMAScript}
 
@@ -11,189 +14,242 @@
 @defproc[(read-program
           [source-name any/c (object-name in)]
           [in input-port? (current-input-port)])
-         (or/c (listof source-element?) eof-object?)]{
+         (or/c (listof (or/c function? statement?)) eof-object?)]{
 }
 
-@section{Syntax Representation}
-
-@margin-note{
-  @bold{Warning}
-  These definitions are not fixed and are likely to change
-  in the future.
-}
+@section{Abstract Syntax}
 
 @defmodule[ecmascript/ast]
 
-@defstruct*[syntax-element ([loc source-location?])]{
+@defstruct*[syntax-element ([location source-location?])]{
+  The base type for all ECMAScript syntax elements.
 }
 
-@defstruct*[(source-element syntax-element) ()]{
-  The top-level elements which make up programs and function bodies.
+@defstruct*[(identifier syntax-element) ([symbol symbol?])]{
+  An identifier.
+}
+
+@defstruct*[(function syntax-element)
+            ([name (or/c identifier? #f)]
+             [parameters (listof identifier?)]
+             [body (listof (or/c function? statement?))])]{
+  A function definition, which may appear as part of an expression
+  (in which case @racket[name] may be @racket[#f]) or program body,
+  or nested within another function.
+}
+
+@defstruct*[(variable-declaration syntax-element)
+            ([name identifier?]
+             [initializer (or/c expression? #f)])]{
+  A variable declaration with optional initializer.
 }
 
 @subsection{Expressions}
 
-@defstruct*[(expr syntax-element) ()]{
-  The base type for ECMAScript expressions.
+@defstruct*[(expression syntax-element) ()]{
+  The base type for all ECMAScript expressions.
 }
 
-@deftogether[(@defstruct*[(expr:this expr) ()]
-              @defstruct*[(expr:null expr) ()])]{
-  The @racketidfont{this} and @racketvalfont{null} keywords.
+@defstruct*[(expression:literal expression) ([value literal?])]{
+  A literal value expression.
 }
 
-@defstruct*[(expr:id expr) ([symbol symbol?])]{
-  An identifier.
+@defstruct*[(expression:this expression) ()]{
+  The @racket[this] keyword.
 }
 
-@deftogether[(@defstruct*[(expr:bool expr) ([value boolean?])]
-              @defstruct*[(expr:number expr) ([value number?])]
-              @defstruct*[(expr:string expr) ([value string?])])]{
-  A literal value.
+@defstruct*[(expression:reference expression) ([identifier identifier?])]{
+  An identifier reference.
 }
 
-@defstruct*[(expr:regexp expr) ([pattern string?] [flags string?])]{
+@defstruct*[(expression:member-reference expression)
+            ([base expression?] [property (or/c identifier? expression?)])]{
+  A member reference. This struct represents expressions of the form
+  @racketfont{object.property} and @racketfont{object[property]},
+  depending on the type of @racket[property].
+}
+
+@deftogether[(@defstruct*[(operator syntax-element) ([symbol symbol?])]
+              @defstruct*[(expression:postfix expression)
+                          ([operand expression?] [operator operator?])]
+              @defstruct*[(expression:unary expression)
+                          ([operator operator?] [operand expression?])]
+              @defstruct*[(expression:binary expression)
+                          ([left expression?] [operator operator?] [right expression?])])]{
+  Operator expressions.
+}
+
+@defstruct*[(expression:conditional expression)
+            ([test expression?] [true expression?] [false expression?])]{
+  The conditional (ternary) operator @racketfont{?:}.
+}
+
+@defstruct*[(expression:call expression)
+            ([function expression?]
+             [arguments (listof expression?)])]{
+  A function call.
+}
+
+@defstruct*[(expression:new expression)
+            ([constructor expression?]
+             [arguments (listof expression?)])]{
+  A @racket[new] expression.
+}
+
+@defstruct*[(expression:function expression) ([definition function?])]{
+  A function expression.
+}
+
+@defstruct*[(expression:comma expression)
+            ([left expression?] [right expression?])]{
+  The comma operator.
+}
+
+@subsection{Literals}
+
+@defstruct*[(literal syntax-element) ()]{
+  The base type for all literals.
+}
+
+@defstruct*[(literal:null literal) ()]{
+  The @racket[null] keyword.
+}
+
+@deftogether[(@defstruct*[(literal:boolean literal) ([value boolean?])]
+              @defstruct*[(literal:number literal) ([value number?])]
+              @defstruct*[(literal:string literal) ([value string?])])]{
+  A boolean, numeric or string literal.
+}
+
+@defstruct*[(literal:regexp literal) ([pattern string?] [flags string?])]{
   A regular expression literal. The @racket[flags] field should
   be a (possibly empty) string consisting of a combination of the
   characters @litchar["g"], @litchar["i"] and @litchar["m"].
 }
 
-@defstruct*[(expr:array expr) ([elements (listof expr?)])]{
-  An array literal.
+@defstruct*[(literal:array literal)
+            ([elements (listof (or/c expression? #f))])]{
+  An array literal. A @racket[#f] value for any element indicates
+  an elision.
 }
 
-@defstruct*[(expr:object expr)
-            ([properties (listof (or/c init:obj:prop?
-                                       init:obj:get?
-                                       init:obj:set?))])]{
+@deftogether[(@defstruct*[(literal:object literal)
+                          ([properties (listof property-initializer?)])]
+              @defstruct*[(property-initializer syntax-element)
+                          ([name (or/c identifier? literal:string? literal:number?)])]
+              @defstruct*[(property-initializer:data property-initializer)
+                          [(value expression?)]]
+              @defstruct*[(property-initializer:get property-initializer)
+                          [(function function?)]]
+              @defstruct*[(property-initializer:set property-initializer)
+                          [(function function?)]])]{
   An object literal.
-}
 
-@defstruct*[(expr:fn expr) ([def fn?])]{
-  A function expression.
-}
-
-@defstruct*[(expr:member expr) ([object expr?] [property expr?])]{
-  A member reference. This struct represents expressions of the form
-  @racketfont{object.property} and @racketfont{object[property]},
-  depending on the type of @racketidfont{property}.
-}
-
-@defstruct*[(expr:new expr) ([ctor expr?] [args (listof expr?)])]{
-  A @racketkeywordfont{new} expression.
-}
-
-@defstruct*[(expr:call expr) ([fn expr?] [args (listof expr?)])]{
-  A function call.
-}
-
-@deftogether[(@defstruct*[(expr:postfix expr) ([expr expr?] [op symbol?])]
-              @defstruct*[(expr:unary expr) ([op symbol?] [expr expr?])]
-              @defstruct*[(expr:binary expr) ([left expr?] [op symbol?] [right expr?])])]{
-  Operator expressions.
-}
-
-@defstruct*[(expr:cond expr) ([test expr?] [true expr?] [false expr?])]{
-  The conditional (ternary) operator @racketfont{?:}.
-}
-
-@defstruct*[(expr:comma expr) ([left expr?] [right expr?])]{
-  The comma operator.
-}
-
-@subsection{Initializers}
-
-@defstruct*[(init syntax-element) ()]{
-}
-
-@deftogether[(@defstruct*[(init:obj:prop init)
-                          ([name (or/c symbol? string? number?)]
-                           [value expr?])]
-              @defstruct*[(init:obj:get init)
-                          ([prop (or/c symbol? string? number?)]
-                           [fn fn?])]
-              @defstruct*[(init:obj:set init)
-                          ([prop (or/c symbol? string? number?)]
-                           [fn fn?])])]{
-  Property initializers for object literals. The argument for setter
-  functions is defined in the @racketidfont{fn} field.
-}
-
-@subsection{Declarations}
-
-@defstruct*[(decl:fn source-element) ([def fn?])]{
-  A function declaration.
-}
-
-@defstruct*[(decl:var syntax-element) ([id symbol?] [expr (or/c expr? #f)])]{
-  A variable declaration.
+  A @racket[property-initializer:get] initializer must be an anonymous
+  function of no arguments. A @racket[property-initializer:set]
+  initializer must be an anonymous function of one argument.
 }
 
 @subsection{Statements}
 
-@defstruct*[(stmt source-element) ()]{
+@defstruct*[(statement syntax-element) ()]{
+  The base type for all statements.
 }
 
-@defstruct*[(stmt:block stmt) ([stmts (listof stmt?)])]{
-  A block.
+@defstruct*[(statement:block statement) ([body (listof statement?)])]{
+  A @racket[block].
 }
 
-@defstruct*[(stmt:vars stmt) ([decls (listof decl:var?)])]{
-  A @racketkeywordfont{vars} statement.
+@defstruct*[(statement:break statement) ([label (or/c identifier? #f)])]{
+  A @racket[break] statement.
 }
 
-@defstruct*[(stmt:empty stmt) ()]{
-  An empty statement.
+@defstruct*[(statement:continue statement) ([label (or/c identifier? #f)])]{
+  A @racket[continue] statement.
 }
 
-@defstruct*[(stmt:if stmt) ([test expr?] [true stmt?] [false (or/c stmt? #f)])]{
-  An @racketkeywordfont{if} statement.
+@defstruct*[(statement:debugger statement) ()]{
+  A @racket[debugger] statement.
 }
 
-@defstruct*[(stmt:do stmt) ([body stmt?] [test expr?])]{
-  A @racketkeywordfont{do} statement.
+@defstruct*[(statement:do statement) ([body statement?] [test expression?])]{
+  A @racket[do] statement.
 }
 
-@defstruct*[(stmt:while stmt) ([test expr?] [body stmt?])]{
-  A @racketkeywordfont{while} statement.
+@defstruct*[(statement:empty statement) ()]{
+  An empty statement. See @racket[empty-statement].
 }
 
-@;@defstruct*[(stmt:for stmt) ([init] [test] [update])]{}
-
-@;@defstruct*[(stmt:for-in stmt) (i expr body)]{}
-
-@defstruct*[(stmt:continue stmt) ([label (or/c symbol? #f)])]{
-  A @racketkeywordfont{continue} statement.
+@defstruct*[(statement:expression statement) ([expression expression?])]{
+  An expression statement.
 }
 
-@defstruct*[(stmt:break stmt) ([label (or/c symbol? #f)])]{
-  A @racketkeywordfont{break} statement.
+@defstruct*[(statement:for statement)
+            ([initializer (or/c expression? (listof variable-declaration?) #f)]
+             [test (or/c expression? #f)]
+             [update (or/c expression? #f)]
+             [body statement?])]{
+  A @racket[for] statement.
 }
 
-@defstruct*[(stmt:return stmt) ([expr (or/c expr? #f)])]{
-  A @racketkeywordfont{return} statement.
+@defstruct*[(statement:for-in stmt)
+            ([index (or/c expression? variable-declaration?)]
+             [expression expression?]
+             [body statement?])]{
+  See @racket[for-in].
 }
 
-@defstruct*[(stmt:with stmt) ([expr expr?] [body stmt?])]{
-  A @racketkeywordfont{with} statement.
+@defstruct*[(statement:if statement)
+            ([test expression?]
+             [true statement?]
+             [false (or/c statement? #f)])]{
+  An @racket[if] statement.
 }
 
-@;@defstruct*[(stmt:switch stmt) (expr cases)]{}
-
-@defstruct*[(stmt:labelled stmt) ([label symbol?] [stmt stmt?])]{}
-
-@defstruct*[(stmt:throw stmt) ([expr expr?])]{
-  A @racketkeywordfont{throw} statement.
+@defstruct*[(statement:label statement)
+            ([label identifier?]
+             [statement statement?])]{
+  A labelled statement. See @racket[label].
 }
 
-@;@defstruct*[(stmt:try stmt) (block catch-id catch finally)]{}
+@defstruct*[(statement:return statement)
+            ([expression (or/c expression? #f)])]{
+  A @racket[return] statement.
+}
 
-@defstruct*[(stmt:debugger stmt) ()]{}
+@deftogether[(@defstruct*[(statement:switch statement)
+                          ([expression expression?]
+                           [body (listof (or/c case-clause? default-clause?))])]
+              @defstruct*[(case-clause syntax-element)
+                          ([expression expression?] [body (listof statement?)])]
+              @defstruct*[(default-clause syntax-element)
+                          ([body (listof statement?)])])]{
+  A @racket[switch] statement.
+}
 
-@subsection{Function definitions}
+@defstruct*[(statement:throw statement) ([expression expression?])]{
+  A @racket[throw] statement.
+}
 
-@defstruct*[(fn syntax-element)
-            ([name symbol?]
-             [params (listof symbol?)]
-             [body (listof source-element?)])]{
+@defstruct*[(statement:try statement)
+            ([body statement:block?]
+             [catch-id (or/c identifier? #f)]
+             [catch-body (or/c statement:block? #f)]
+             [finally-body (or/c statement:block? #f)])]{
+  A @racket[try] statement.
+}
+
+@defstruct*[(statement:var statement)
+            ([declarations (listof variable-declaration?)])]{
+  A variable declaration statement.
+}
+
+@defstruct*[(statement:while statement)
+            ([test expression?] [body statement?])]{
+  A @racket[while] statement.
+}
+
+@defstruct*[(statement:with statement)
+            ([expression expression?] [body statement?])]{
+  A @racket[with] statement.
 }
