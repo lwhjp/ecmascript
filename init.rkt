@@ -1,10 +1,15 @@
 #lang racket/base
 
-(require racket/class
+(require (only-in racket/class get-field)
          racket/match
+         racket/math
          racket/runtime-path
+         net/uri-codec
+         "private/function.rkt"
          "private/global-object.rkt"
-         "private/object.rkt")
+         "private/object.rkt"
+         "types.rkt"
+         (prefix-in ecma: "eval.rkt"))
 
 (define (import-library mod)
   (define imported-properties
@@ -26,14 +31,36 @@
 (define-object-properties global-object
   ["NaN" +nan.0]
   ["Infinity" +inf.0]
-  ; TODO: eval
-  ; TODO: parseInt
-  ; TODO: parseFloat
-  ; TODO: escape
-  ; TODO: unescape
-  ; TODO: isNaN
-  ; TODO: isFinite
-  )
+  ["eval"
+   (native-method (this x)
+     (if (string? x)
+         (ecma:eval x)
+         x))]
+  ["parseInt"
+   (native-method (this string radix)
+     (string->number (to-string string)
+                     (to-int32 radix)))]
+  ["parseFloat"
+   (native-method (this string)
+     (string->number (to-string string)))]
+  ["isNaN"
+   (native-method (this number)
+     (nan? (to-number number)))]
+  ["isFinite"
+   (native-method (this number)
+     (not (infinite? number)))]
+  ["decodeURI"
+   (native-method (this encodedURI)
+     (uri-decode (to-string encodedURI)))]
+  ["decodeURIComponent"
+   (native-method (this encodedURIComponent)
+     (uri-path-segment-decode (to-string encodedURIComponent)))]
+  ["encodeURI"
+   (native-method (this uri)
+     (uri-encode (to-string uri)))]
+  ["encodeURIComponent"
+   (native-method (this uriComponent)
+     (uri-path-segment-encode (to-string uriComponent)))])
 
 (define-runtime-module-path lib:array "lib/array.rkt")
 (define-runtime-module-path lib:boolean "lib/boolean.rkt")

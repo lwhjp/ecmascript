@@ -51,14 +51,3 @@
         #`(begin
             #,@(ecmascript->racket
                 (read-program src (open-input-string line)))))))
-
-(void
- (send
-  ecma:global-object
-  put!
-  "eval"
-  (ecma:make-native-function
-   (λ (this x)
-     (if (string? x)
-         (ecma:eval x) ; FIXME: nested lexical scopes
-         x)))))
