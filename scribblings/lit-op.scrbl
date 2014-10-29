@@ -1,5 +1,5 @@
 #lang scribble/manual
-@(require (for-label "../private/helpers.rkt"
+@(require (for-label "../private/literal.rkt"
                      "../private/operator.rkt"
                      "../types.rkt"))
 

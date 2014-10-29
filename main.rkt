@@ -7,11 +7,11 @@
          "private/environment.rkt"
          "private/function.rkt"
          "private/global-object.rkt"
-         "private/helpers.rkt"
+         "private/literal.rkt"
          "private/operator.rkt"
          "private/statement.rkt")
 
-(provide (all-from-out "private/helpers.rkt"
+(provide (all-from-out "private/literal.rkt"
                        "private/operator.rkt"
                        "private/statement.rkt")
          ; TODO: several of these should be removed

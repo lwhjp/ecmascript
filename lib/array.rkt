@@ -8,7 +8,7 @@
          "../private/object.rkt"
          [prefix-in ecma:
                     (combine-in
-                     "../private/helpers.rkt"
+                     "../private/literal.rkt"
                      "../types.rkt")])
 
 (provide get-properties)

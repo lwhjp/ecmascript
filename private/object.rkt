@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require (for-syntax racket/base)
-         racket/class
+(require racket/class
          "error.rkt")
 
 (provide (all-defined-out))
