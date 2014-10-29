@@ -3,6 +3,7 @@
 (require racket/class
          racket/list
          racket/string
+         "../private/builtin.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
@@ -12,13 +13,6 @@
 
 (define (get-properties)
   `(["String" . ,string-constructor]))
-
-(define string%
-  (class ecma-object%
-    (init-field value)
-    (super-new [class "String"]
-               [initial-properties
-                `(("length" . ,(make-data-property (string-length value))))])))
 
 (define string-prototype
   (instantiate string% ("")

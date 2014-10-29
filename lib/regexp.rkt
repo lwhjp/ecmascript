@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require racket/class
+         "../private/builtin.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
@@ -13,11 +14,6 @@
 
 (define (get-properties)
   `(["RegExp" . ,regexp-constructor]))
-
-(define regexp%
-  (class ecma-object%
-    (init-field pattern flags)
-    (super-new [class "RegExp"])))
 
 (define (make-regexp-object pattern flags prototype)
   (let ([obj

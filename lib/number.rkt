@@ -2,6 +2,7 @@
 
 (require math/flonum
          racket/class
+         "../private/builtin.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
          (prefix-in ecma: "../types.rkt"))
@@ -10,11 +11,6 @@
 
 (define (get-properties)
   `(["Number" . ,number-constructor]))
-
-(define number%
-  (class ecma-object%
-    (init-field value)
-    (super-new [class "Number"])))
 
 (define number-prototype
   (instantiate number% (0)

@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require racket/class
+         "../private/builtin.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
          (prefix-in ecma: "../types.rkt"))
@@ -9,11 +10,6 @@
 
 (define (get-properties)
   `(["Boolean" . ,boolean-constructor]))
-
-(define boolean%
-  (class ecma-object%
-    (init-field value)
-    (super-new [class "Boolean"])))
 
 (define boolean-prototype
   (instantiate boolean% (#f)

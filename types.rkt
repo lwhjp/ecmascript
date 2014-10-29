@@ -1,12 +1,13 @@
 #lang racket/base
 
 (require (only-in racket/class
+                  instantiate
                   is-a?
                   send)
          racket/math
          racket/string
+         "private/builtin.rkt"
          "private/error.rkt"
-         "private/global-object.rkt"
          "private/object.rkt")
 
 (provide (all-defined-out)
@@ -111,16 +112,7 @@
   (cond
     [(eq? v 'undefined) (raise-native-error 'type "undefined")]
     [(eq? v 'null) (raise-native-error 'type "null")]
-    [(boolean? v)
-     (send (send global-object get "Boolean")
-           construct
-           v)]
-    [(number? v)
-     (send (send global-object get "Number")
-           construct
-           v)]
-    [(string? v)
-     (send (send global-object get "String")
-           construct
-           v)]
+    [(boolean? v) (instantiate boolean% (v))]
+    [(number? v) (instantiate number% (v))]
+    [(string? v) (instantiate string% (v))]
     [(object? v) v]))
