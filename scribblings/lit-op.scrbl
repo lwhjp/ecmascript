@@ -12,7 +12,7 @@
 @defproc[(array [v value?] ...) object?]{
 }
 
-@defform[(object [property-id . property-definition] ...)
+@defform[(object [property-id property-definition] ...)
          #:grammar
          [(property-definition (code:line expr)
                                (code:line #:get get-fn)
