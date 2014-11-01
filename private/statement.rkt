@@ -8,7 +8,8 @@
          "environment.rkt"
          "function.rkt"
          "object.rkt"
-         "../types.rkt")
+         "../types.rkt"
+         (prefix-in ecma: "operator.rkt"))
 
 (provide (filtered-out
           (λ (name)
@@ -123,6 +124,38 @@
 (define-syntax-rule (stmt:with expr body0 body ...)
   (begin-scope (new-object-environment (get-value expr) lexical-environment)
     body0 body ...))
+
+(define-syntax (stmt:switch stx)
+  (syntax-case stx ()
+    [(_ expr clause ...)
+     #'(let/ec escape
+         (syntax-parameterize
+             ([break-bindings (cons (cons #f #'escape)
+                                    (syntax-parameter-value #'break-bindings))]
+              [return-value (λ (stx) #'(void))])
+           (let ([v expr])
+             (do-switch v first-lbl () () ([else (escape)]) clause ...))))]))
+
+(define-syntax do-switch
+  (syntax-rules (default)
+    [(_ _ end (letrec-part ...) (cond-part ...) (default-part ...))
+     (letrec (letrec-part ... [end void])
+       (cond cond-part ... default-part ...))]
+    [(_ v lbl (letrec-part ...) (cond-part ...) (default-part ...) (default stmt ...) clause ...)
+     (do-switch v next-lbl
+                (letrec-part ...
+                 [lbl (λ () stmt ... (next-lbl))])
+                (cond-part ...)
+                ([else (lbl)])
+                clause ...)]
+    [(_ v lbl (letrec-part ...) (cond-part ...) (default-part ...) (test stmt ...) clause ...)
+     (do-switch v next-lbl
+                (letrec-part ...
+                 [lbl (λ () stmt ... (next-lbl))])
+                (cond-part ...
+                 [(ecma:=== v test) (lbl)])
+                (default-part ...)
+                clause ...)]))
 
 (define-syntax (stmt:label stx)
   (syntax-case stx ()

@@ -372,8 +372,23 @@
       loc
       (parse-expression #'expr)
       (parse-statement #'body))]
-    [(switch-statement "(" expr ")" ((~datum case-block) "{" clause ... "}"))
-     (error "TODO: switch")]
+    [(switch-statement "switch" "(" expr ")" ((~datum case-block) "{" clause ... "}"))
+     (ast:statement:switch
+      loc
+      (parse-expression #'expr)
+      (map
+       (λ (stx)
+         (syntax-parse stx
+           [((~datum case-clause) "case" expr ":" stmt ...)
+            (ast:case-clause
+             (stx-loc stx)
+             (parse-expression #'expr)
+             (map parse-statement (attribute stmt)))]
+           [((~datum default-clause) "default" ":" stmt ...)
+            (ast:default-clause
+             (stx-loc stx)
+             (map parse-statement (attribute stmt)))]))
+       (attribute clause)))]
     [(labelled-statement (identifier label) ":" stmt)
      (ast:statement:label
       loc

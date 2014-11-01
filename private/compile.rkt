@@ -240,6 +240,23 @@
        `(with ,(compile-expression expr)
           ,(compile-statement body))
        loc)]
+    [(ast:statement:switch loc expr body)
+     (datum->syntax #f
+       `(switch ,(compile-expression expr)
+          ,@(map
+             (match-lambda
+               [(ast:case-clause loc expr body)
+                (datum->syntax #f
+                  `(,(compile-expression expr)
+                    ,@(map compile-statement body))
+                  loc)]
+                [(ast:default-clause loc body)
+                 (datum->syntax #f
+                   `(default
+                     ,@(map compile-statement body))
+                   loc)])
+              body))
+       loc)]
     [(ast:statement:label loc label stmt)
      (datum->syntax #f
        `(label ,(compile-identifier label)

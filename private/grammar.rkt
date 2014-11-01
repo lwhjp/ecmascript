@@ -100,7 +100,7 @@ continue-statement: "continue" [ws-no-eol identifier] ws eol-or-semicolon
 break-statement: "break" [ws-no-eol identifier] ws eol-or-semicolon
 return-statement: "return" [ws-no-eol expression] ws eol-or-semicolon
 with-statement: "with" ws "(" ws expression ws ")" ws statement
-switch-statement: "switch" ws "(" ws expression ws ")" case-block
+switch-statement: "switch" ws "(" ws expression ws ")" ws case-block
 case-block: "{" (ws case-clause)* [ws default-clause (ws case-clause)*] ws "}"
 case-clause: "case" ws expression ws ":" (ws statement)*
 default-clause: "default" ws ":" (ws statement)*
