@@ -53,6 +53,25 @@
      (apply
       ecma:array
       (hash-keys (get-field properties o))))]
+  ["create"
+   (native-method (this o properties)
+     (unless (or (null? o) (object? o))
+       (raise-native-error 'type "not an object or null"))
+     (let ([obj (new ecma-object%
+                     [class "Object"]
+                     [prototype (if (null? o)
+                                    #f
+                                    o)])])
+       (unless (eq? 'undefined properties)
+         (for ([(pname pdesc) (in-hash
+                               (get-field properties
+                                          (ecma:to-object properties)))]
+               #:when (property-enumerable? pdesc))
+           (send obj define-own-property pname
+                 (to-property-descriptor
+                  (send obj get pname))
+                 #t)))
+       obj))]
   ["defineProperty"
    (native-method (this o p attributes)
      (check-is-object o)
