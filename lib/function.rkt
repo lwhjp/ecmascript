@@ -1,7 +1,9 @@
 #lang racket/base
 
-(require racket/match
+(require (only-in racket/class is-a? send)
+         racket/match
          racket/string
+         "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
          "../eval.rkt"
@@ -30,8 +32,36 @@
             (eval def)))])
     (make-native-constructor call construct)))
 
+(define (check-is-function o)
+  (unless (is-a? o function%)
+    (raise-native-error 'type "not a function")))
+
 (define-object-properties function-constructor
   ["prototype" function-prototype])
 
 (define-object-properties function-prototype
-  ["constructor" function-constructor])
+  ["constructor" function-constructor]
+  ["toString"
+   (make-native-function
+    (λ (this)
+      (check-is-function this)
+      "function"))]
+  ["apply"
+   (make-native-function
+    (λ (this this-arg arg-array)
+      (check-is-function this)
+      (define length
+        (if (is-a? arg-array ecma-object%)
+            (send arg-array get "length")
+            0))
+      (define args
+        (for/list ([i (in-range (to-uint32 length))])
+          (send arg-array get (to-string i))))
+      (send this call this-arg . arg-array)))]
+  ["call"
+   (make-native-function
+    (λ (this this-arg . args)
+      (check-is-function this)
+      (send this call this-arg . args)))]
+  ; TODO: bind
+  )
