@@ -12,10 +12,6 @@
 (define (get-properties)
   `(["Number" . ,number-constructor]))
 
-(define number-prototype
-  (instantiate number% (0)
-    [prototype object-prototype]))
-
 (define number-constructor
   (letrec
       ([call

@@ -11,10 +11,6 @@
 (define (get-properties)
   `(["Boolean" . ,boolean-constructor]))
 
-(define boolean-prototype
-  (instantiate boolean% (#f)
-    [prototype object-prototype]))
-
 (define boolean-constructor
   (letrec
       ([call

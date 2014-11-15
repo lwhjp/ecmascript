@@ -14,10 +14,6 @@
 (define (get-properties)
   `(["String" . ,string-constructor]))
 
-(define string-prototype
-  (instantiate string% ("")
-    [prototype object-prototype]))
-
 (define string-constructor
   (letrec
       ([call
