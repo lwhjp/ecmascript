@@ -35,33 +35,12 @@
 
     (super-new)
 
-    (define/public (get p)
-      (let ([prop (send this get-property p)])
-        (cond
-          [(data-property? prop)
-           (data-property-value prop)]
-          [(accessor-property? prop)
-           (let ([get (accessor-property-get prop)])
-             (if get
-                 (send get call this)
-                 'undefined))]
-          [else 'undefined])))
-
-    (define/public (get-own-property p)
-      (hash-ref properties p #f))
-
-    (define/public (get-property p)
-      (hash-ref properties p
-                (λ ()
-                  (and prototype
-                       (send prototype get-property p)))))
-
     (define/public (put! p v [throw? #t])
       (if (send this can-put? p)
-          (let ([own (send this get-own-property p)])
+          (let ([own (get-own-property this p)])
             (if (data-property? own)
                 (send this define-own-property p `(data (value . ,v)) throw?)
-                (let ([prop (send this get-property p)])
+                (let ([prop (get-property this p)])
                   (if (accessor-property? prop)
                       (send (accessor-property-set prop) call this v)
                       (send this define-own-property
@@ -78,7 +57,7 @@
              (format "~a: can't put" p)))))
 
     (define/public (can-put? p)
-      (let ([prop (send this get-own-property p)])
+      (let ([prop (get-own-property this p)])
         (cond
           [(accessor-property? prop)
            (if (accessor-property-set prop) #t #f)]
@@ -87,7 +66,7 @@
           [(not prototype)
            extensible?]
           [else
-           (let ([inherited (send prototype get-property p)])
+           (let ([inherited (get-property prototype p)])
              (cond
                [(accessor-property? inherited)
                 (if (accessor-property-set inherited) #t #f)]
@@ -95,11 +74,8 @@
                 (data-property-writable? inherited)]
                [else extensible?]))])))
 
-    (define/public (has-property? p)
-      (if (send this get-property p) #t #f))
-
     (define/public (delete! p [throw? #t])
-      (let ([prop (send this get-own-property p)])
+      (let ([prop (get-own-property this p)])
         (if prop
             (if (property-configurable? prop)
                 (begin
@@ -110,19 +86,6 @@
                       'type
                       (format "~a: not configurable" p))))
             #t)))
-
-    (define/public (default-value [hint 'number])
-      (let/ec return
-        (for ([method (if (eq? 'string hint)
-                          '("toString" "valueOf")
-                          '("valueOf" "toString"))])
-          (let ([f (send this get method)])
-            (when (and (is-a? f ecma-object%)
-                       (object-method-arity-includes? f 'call 1))
-              (let ([v (send f call this)])
-                (unless (is-a? v ecma-object%)
-                  (return v))))))
-        (raise-native-error 'type)))
 
     (define (generic-desc? desc)
       (and (not (data-desc? desc))
@@ -152,7 +115,7 @@
 
     (define/public (define-own-property p desc throw?)
       (let ([reject (λ () (and throw? (raise-native-error 'type)))]
-            [current (send this get-own-property p)])
+            [current (get-own-property this p)])
         (cond
           [(not current)
            (if (not extensible?)
@@ -208,6 +171,21 @@
                              #| TODO |#)))
                (reject)
                (update-property current desc))])))))
+
+(define (get-property object name)
+  (hash-ref
+   (get-field properties object)
+   name
+   (λ ()
+     (let ([prototype (get-field prototype object)])
+       (and prototype
+            (get-property prototype name))))))
+
+(define (get-own-property object name)
+  (hash-ref
+   (get-field properties object)
+   name
+   #f))
 
 (define-syntax-rule (define-object-properties obj [prop val] ...)
   (begin

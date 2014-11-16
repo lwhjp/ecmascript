@@ -98,12 +98,12 @@
       (unless (object? this)
         (raise-native-error 'type "this: not an object"))
       (define name
-        (let ([name (send this get "name")])
+        (let ([name (get this "name")])
           (if (ecma:undefined? name)
               "Error"
               (ecma:to-string name))))
       (define msg
-        (let ([msg (send this get "message")])
+        (let ([msg (get this "message")])
           (if (ecma:undefined? msg)
               ""
               (ecma:to-string msg))))

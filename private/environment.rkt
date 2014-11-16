@@ -41,11 +41,11 @@
                  (ecma:reference-name v)
                  (ecma:reference-strict? v))]
           [(object? base)
-           (send base get (ecma:reference-name v))]
+           (get base (ecma:reference-name v))]
           [else
            (let ([o (ecma:to-object base)]
                  [p (ecma:reference-name v)])
-             (let ([prop (send o get-property p)])
+             (let ([prop (get-property o p)])
                (cond
                  [(data-property? prop)
                   (data-property-value prop)]
@@ -88,8 +88,8 @@
          (if (and
               (send o can-put? p)
               (not (data-property?
-                    (send o get-own-property p))))
-             (let ([prop (send o get-property p)])
+                    (get-own-property o p))))
+             (let ([prop (get-property o p)])
                (if (accessor-property? prop)
                    (send (accessor-property-set prop)
                          call
@@ -163,7 +163,7 @@
                 [provide-this? #f])
     (super-new)
     (define/override (has-binding? n)
-      (send binding-object has-property? n))
+      (has-property? binding-object n))
     (define/override (create-mutable-binding! n d)
       (send binding-object
             define-own-property
@@ -177,8 +177,8 @@
     (define/override (set-mutable-binding! n v s)
       (send binding-object put! n v s))
     (define/override (get-binding-value n s)
-      (if (send binding-object has-property? n)
-          (send binding-object get n)
+      (if (has-property? binding-object n)
+          (get binding-object n)
           (if s
               (raise-native-error
                'reference

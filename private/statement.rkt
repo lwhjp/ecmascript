@@ -9,6 +9,7 @@
          "function.rkt"
          "object.rkt"
          "../convert.rkt"
+         "../object.rkt"
          "../types.rkt"
          (prefix-in ecma: "operator.rkt"))
 
@@ -119,7 +120,7 @@
                     ([(name prop) (in-hash
                                    (get-field properties obj))]
                      #:when (property-enumerable? prop))
-            (put-value! lhs (send obj get name))
+            (put-value! lhs (get obj name))
             body)))))
 
 (define-syntax-rule (stmt:with expr body0 body ...)

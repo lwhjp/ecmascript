@@ -2,6 +2,7 @@
 
 (require (only-in racket/class
                   instantiate
+                  object-method-arity-includes?
                   send)
          racket/math
          racket/string
@@ -12,11 +13,19 @@
 
 (provide (all-defined-out))
 
-(define (to-primitive v [preferred #f])
+(define (to-primitive v [hint 'number])
   (if (object? v)
-      (if preferred
-          (send v default-value preferred)
-          (send v default-value))
+      (let/ec return
+        (for ([method (if (eq? 'string hint)
+                          '("toString" "valueOf")
+                          '("valueOf" "toString"))])
+          (let ([f (get v method)])
+            (when (and (object? f)
+                       (object-method-arity-includes? f 'call 1))
+              (let ([v (send f call v)])
+                (unless (object? v)
+                  (return v))))))
+        (raise-native-error 'type))
       v))
 
 (define (to-boolean v)

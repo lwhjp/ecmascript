@@ -2,6 +2,7 @@
 
 (require (only-in racket/class is-a? send)
          racket/string
+         "../object.rkt"
          "../private/array.rkt"
          "../private/environment.rkt"
          "../private/function.rkt"
@@ -38,7 +39,7 @@
   ["toString"
    (native-method (this)
      (let* ([array (ecma:to-object this)]
-            [func (send array get "join")])
+            [func (get array "join")])
        (if (is-a? func function%)
            (send func call this)
            (send (get-value
@@ -50,15 +51,15 @@
                  this))))]
   ["toLocaleString"
    (native-method (this)
-     (send (send this get "toString") call this))]
+     (send (get this "toString") call this))]
   ; TODO: concat
   ["join"
    (native-method (this separator)
      (string-join
       (for/list ([i (in-range
                      (ecma:to-uint32
-                      (send this get "length")))])
-        (let ([elt (send this get (number->string i))])
+                      (get this "length")))])
+        (let ([elt (get this (number->string i))])
           (if (or (ecma:undefined? elt)
                   (ecma:null? elt))
               ""

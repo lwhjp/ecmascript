@@ -8,6 +8,7 @@
          "../private/object.rkt"
          "../convert.rkt"
          "../eval.rkt"
+         "../object.rkt"
          "../types.rkt")
 
 (provide get-properties)
@@ -53,11 +54,11 @@
       (check-is-function this)
       (define length
         (if (is-a? arg-array ecma-object%)
-            (send arg-array get "length")
+            (get arg-array "length")
             0))
       (define args
         (for/list ([i (in-range (to-uint32 length))])
-          (send arg-array get (to-string i))))
+          (get arg-array (to-string i))))
       (send this call this-arg . arg-array)))]
   ["call"
    (make-native-function

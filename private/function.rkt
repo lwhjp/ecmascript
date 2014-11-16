@@ -51,7 +51,7 @@
     (define/public (has-instance? v)
       (and
        (object? v)
-       (let ([o (send this get "prototype")])
+       (let ([o (get this "prototype")])
          (unless (object? o)
            (raise-native-error 'type "not an object"))
          (let loop ([v v])
@@ -81,7 +81,7 @@
     (super-new)
 
     (define/public (construct . args)
-      (let* ([prot (send this get "prototype")]
+      (let* ([prot (get this "prototype")]
              [prot (if (object? prot) prot object-prototype)]
              [obj (new ecma-object%
                        [class (get-field class prot)]
@@ -124,20 +124,7 @@
   (class ecma-object%
     (init-field arg-map)
     (super-new [class "Arguments"]
-               [prototype object-prototype])
-    (define/override (get p)
-      (hash-ref arg-map
-                p
-                (λ ()
-                  (super get p))))
-    (define/override (get-own-property p)
-      (let ([prop (super get-own-property p)])
-        (and
-         prop
-         (let ([arg (hash-ref arg-map p 'undefined)])
-           (if (ecma:defined? arg)
-               (struct-copy data-property prop [value arg])
-               prop)))))))
+               [prototype object-prototype])))
 
 (define (make-arguments-object f args)
   (let* ([arg-map

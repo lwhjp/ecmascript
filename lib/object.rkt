@@ -48,7 +48,7 @@
   ["getOwnPropertyDescriptor"
    (native-method (this o p)
      (from-property-descriptor
-      (send o get-own-property (ecma:to-string p))))]
+      (get-own-property o (ecma:to-string p))))]
   ["getOwnPropertyNames"
    (native-method (this o)
      (check-is-object o)
@@ -71,7 +71,7 @@
                #:when (property-enumerable? pdesc))
            (send obj define-own-property pname
                  (to-property-descriptor
-                  (send obj get pname))
+                  (get obj pname))
                  #t)))
        obj))]
   ["defineProperty"
@@ -90,7 +90,7 @@
            #:when (property-enumerable? pdesc))
        (send o define-own-property pname
              (to-property-descriptor
-              (send o get pname))
+              (get o pname))
              #t))
      o)]
   ["seal"
@@ -156,7 +156,7 @@
    (make-native-function
     (λ (this)
       (define o (ecma:to-object this))
-      (define f (send o get "toString"))
+      (define f (get o "toString"))
       (unless (is-a? f function%)
         (raise-native-error 'type "toString: not a function"))
       (send f call o)))]
@@ -168,9 +168,9 @@
    (make-native-function
     (λ (this v)
       (property?
-       (send (ecma:to-object this)
-             get-own-property
-             (ecma:to-string v)))))]
+       (get-own-property
+        (ecma:to-object this)
+        (ecma:to-string v)))))]
   ["isPrototypeOf"
    (make-native-function
     (λ (this v)
@@ -184,8 +184,8 @@
    (make-native-function
     (λ (this v)
       (define prop
-        (send (ecma:to-object this)
-              get-own-property
-              (ecma:to-string v)))
+        (get-own-property
+         (ecma:to-object this)
+         (ecma:to-string v)))
       (and (property? prop)
            (property-enumerable? prop))))])

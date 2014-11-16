@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/class
+(require (except-in racket/class object?)
+         "../object.rkt"
          "../private/builtin.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
@@ -37,7 +38,7 @@
   (define-values (global ignore-case multiline last-index)
     (apply values
            (map (λ (p)
-                  (send r get p))
+                  (get r p))
                 '("global" "ignoreCase" "multiline" "lastIndex"))))
   (define re
     (pregexp
@@ -107,8 +108,8 @@
    (native-method (this)
      (string-append
       "/"
-      (ecma:to-string (send this get "source"))
+      (ecma:to-string (get this "source"))
       "/"
-      (if (ecma:to-boolean (send this get "global")) "g" "")
-      (if (ecma:to-boolean (send this get "ignoreCase")) "i" "")
-      (if (ecma:to-boolean (send this get "multiline")) "m" "")))])
+      (if (ecma:to-boolean (get this "global")) "g" "")
+      (if (ecma:to-boolean (get this "ignoreCase")) "i" "")
+      (if (ecma:to-boolean (get this "multiline")) "m" "")))])
