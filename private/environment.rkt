@@ -1,8 +1,9 @@
 #lang racket/base
 
 (require (for-syntax racket/base)
-         racket/class
+         (except-in racket/class object?)
          racket/stxparam
+         "../object.rkt"
          "error.rkt"
          "global-object.rkt"
          "object.rkt"
@@ -35,7 +36,7 @@
                  get-binding-value
                  (ecma:reference-name v)
                  (ecma:reference-strict? v))]
-          [(is-a? base ecma-object%)
+          [(object? base)
            (send base get (ecma:reference-name v))]
           [else
            (let ([o (ecma:to-object base)]

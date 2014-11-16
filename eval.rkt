@@ -5,10 +5,10 @@
             "private/function.rkt"
             "private/global-object.rkt"
             "private/object.rkt"))
-         racket/class
          racket/port
          racket/runtime-path
          racket/contract/base
+         "object.rkt"
          "parse.rkt"
          "private/compile.rkt"
          "private/read.rkt")
@@ -16,8 +16,7 @@
 (provide (contract-out
           (rename ecma:eval eval
                   (->* (string?)
-                       ((is-a?/c ecma:ecma-object%)
-                        namespace?)
+                       (object? namespace?)
                        any))
           [make-global-namespace (-> namespace?)])
          eval-read-interaction)

@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/class
+(require (except-in racket/class object?)
+         "../object.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
@@ -22,7 +23,7 @@
        [construct
         (λ ([value 'undefined])
           (cond
-            [(is-a? value ecma-object%) value]
+            [(object? value) value]
             [(or (string? value)
                  (boolean? value)
                  (number? value))
@@ -34,7 +35,7 @@
     (make-native-constructor call construct)))
 
 (define (check-is-object o)
-  (unless (is-a? o ecma-object%)
+  (unless (object? o)
     (raise-native-error 'type "not an object")))
 
 (define-object-properties object-constructor
@@ -172,7 +173,7 @@
   ["isPrototypeOf"
    (make-native-function
     (λ (this v)
-      (and (is-a? v ecma-object%)
+      (and (object? v)
            (let ([o (ecma:to-object this)])
              (let loop ([v (get-field prototype v)])
                (and (not (eq? 'null v))

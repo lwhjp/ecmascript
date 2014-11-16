@@ -2,10 +2,10 @@
 
 (require (only-in racket/class
                   instantiate
-                  is-a?
                   send)
          racket/math
          racket/string
+         "object.rkt"
          "private/builtin.rkt"
          "private/error.rkt"
          "private/object.rkt")
@@ -35,9 +35,6 @@
       (number? v)
       (string? v)))
 
-(define (object? v)
-  (is-a? v ecma-object%))
-
 (define (value? v)
   (or (primitive-value? v)
       (object? v)))
@@ -45,7 +42,7 @@
 (struct reference (base name strict?) #:transparent)
 
 (define (to-primitive v [preferred #f])
-  (if (is-a? v ecma-object%)
+  (if (object? v)
       (if preferred
           (send v default-value preferred)
           (send v default-value))

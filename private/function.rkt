@@ -2,10 +2,11 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
-         racket/class
+         (except-in racket/class object?)
          racket/list
          racket/stxparam
          (prefix-in ecma: "../types.rkt")
+         "../object.rkt"
          "environment.rkt"
          "error.rkt"
          "global-object.rkt"
@@ -38,16 +39,16 @@
        (cond
          [(or (ecma:null? this-arg) (ecma:undefined? this-arg))
           global-object]
-         [(ecma:object? this-arg) this-arg]
+         [(object? this-arg) this-arg]
          [else (ecma:to-object this-arg)])
        (λ (env)
          (bind-arguments! env args))))
 
     (define/public (has-instance? v)
       (and
-       (is-a? v ecma-object%)
+       (object? v)
        (let ([o (send this get "prototype")])
-         (unless (is-a? o ecma-object%)
+         (unless (object? o)
            (raise-native-error 'type "not an object"))
          (let loop ([v v])
            (let ([v (get-field prototype v)])

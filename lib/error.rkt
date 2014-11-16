@@ -2,7 +2,8 @@
 
 (require (for-syntax racket/base
                      racket/syntax)
-         racket/class
+         (except-in racket/class object?)
+         "../object.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
@@ -90,7 +91,7 @@
   ["toString"
    (make-native-function
     (λ (this)
-      (unless (is-a? this ecma-object%)
+      (unless (object? this)
         (raise-native-error 'type "this: not an object"))
       (define name
         (let ([name (send this get "name")])

@@ -3,6 +3,7 @@
 (require (only-in racket/class is-a? send)
          racket/math
          racket/provide
+         "../object.rkt"
          "environment.rkt"
          "error.rkt"
          "function.rkt"
@@ -61,7 +62,7 @@
           [(number? v) "number"]
           [(string? v) "string"]
           [(is-a? v function%) "function"]
-          [(is-a? v ecma-object%) "object"]))))
+          [(object? v) "object"]))))
 
 (define (op:instanceof a b)
   (define lval (get-value a))
@@ -174,17 +175,17 @@
               (cond
                 [(number? b) (= a b)]
                 [(string? b) (op:== a (to-number b))]
-                [(is-a? b ecma-object%) (op:== a (to-primitive b))]
+                [(object? b) (op:== a (to-primitive b))]
                 [else #f])]
              [(string? a)
               (cond
                 [(string? b) (string=? a b)]
                 [(number? b) (op:== (to-number a) b)]
-                [(is-a? b ecma-object%) (op:== a (to-primitive b))]
+                [(object? b) (op:== a (to-primitive b))]
                 [else #f])]
-             [(is-a? a ecma-object%)
+             [(object? a)
               (cond
-                [(is-a? b ecma-object%) (eq? a b)]
+                [(object? b) (eq? a b)]
                 [(or (string? b) (number? b)) (op:== (to-primitive a) b)]
                 [else #f])]))])
     (values
