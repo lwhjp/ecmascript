@@ -4,7 +4,11 @@
          racket/math
          "../private/function.rkt"
          "../private/object.rkt"
-         (prefix-in ecma: "../types.rkt"))
+         (prefix-in
+          ecma:
+          (combine-in
+           "../convert.rkt"
+           "../types.rkt")))
 
 (provide get-properties)
 

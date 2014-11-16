@@ -5,7 +5,11 @@
          (except-in racket/class object?)
          racket/list
          racket/stxparam
-         (prefix-in ecma: "../types.rkt")
+         (prefix-in
+          ecma:
+          (combine-in
+           "../convert.rkt"
+           "../types.rkt"))
          "../object.rkt"
          "environment.rkt"
          "error.rkt"

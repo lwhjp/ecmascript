@@ -8,6 +8,7 @@
          "private/function.rkt"
          "private/global-object.rkt"
          "private/object.rkt"
+         "convert.rkt"
          "types.rkt"
          (prefix-in ecma: "eval.rkt"))
 

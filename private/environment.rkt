@@ -7,7 +7,11 @@
          "error.rkt"
          "global-object.rkt"
          "object.rkt"
-         (prefix-in ecma: "../types.rkt"))
+         (prefix-in
+          ecma:
+          (combine-in
+           "../convert.rkt"
+           "../types.rkt")))
 
 (provide get-value
          put-value!

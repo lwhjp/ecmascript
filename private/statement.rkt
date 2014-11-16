@@ -8,6 +8,7 @@
          "environment.rkt"
          "function.rkt"
          "object.rkt"
+         "../convert.rkt"
          "../types.rkt"
          (prefix-in ecma: "operator.rkt"))
 

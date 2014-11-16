@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require "eval.rkt"
+(require "convert.rkt"
+         "eval.rkt"
          "function.rkt"
          "init.rkt"
          "types.rkt"

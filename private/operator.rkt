@@ -3,6 +3,7 @@
 (require (only-in racket/class is-a? send)
          racket/math
          racket/provide
+         "../convert.rkt"
          "../object.rkt"
          "environment.rkt"
          "error.rkt"

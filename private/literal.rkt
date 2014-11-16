@@ -8,7 +8,11 @@
          "array.rkt"
          "environment.rkt"
          "object.rkt"
-         (prefix-in ecma: "../types.rkt"))
+         (prefix-in
+          ecma:
+          (combine-in
+           "../convert.rkt"
+           "../types.rkt")))
 
 (provide (filtered-out
           (λ (name)

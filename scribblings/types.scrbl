@@ -55,11 +55,6 @@
   Returns @racket[#t] if @racket[v] is an ECMAScript object, @racket[#f] otherwise.
 }
 
-@defproc[(value? [v any/c]) boolean?]{
-  Returns @racket[#t] if @racket[v] is an ECMAScript value (if either
-  @racket[primitive-value?] or @racket[object?] is true), @racket[#f] otherwise.
-}
-
 @subsection{Reference Type}
 
 @defstruct[reference
@@ -70,6 +65,8 @@
 }
 
 @subsection{Type Conversions}
+
+@defmodule[ecmascript/convert]
 
 @defproc[(to-primitive [v value?] [preferred (or/c 'number 'string #f) #f]) primitive-value?]{
   Converts @racket[v] to a primitive value. If @racket[preferred] is

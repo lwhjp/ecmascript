@@ -6,6 +6,7 @@
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../convert.rkt"
          "../eval.rkt"
          "../types.rkt")
 

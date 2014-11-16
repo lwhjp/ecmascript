@@ -9,6 +9,7 @@
          [prefix-in ecma:
                     (combine-in
                      "../private/literal.rkt"
+                     "../convert.rkt"
                      "../types.rkt")])
 
 (provide get-properties)
