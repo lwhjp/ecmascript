@@ -39,9 +39,9 @@
     (raise-native-error 'type "not a function")))
 
 (define-object-properties function-constructor
-  ["prototype" function-prototype])
+  ["prototype" function:prototype])
 
-(define-object-properties function-prototype
+(define-object-properties function:prototype
   ["constructor" function-constructor]
   ["toString"
    (make-native-function

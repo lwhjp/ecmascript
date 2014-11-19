@@ -31,7 +31,7 @@
              (ecma:to-object value)]
             [else
              (new ecma-object%
-                  [prototype object-prototype]
+                  [prototype object:prototype]
                   [class "Object"])]))])
     (make-native-constructor call construct)))
 
@@ -40,7 +40,7 @@
     (raise-native-error 'type "not an object")))
 
 (define-object-properties object-constructor
-  ["prototype" object-prototype]
+  ["prototype" object:prototype]
   ["getPrototypeOf"
    (native-method (this o)
      (check-is-object o)
@@ -142,7 +142,7 @@
                  #:when (property-enumerable? prop))
         name)))])
 
-(define-object-properties object-prototype
+(define-object-properties object:prototype
   ["constructor" object-constructor]
   ["toString"
    (make-native-function

@@ -24,18 +24,18 @@
        [construct
         (λ ([value 0])
           (instantiate number% ((ecma:to-number value))
-            [prototype number-prototype]))])
+            [prototype number:prototype]))])
     (make-native-constructor call construct)))
 
 (define-object-properties number-constructor
-  ["prototype" number-prototype]
+  ["prototype" number:prototype]
   ["MAX_VALUE" +max.0]
   ["MIN_VALUE" +min.0]
   ["NaN" +nan.0]
   ["NEGATIVE_INFINITY" -inf.0]
   ["POSITIVE_INFINITY" +inf.0])
 
-(define-object-properties number-prototype
+(define-object-properties number:prototype
   ["constructor" number-constructor]
   ["toString"
    (native-method (this radix)

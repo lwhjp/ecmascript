@@ -139,14 +139,14 @@
                                    #:enumerable #f
                                    #:configurable #t)) ...))
 
-(define object-prototype
+(define object:prototype
   (new ecma-object%
        [prototype #f]
        [class "Object"]))
 
 (define (from-property-descriptor desc)
   (if desc
-      (let ([obj (new ecma-object% [class "Object"] [prototype object-prototype])])
+      (let ([obj (new ecma-object% [class "Object"] [prototype object:prototype])])
         (if (data-property? desc)
             (begin
               (define-own-property obj "value"

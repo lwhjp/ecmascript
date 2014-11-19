@@ -23,13 +23,13 @@
        [construct
         (λ ([value #f])
           (instantiate boolean% ((ecma:to-boolean value))
-            [prototype boolean-prototype]))])
+            [prototype boolean:prototype]))])
     (make-native-constructor call construct)))
 
 (define-object-properties boolean-constructor
-  ["prototype" boolean-prototype])
+  ["prototype" boolean:prototype])
 
-(define-object-properties boolean-prototype
+(define-object-properties boolean:prototype
   ["constructor" boolean-constructor]
   ["toString"
    (native-method (this)

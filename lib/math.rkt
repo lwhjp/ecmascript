@@ -17,7 +17,7 @@
 
 (define math
   (new ecma-object%
-    [prototype object-prototype]
+    [prototype object:prototype]
     [class "Math"]))
 
 (define-syntax-rule (wrap-math fn arg ...)

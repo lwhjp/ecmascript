@@ -89,7 +89,7 @@
   (cond
     [(eq? v 'undefined) (raise-native-error 'type "undefined")]
     [(eq? v 'null) (raise-native-error 'type "null")]
-    [(boolean? v) (instantiate boolean% (v) [prototype boolean-prototype])]
-    [(number? v) (instantiate number% (v) [prototype number-prototype])]
-    [(string? v) (instantiate string% (v) [prototype string-prototype])]
+    [(boolean? v) (instantiate boolean% (v) [prototype boolean:prototype])]
+    [(number? v) (instantiate number% (v) [prototype number:prototype])]
+    [(string? v) (instantiate string% (v) [prototype string:prototype])]
     [(object? v) v]))

@@ -29,12 +29,12 @@
     (make-native-constructor call construct)))
 
 (define-object-properties array-constructor
-  ["prototype" array-prototype]
+  ["prototype" array:prototype]
   ["isArray"
    (native-method (this arg)
      (is-a? arg array%))])
 
-(define-object-properties array-prototype
+(define-object-properties array:prototype
   ["constructor" array-constructor]
   ["toString"
    (native-method (this)

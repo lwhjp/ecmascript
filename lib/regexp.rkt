@@ -30,7 +30,7 @@
     obj))
 
 (module+ test
-  (define r (make-regexp-object "foo" "gi" regexp-prototype))
+  (define r (make-regexp-object "foo" "gi" regexp:prototype))
   (exec-regexp r "fOo foo")
   (exec-regexp r "fOo foo"))
 
@@ -67,8 +67,8 @@
         a)
       'null))
 
-(define regexp-prototype
-  (make-regexp-object "" "" object-prototype))
+(define regexp:prototype
+  (make-regexp-object "" "" object:prototype))
 
 (define regexp-constructor
   (letrec
@@ -90,13 +90,13 @@
           (make-regexp-object
            p
            (if (eq? 'undefined flags) "" (ecma:to-string flags))
-           regexp-prototype))])
+           regexp:prototype))])
     (make-native-constructor call construct)))
 
 (define-object-properties regexp-constructor
-  ["prototype" regexp-prototype])
+  ["prototype" regexp:prototype])
 
-(define-object-properties regexp-prototype
+(define-object-properties regexp:prototype
   ["constructor" regexp-constructor]
   ["exec"
    (native-method (this string)

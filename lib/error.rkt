@@ -57,8 +57,8 @@
       ["prototype" prototype])
     (values prototype constructor)))
 
-(define-values (error-prototype error-constructor)
-  (make-error-prototype+constructor "Error" object-prototype))
+(define-values (error:prototype error-constructor)
+  (make-error-prototype+constructor "Error" object:prototype))
 
 (define-syntax (define-native-error stx)
   (syntax-case stx ()
@@ -69,7 +69,7 @@
                          (syntax-e #'base-str))
                         "-error"))])
        (with-syntax
-         ([proto-id (format-id stx "~a-prototype" base-name)]
+         ([proto-id (format-id stx "~a:prototype" base-name)]
           [cons-id (format-id stx "~a-constructor" base-name)]
           [throw-id (format-id stx "throw-~a" base-name)])
          #'(define-values (proto-id cons-id throw-id)
@@ -77,7 +77,7 @@
                  ([(proto cons)
                    (make-error-prototype+constructor
                     (string-append base-str "Error")
-                    error-prototype)])
+                    error:prototype)])
                (values proto
                        cons
                        (λ (msg)
@@ -91,7 +91,7 @@
 (define-native-error "Type")
 (define-native-error "URI")
 
-(define-object-properties error-prototype
+(define-object-properties error:prototype
   ["toString"
    (make-native-function
     (λ (this)

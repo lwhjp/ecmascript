@@ -15,6 +15,6 @@
                        #:configurable #f
                        #:enumerable #f)))])))
 
-(define array-prototype
+(define array:prototype
   (new array%
-       [prototype object-prototype]))
+       [prototype object:prototype]))

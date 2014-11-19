@@ -19,7 +19,7 @@
 (provide function%
          constructor%
          activation%
-         function-prototype
+         function:prototype
          make-function
          this-binding
          return
@@ -82,7 +82,7 @@
 
     (define/public (construct . args)
       (let* ([prot (get-property-value this "prototype")]
-             [prot (if (object? prot) prot object-prototype)]
+             [prot (if (object? prot) prot object:prototype)]
              [obj (new ecma-object%
                        [class (get-field class prot)]
                        [prototype prot])]
@@ -113,9 +113,9 @@
     (super-new [prototype #f]
                [class "Object"])))
 
-(define function-prototype
+(define function:prototype
   (new function%
-       [prototype object-prototype]
+       [prototype object:prototype]
        [call-proc (λ args
                     'undefined)]
        [formal-parameters '()]))
@@ -124,7 +124,7 @@
   (class ecma-object%
     (init-field arg-map)
     (super-new [class "Arguments"]
-               [prototype object-prototype])))
+               [prototype object:prototype])))
 
 (define (make-arguments-object f args)
   (let* ([arg-map
@@ -152,12 +152,12 @@
 
 (define (make-function params proc)
   (let ([f (new constructor%
-                [prototype function-prototype]
+                [prototype function:prototype]
                 [call-proc proc]
                 [formal-parameters params])]
         [proto
            (new ecma-object%
-                [prototype object-prototype]
+                [prototype object:prototype]
                 [class "Object"])])
     (define-own-property f
           "length"
@@ -265,7 +265,7 @@
 
 (define (make-native-constructor call-proc construct-proc)
   (new native-constructor%
-       [prototype function-prototype]
+       [prototype function:prototype]
        [call-proc call-proc]
        [formal-parameters 'TODO]
        [construct-proc construct-proc]))
@@ -294,7 +294,7 @@
          arg)))))
   (define f
     (new native-function%
-         [prototype function-prototype]
+         [prototype function:prototype]
          [call-proc wrapper]
          [formal-parameters 'TODO]))
   (define-own-property f

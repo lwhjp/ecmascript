@@ -60,7 +60,7 @@
    [(_ (~optional class-name:str
                   #:defaults ([class-name "Object"]))
        (~optional proto-expr
-                  #:defaults ([proto-expr #'object-prototype]))
+                  #:defaults ([proto-expr #'object:prototype]))
        prop:property-clause ...)
     #'(new
        ecma-object%

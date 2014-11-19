@@ -26,17 +26,17 @@
        [construct
         (λ ([value ""])
           (instantiate string% ((ecma:to-string value))
-            [prototype string-prototype]))])
+            [prototype string:prototype]))])
     (make-native-constructor call construct)))
 
 (define-object-properties string-constructor
-  ["prototype" string-prototype]
+  ["prototype" string:prototype]
   ["fromCharCode"
    (native-method (this . args)
      (list->string
       (map integer->char args)))])
 
-(define-object-properties string-prototype
+(define-object-properties string:prototype
   ["constructor" string-constructor]
   ["toString"
    (native-method (this)

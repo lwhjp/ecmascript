@@ -23,7 +23,7 @@
 
 (define (ecma:array . elements)
   (let ([obj (new array%
-                  [prototype array-prototype])])
+                  [prototype array:prototype])])
     (for ([i (in-naturals)]
           [elt (in-list elements)]
           #:unless (eq? 'undefined elt))
@@ -68,7 +68,7 @@
          ([(pname ...) (stx-map parse-name #'(name ...))]
           [(pdesc ...) (stx-map parse-def #'(def ...))])
        #`(let ([obj (new ecma-object%
-                         [prototype object-prototype]
+                         [prototype object:prototype]
                          [class "Object"])])
            (define-own-property obj
                  pname
