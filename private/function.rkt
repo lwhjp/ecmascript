@@ -8,6 +8,7 @@
          (prefix-in
           ecma:
           (combine-in
+           "this.rkt"
            "../convert.rkt"
            "../types.rkt"))
          "../object.rkt"
@@ -21,7 +22,6 @@
          activation%
          function:prototype
          make-function
-         this-binding
          return
          function
          begin-scope
@@ -39,14 +39,16 @@
     (super-new [class "Function"])
 
     (define/public (call this-arg . args)
-      (call-proc
+      (ecma:apply/this
        (cond
          [(or (ecma:null? this-arg) (ecma:undefined? this-arg))
           global-object]
          [(object? this-arg) this-arg]
          [else (ecma:to-object this-arg)])
+       call-proc
        (λ (env)
-         (bind-arguments! env args))))
+         (bind-arguments! env args))
+       '()))
 
     (define/public (has-instance? v)
       (and
@@ -96,7 +98,7 @@
     (inherit-field call-proc)
     (super-new)
     (define/override (call this-arg . args)
-      (apply call-proc this-arg args))))
+      (ecma:apply/this this-arg call-proc args))))
 
 (define native-constructor%
   (class constructor%
@@ -185,9 +187,6 @@
           #f)
     f))
 
-(define-syntax-parameter this-binding
-  (make-rename-transformer #'global-object))
-
 (define-syntax-parameter return-binding #f)
 
 (define-syntax return
@@ -209,13 +208,12 @@
        (~optional (~seq body:expr ...+)))
     #`(let ([scope-env (new-declarative-environment lexical-environment)])
         (let ([f (make-function '(param ...)
-                   (λ (this-arg bind-args)
+                   (λ (bind-args)
                      (let ([local-env (new-declarative-environment scope-env)])
                        (bind-args local-env)
                        (let/ec escape
                          (syntax-parameterize
-                             ([this-binding (make-rename-transformer #'this-arg)]
-                              [return-binding (make-rename-transformer #'escape)])
+                             ([return-binding (make-rename-transformer #'escape)])
                            (begin-scope local-env
                              #,@(if (attribute var-id) #'(#:vars (var-id ...)) #'())
                              #,@(or (attribute body) #'(ecma:undefined))))))))])
@@ -283,12 +281,11 @@
   (define arity
     (sub1 (typical-arity proc)))
   (define wrapper
-    (λ (this . args)
+    (λ args
       (if (procedure-arity-includes? proc (add1 (length args)))
-          (apply proc this args)
+          (apply proc args)
       (apply
        proc
-       this
        (for/list ([i (in-range arity)]
                   [arg (in-sequences args (in-cycle '(undefined)))])
          arg)))))

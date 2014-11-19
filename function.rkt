@@ -8,11 +8,12 @@
          "private/error.rkt"
          "private/function.rkt"
          "private/global-object.rkt"
+         "private/this.rkt"
          "object.rkt"
          "types.rkt")
 
 (provide (all-defined-out)
-         (rename-out [this-binding this])
+         this
          return
          function)
 

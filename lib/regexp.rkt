@@ -1,11 +1,12 @@
 #lang racket/base
 
-(require (except-in racket/class object?)
+(require (except-in racket/class object? this)
          "../object.rkt"
          "../private/builtin.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/this.rkt"
          (prefix-in ecma:
                     (combine-in
                      "../private/literal.rkt"
@@ -73,7 +74,7 @@
 (define regexp-constructor
   (letrec
       ([call
-        (λ (this pattern [flags 'undefined])
+        (λ (pattern [flags 'undefined])
           (if (and (is-a? pattern regexp%)
                    (eq? 'undefined flags))
               pattern
@@ -99,13 +100,13 @@
 (define-object-properties regexp:prototype
   ["constructor" regexp-constructor]
   ["exec"
-   (native-method (this string)
+   (native-method (string)
      (exec-regexp this string))]
   ["test"
-   (native-method (this string)
+   (native-method (string)
      (not (eq? 'null (exec-regexp this string))))]
   ["toString"
-   (native-method (this)
+   (native-method ()
      (string-append
       "/"
       (ecma:to-string (get-property-value this "source"))

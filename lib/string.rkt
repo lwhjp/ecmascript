@@ -1,12 +1,13 @@
 #lang racket/base
 
-(require racket/class
+(require (except-in racket/class this)
          racket/list
          racket/string
          "../private/builtin.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/this.rkt"
          (prefix-in
           ecma:
           (combine-in
@@ -21,7 +22,7 @@
 (define string-constructor
   (letrec
       ([call
-        (λ (this [value ""])
+        (λ ([value ""])
           (ecma:to-string value))]
        [construct
         (λ ([value ""])
@@ -32,31 +33,31 @@
 (define-object-properties string-constructor
   ["prototype" string:prototype]
   ["fromCharCode"
-   (native-method (this . args)
+   (native-method args
      (list->string
       (map integer->char args)))])
 
 (define-object-properties string:prototype
   ["constructor" string-constructor]
   ["toString"
-   (native-method (this)
+   (native-method ()
      (unless (is-a? this string%)
        (raise-native-error 'type "not a string"))
      (get-field value this))]
   ["valueOf"
-   (native-method (this)
+   (native-method ()
      (unless (is-a? this string%)
        (raise-native-error 'type "not a string"))
      (get-field value this))]
   ["charAt"
-   (native-method (this pos)
+   (native-method (pos)
      (let ([s (ecma:to-string this)]
            [p (ecma:to-integer pos)])
        (if (<= 0 p (sub1 (string-length s)))
            (substring s p (add1 p))
            "")))]
   ["charCodeAt"
-   (native-method (this pos)
+   (native-method (pos)
      (let ([s (ecma:to-string this)]
            [p (ecma:to-integer pos)])
        (if (<= 0 p (sub1 (string-length s)))
@@ -64,12 +65,12 @@
             (string-ref s p))
            +nan.0)))]
   ["concat"
-   (native-method (this . args)
+   (native-method args
      (apply
       string-append
       (map ecma:to-string (cons this args))))]
   ["indexOf"
-   (native-method (this searchString position)
+   (native-method (searchString position)
      (let ([s1 (ecma:to-string this)]
            [s2 (ecma:to-string searchString)]
            [p (ecma:to-integer position)])
@@ -78,7 +79,7 @@
              (caar r)
              -1))))]
   ["lastIndexOf"
-   (native-method (this searchString position)
+   (native-method (searchString position)
      (let ([s1 (ecma:to-string this)]
            [s2 (ecma:to-string searchString)]
            [p (ecma:to-integer position)])
@@ -90,7 +91,7 @@
              (car (last r2))
              -1))))]
   ["localeCompare"
-   (native-method (this that)
+   (native-method (that)
      (let ([s (ecma:to-string this)]
            [that (ecma:to-string that)])
        (cond
@@ -101,7 +102,7 @@
   ; TODO: replace
   ; TODO: search
   ["slice"
-   (native-method (this start end)
+   (native-method (start end)
      (let* ([str (ecma:to-string this)]
             [len (string-length str)]
             [start (ecma:to-integer start)]
@@ -112,7 +113,7 @@
        (substring str from (+ from span))))]
   ; TODO: split
   ["substring"
-   (native-method (this start end)
+   (native-method (start end)
      (let* ([s (ecma:to-string this)]
             [len (string-length s)]
             [int-start (ecma:to-integer start)]
@@ -123,17 +124,17 @@
             [to (max final-start final-end)])
        (substring s from to)))]
   ["toLowerCase"
-   (native-method (this)
+   (native-method ()
      (string-downcase (ecma:to-string this)))]
   ["toLocaleLowerCase"
-   (native-method (this)
+   (native-method ()
      (string-downcase (ecma:to-string this)))]
   ["toUpperCase"
-   (native-method (this)
+   (native-method ()
      (string-upcase (ecma:to-string this)))]
   ["toLocaleUpperCase"
-   (native-method (this)
+   (native-method ()
      (string-upcase (ecma:to-string this)))]
   ["trim"
-   (native-method (this)
+   (native-method ()
      (string-trim (ecma:to-string this)))])

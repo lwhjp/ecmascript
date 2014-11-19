@@ -6,6 +6,7 @@
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/this.rkt"
          "../convert.rkt"
          "../eval.rkt"
          "../object.rkt"
@@ -19,7 +20,7 @@
 (define function-constructor
   (letrec
       ([call
-        (λ (this . args)
+        (λ args
           (apply construct args))]
        [construct
         (λ args
@@ -45,12 +46,12 @@
   ["constructor" function-constructor]
   ["toString"
    (make-native-function
-    (λ (this)
+    (λ ()
       (check-is-function this)
       "function"))]
   ["apply"
    (make-native-function
-    (λ (this this-arg arg-array)
+    (λ (this-arg arg-array)
       (check-is-function this)
       (define length
         (if (is-a? arg-array ecma-object%)
@@ -62,7 +63,7 @@
       (send this call this-arg . arg-array)))]
   ["call"
    (make-native-function
-    (λ (this this-arg . args)
+    (λ (this-arg . args)
       (check-is-function this)
       (send this call this-arg . args)))]
   ; TODO: bind

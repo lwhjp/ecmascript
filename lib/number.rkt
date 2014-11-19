@@ -1,10 +1,11 @@
 #lang racket/base
 
 (require math/flonum
-         racket/class
+         (except-in racket/class this)
          "../private/builtin.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/this.rkt"
          (prefix-in
           ecma:
           (combine-in
@@ -19,7 +20,7 @@
 (define number-constructor
   (letrec
       ([call
-        (λ (this [value 0])
+        (λ ([value 0])
           (ecma:to-number value))]
        [construct
         (λ ([value 0])
@@ -38,26 +39,26 @@
 (define-object-properties number:prototype
   ["constructor" number-constructor]
   ["toString"
-   (native-method (this radix)
+   (native-method (radix)
      (if (= 10 (ecma:to-number radix))
          (ecma:to-string (get-field value this))
          (number->string
           (get-field value this)
           (ecma:to-number radix))))]
   ["toLocaleString"
-   (native-method (this)
+   (native-method ()
      (number->string (get-field value this)))]
   ["valueOf"
-   (native-method (this)
+   (native-method ()
      (get-field value this))]
   ["toFixed"
-   (native-method (this fractionDigits)
+   (native-method (fractionDigits)
      (real->decimal-string
       (get-field value this)
       (ecma:to-integer fractionDigits)))]
   ["toExponential"
-   (native-method (this fractionDigits)
+   (native-method (fractionDigits)
      (number->string (get-field value this)))]
   ["toPrecision"
-   (native-method (this precision)
+   (native-method (precision)
      (number->string (get-field value this)))])

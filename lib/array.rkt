@@ -7,6 +7,7 @@
          "../private/environment.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/this.rkt"
          [prefix-in ecma:
                     (combine-in
                      "../private/literal.rkt"
@@ -21,7 +22,7 @@
 (define array-constructor
   (letrec
       ([call
-        (λ (this . args)
+        (λ args
           (apply construct args))]
        [construct
         (λ args
@@ -31,13 +32,13 @@
 (define-object-properties array-constructor
   ["prototype" array:prototype]
   ["isArray"
-   (native-method (this arg)
+   (native-method (arg)
      (is-a? arg array%))])
 
 (define-object-properties array:prototype
   ["constructor" array-constructor]
   ["toString"
-   (native-method (this)
+   (native-method ()
      (let* ([array (ecma:to-object this)]
             [func (get-property-value array "join")])
        (if (is-a? func function%)
@@ -50,11 +51,11 @@
                  call
                  this))))]
   ["toLocaleString"
-   (native-method (this)
+   (native-method ()
      (send (get-property-value this "toString") call this))]
   ; TODO: concat
   ["join"
-   (native-method (this separator)
+   (native-method (separator)
      (string-join
       (for/list ([i (in-range
                      (ecma:to-uint32

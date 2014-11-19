@@ -21,7 +21,7 @@
     [class "Math"]))
 
 (define-syntax-rule (wrap-math fn arg ...)
-  (native-method (this arg ...)
+  (native-method (arg ...)
     (fn (ecma:to-number arg) ...)))
 
 (define-object-properties math

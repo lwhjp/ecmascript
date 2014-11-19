@@ -1,9 +1,10 @@
 #lang racket/base
 
-(require racket/class
+(require (except-in racket/class this)
          "../private/builtin.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/this.rkt"
          (prefix-in
           ecma:
           (combine-in
@@ -18,7 +19,7 @@
 (define boolean-constructor
   (letrec
       ([call
-        (λ (this [value #f])
+        (λ ([value #f])
           (ecma:to-boolean value))]
        [construct
         (λ ([value #f])
@@ -32,10 +33,10 @@
 (define-object-properties boolean:prototype
   ["constructor" boolean-constructor]
   ["toString"
-   (native-method (this)
+   (native-method ()
      (if (get-field value this)
          "true"
          "false"))]
   ["valueOf"
-   (native-method (this)
+   (native-method ()
      (get-field value this))])

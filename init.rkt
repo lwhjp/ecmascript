@@ -33,34 +33,34 @@
   ["NaN" +nan.0]
   ["Infinity" +inf.0]
   ["eval"
-   (native-method (this x)
+   (native-method (x)
      (if (string? x)
          (ecma:eval x)
          x))]
   ["parseInt"
-   (native-method (this string radix)
+   (native-method (string radix)
      (string->number (to-string string)
                      (to-int32 radix)))]
   ["parseFloat"
-   (native-method (this string)
+   (native-method (string)
      (string->number (to-string string)))]
   ["isNaN"
-   (native-method (this number)
+   (native-method (number)
      (nan? (to-number number)))]
   ["isFinite"
-   (native-method (this number)
+   (native-method (number)
      (not (infinite? number)))]
   ["decodeURI"
-   (native-method (this encodedURI)
+   (native-method (encodedURI)
      (uri-decode (to-string encodedURI)))]
   ["decodeURIComponent"
-   (native-method (this encodedURIComponent)
+   (native-method (encodedURIComponent)
      (uri-path-segment-decode (to-string encodedURIComponent)))]
   ["encodeURI"
-   (native-method (this uri)
+   (native-method (uri)
      (uri-encode (to-string uri)))]
   ["encodeURIComponent"
-   (native-method (this uriComponent)
+   (native-method (uriComponent)
      (uri-path-segment-encode (to-string uriComponent)))])
 
 (define-runtime-module-path lib:array "lib/array.rkt")

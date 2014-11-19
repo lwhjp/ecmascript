@@ -2,12 +2,13 @@
 
 (require (for-syntax racket/base
                      racket/syntax)
-         (except-in racket/class object?)
+         (except-in racket/class object? this)
          "../object.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
          "../private/statement.rkt"
+         "../private/this.rkt"
          (prefix-in
           ecma:
           (combine-in
@@ -37,7 +38,7 @@
        [constructor
         (letrec
             ([call
-              (λ (this . args)
+              (λ args
                 (apply construct args))]
              [construct
               (λ ([message 'undefined])
@@ -94,7 +95,7 @@
 (define-object-properties error:prototype
   ["toString"
    (make-native-function
-    (λ (this)
+    (λ ()
       (unless (object? this)
         (raise-native-error 'type "this: not an object"))
       (define name
