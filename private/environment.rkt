@@ -41,7 +41,7 @@
                  (ecma:reference-name v)
                  (ecma:reference-strict? v))]
           [(object? base)
-           (get base (ecma:reference-name v))]
+           (get-property-value base (ecma:reference-name v))]
           [else
            (let ([o (ecma:to-object base)]
                  [p (ecma:reference-name v)])
@@ -178,7 +178,7 @@
       (send binding-object put! n v s))
     (define/override (get-binding-value n s)
       (if (has-property? binding-object n)
-          (get binding-object n)
+          (get-property-value binding-object n)
           (if s
               (raise-native-error
                'reference

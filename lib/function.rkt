@@ -54,11 +54,11 @@
       (check-is-function this)
       (define length
         (if (is-a? arg-array ecma-object%)
-            (get arg-array "length")
+            (get-property-value arg-array "length")
             0))
       (define args
         (for/list ([i (in-range (to-uint32 length))])
-          (get arg-array (to-string i))))
+          (get-property-value arg-array (to-string i))))
       (send this call this-arg . arg-array)))]
   ["call"
    (make-native-function

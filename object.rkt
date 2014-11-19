@@ -9,7 +9,7 @@
 (define (object? v)
   (is-a? v ecma-object%))
 
-(define (get object name)
+(define (get-property-value object name)
   (let ([property (get-property object name)])
     (cond
       [(data-property? property)

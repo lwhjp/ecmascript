@@ -19,7 +19,7 @@
         (for ([method (if (eq? 'string hint)
                           '("toString" "valueOf")
                           '("valueOf" "toString"))])
-          (let ([f (get v method)])
+          (let ([f (get-property-value v method)])
             (when (and (object? f)
                        (object-method-arity-includes? f 'call 1))
               (let ([v (send f call v)])

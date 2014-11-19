@@ -51,7 +51,7 @@
     (define/public (has-instance? v)
       (and
        (object? v)
-       (let ([o (get this "prototype")])
+       (let ([o (get-property-value this "prototype")])
          (unless (object? o)
            (raise-native-error 'type "not an object"))
          (let loop ([v v])
@@ -81,7 +81,7 @@
     (super-new)
 
     (define/public (construct . args)
-      (let* ([prot (get this "prototype")]
+      (let* ([prot (get-property-value this "prototype")]
              [prot (if (object? prot) prot object-prototype)]
              [obj (new ecma-object%
                        [class (get-field class prot)]

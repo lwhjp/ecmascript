@@ -71,7 +71,7 @@
                #:when (property-enumerable? pdesc))
            (send obj define-own-property pname
                  (to-property-descriptor
-                  (get obj pname))
+                  (get-property-value obj pname))
                  #t)))
        obj))]
   ["defineProperty"
@@ -90,7 +90,7 @@
            #:when (property-enumerable? pdesc))
        (send o define-own-property pname
              (to-property-descriptor
-              (get o pname))
+              (get-property-value o pname))
              #t))
      o)]
   ["seal"
@@ -156,7 +156,7 @@
    (make-native-function
     (λ (this)
       (define o (ecma:to-object this))
-      (define f (get o "toString"))
+      (define f (get-property-value o "toString"))
       (unless (is-a? f function%)
         (raise-native-error 'type "toString: not a function"))
       (send f call o)))]

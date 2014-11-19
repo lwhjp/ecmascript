@@ -39,7 +39,7 @@
   ["toString"
    (native-method (this)
      (let* ([array (ecma:to-object this)]
-            [func (get array "join")])
+            [func (get-property-value array "join")])
        (if (is-a? func function%)
            (send func call this)
            (send (get-value
@@ -51,15 +51,15 @@
                  this))))]
   ["toLocaleString"
    (native-method (this)
-     (send (get this "toString") call this))]
+     (send (get-property-value this "toString") call this))]
   ; TODO: concat
   ["join"
    (native-method (this separator)
      (string-join
       (for/list ([i (in-range
                      (ecma:to-uint32
-                      (get this "length")))])
-        (let ([elt (get this (number->string i))])
+                      (get-property-value this "length")))])
+        (let ([elt (get-property-value this (number->string i))])
           (if (or (ecma:undefined? elt)
                   (ecma:null? elt))
               ""

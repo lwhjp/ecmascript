@@ -120,7 +120,7 @@
                     ([(name prop) (in-hash
                                    (get-field properties obj))]
                      #:when (property-enumerable? prop))
-            (put-value! lhs (get obj name))
+            (put-value! lhs (get-property-value obj name))
             body)))))
 
 (define-syntax-rule (stmt:with expr body0 body ...)

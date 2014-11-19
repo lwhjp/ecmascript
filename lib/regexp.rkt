@@ -38,7 +38,7 @@
   (define-values (global ignore-case multiline last-index)
     (apply values
            (map (λ (p)
-                  (get r p))
+                  (get-property-value r p))
                 '("global" "ignoreCase" "multiline" "lastIndex"))))
   (define re
     (pregexp
@@ -108,8 +108,8 @@
    (native-method (this)
      (string-append
       "/"
-      (ecma:to-string (get this "source"))
+      (ecma:to-string (get-property-value this "source"))
       "/"
-      (if (ecma:to-boolean (get this "global")) "g" "")
-      (if (ecma:to-boolean (get this "ignoreCase")) "i" "")
-      (if (ecma:to-boolean (get this "multiline")) "m" "")))])
+      (if (ecma:to-boolean (get-property-value this "global")) "g" "")
+      (if (ecma:to-boolean (get-property-value this "ignoreCase")) "i" "")
+      (if (ecma:to-boolean (get-property-value this "multiline")) "m" "")))])
