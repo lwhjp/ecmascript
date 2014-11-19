@@ -69,7 +69,7 @@
                                (get-field properties
                                           (ecma:to-object properties)))]
                #:when (property-enumerable? pdesc))
-           (send obj define-own-property pname
+           (define-own-property obj pname
                  (to-property-descriptor
                   (get-property-value obj pname))
                  #t)))
@@ -77,7 +77,7 @@
   ["defineProperty"
    (native-method (this o p attributes)
      (check-is-object o)
-     (send o define-own-property (ecma:to-string p)
+     (define-own-property o (ecma:to-string p)
            (to-property-descriptor attributes)
            #t)
      o)]
@@ -88,7 +88,7 @@
                            (get-field properties
                                       (ecma:to-object properties)))]
            #:when (property-enumerable? pdesc))
-       (send o define-own-property pname
+       (define-own-property o pname
              (to-property-descriptor
               (get-property-value o pname))
              #t))

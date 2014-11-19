@@ -29,18 +29,16 @@
   (if (can-set-property? object name)
       (let ([own (get-own-property object name)])
         (if (data-property? own)
-            (send
+            (define-own-property
              object
-             define-own-property
              name
              `(data (value . ,v))
              throw?)
             (let ([prop (get-property object name)])
               (if (accessor-property? prop)
                   (send (accessor-property-set prop) call object v)
-                  (send
+                  (define-own-property
                    object
-                   define-own-property
                    name
                    `(data
                      (value . ,v)

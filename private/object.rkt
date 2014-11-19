@@ -33,92 +33,7 @@
 
     (field [properties (make-hash initial-properties)])
 
-    (super-new)
-
-    (define (generic-desc? desc)
-      (and (not (data-desc? desc))
-           (not (accessor-desc? desc))))
-
-    (define (data-desc? desc)
-      (eq? 'data (car desc)))
-
-    (define (accessor-desc? desc)
-      (eq? 'accessor (car desc)))
-
-    (define (desc-get desc v def)
-      (let ([p (assq v (cdr desc))])
-        (if p (cdr p) def)))
-
-    (define (update-property p desc)
-      (let loop ([fields (cdr desc)])
-        (unless (null? fields)
-          (case (caar fields)
-            [(configurable) (set-property-configurable?! p (cdar fields))]
-            [(enumerable) (set-property-enumerable?! p (cdar fields))]
-            [(writable) (set-data-property-writable?! p (cdar fields))]
-            [(value) (set-data-property-value! p (cdar fields))]
-            [(set) (set-accessor-property-set! p (cdar fields))]
-            [(get) (set-accessor-property-get! p (cdar fields))])
-          (loop (cdr fields)))))
-
-    (define/public (define-own-property p desc throw?)
-      (let ([reject (λ () (and throw? (raise-native-error 'type)))]
-            [current (get-own-property this p)])
-        (cond
-          [(not current)
-           (if (not extensible?)
-               (reject)
-               (begin
-                 (hash-set!
-                  properties
-                  p
-                  (if (accessor-desc? desc)
-                      (make-accessor-property #:get (desc-get desc 'get 'undefined)
-                                              #:set (desc-get desc 'set 'undefined)
-                                              #:enumerable (desc-get desc 'enumerable #f)
-                                              #:configurable (desc-get desc 'configurable #f))
-                      (make-data-property (desc-get desc 'value 'undefined)
-                                          #:writable (desc-get desc 'writable #f)
-                                          #:enumerable (desc-get desc 'enumerable #f)
-                                          #:configurable (desc-get desc 'configurable #f))))
-                 #t))]
-          [(null? (cdr desc)) #t]
-          [#f #t] ; TODO: step 6
-          [(and (not (property-configurable? current))
-                (or (desc-get desc 'configurable #f)
-                    (and (memv 'enumerable (cdr desc))
-                         (not (eq? (property-enumerable? current)
-                                   (memv 'enumerable (cdr desc)))))))
-           (reject)]
-          [(generic-desc? desc)
-           (update-property current desc)]
-          [(and (not (eq? (data-property? current)
-                          (data-desc? desc))))
-           (if (property-configurable? current)
-               (let ([current
-                      (if (data-property? current)
-                          (make-accessor-property #:configurable (property-configurable? current)
-                                                  #:enumerable (property-enumerable? current))
-                          (make-data-property #:configurable (property-configurable? current)
-                                              #:enumerable (property-enumerable? current)))])
-                 (hash-set! properties p current)
-                 (update-property current desc))
-               (reject))]
-          [(and (data-property? current) (data-desc? desc))
-           (if (and (not (property-configurable? current))
-                    (and (not (data-property-writable? current))
-                         (or (desc-get desc 'writable #f)
-                             #| TODO: same-value |#)))
-               (reject)
-               (update-property current desc))]
-          [else
-           (if (and (not (property-configurable? current))
-                    (or (and (desc-get desc 'set 'undefined)
-                             #| TODO |#)
-                        (and (desc-get desc 'get 'undefined)
-                             #| TODO |#)))
-               (reject)
-               (update-property current desc))])))))
+    (super-new)))
 
 (define (get-property object name)
   (hash-ref
@@ -134,6 +49,86 @@
    (get-field properties object)
    name
    #f))
+
+(define (define-own-property object name desc throw?)
+  (define (generic-desc? desc)
+    (and (not (data-desc? desc))
+         (not (accessor-desc? desc))))
+  (define (data-desc? desc)
+    (eq? 'data (car desc)))
+  (define (accessor-desc? desc)
+    (eq? 'accessor (car desc)))
+  (define (desc-get desc v def)
+    (let ([p (assq v (cdr desc))])
+      (if p (cdr p) def)))
+  (define (update-property p desc)
+    (let loop ([fields (cdr desc)])
+      (unless (null? fields)
+        (case (caar fields)
+          [(configurable) (set-property-configurable?! p (cdar fields))]
+          [(enumerable) (set-property-enumerable?! p (cdar fields))]
+          [(writable) (set-data-property-writable?! p (cdar fields))]
+          [(value) (set-data-property-value! p (cdar fields))]
+          [(set) (set-accessor-property-set! p (cdar fields))]
+          [(get) (set-accessor-property-get! p (cdar fields))])
+        (loop (cdr fields)))))
+  (let ([reject (λ () (and throw? (raise-native-error 'type)))]
+        [current (get-own-property object name)])
+    (cond
+      [(not current)
+       (if (not (get-field extensible? object))
+           (reject)
+           (begin
+             (hash-set!
+              (get-field properties object)
+              name
+              (if (accessor-desc? desc)
+                  (make-accessor-property #:get (desc-get desc 'get 'undefined)
+                                          #:set (desc-get desc 'set 'undefined)
+                                          #:enumerable (desc-get desc 'enumerable #f)
+                                          #:configurable (desc-get desc 'configurable #f))
+                  (make-data-property (desc-get desc 'value 'undefined)
+                                      #:writable (desc-get desc 'writable #f)
+                                      #:enumerable (desc-get desc 'enumerable #f)
+                                      #:configurable (desc-get desc 'configurable #f))))
+             #t))]
+      [(null? (cdr desc)) #t]
+      [#f #t] ; TODO: step 6
+      [(and (not (property-configurable? current))
+            (or (desc-get desc 'configurable #f)
+                (and (memv 'enumerable (cdr desc))
+                     (not (eq? (property-enumerable? current)
+                               (memv 'enumerable (cdr desc)))))))
+       (reject)]
+      [(generic-desc? desc)
+       (update-property current desc)]
+      [(and (not (eq? (data-property? current)
+                      (data-desc? desc))))
+       (if (property-configurable? current)
+           (let ([current
+                  (if (data-property? current)
+                      (make-accessor-property #:configurable (property-configurable? current)
+                                              #:enumerable (property-enumerable? current))
+                      (make-data-property #:configurable (property-configurable? current)
+                                          #:enumerable (property-enumerable? current)))])
+             (hash-set! (get-field properties object) name current)
+             (update-property current desc))
+           (reject))]
+      [(and (data-property? current) (data-desc? desc))
+       (if (and (not (property-configurable? current))
+                (and (not (data-property-writable? current))
+                     (or (desc-get desc 'writable #f)
+                         #| TODO: same-value |#)))
+           (reject)
+           (update-property current desc))]
+      [else
+       (if (and (not (property-configurable? current))
+                (or (and (desc-get desc 'set 'undefined)
+                         #| TODO |#)
+                    (and (desc-get desc 'get 'undefined)
+                         #| TODO |#)))
+           (reject)
+           (update-property current desc))])))
 
 (define-syntax-rule (define-object-properties obj [prop val] ...)
   (begin
@@ -154,38 +149,38 @@
       (let ([obj (new ecma-object% [class "Object"] [prototype object-prototype])])
         (if (data-property? desc)
             (begin
-              (send obj define-own-property "value"
+              (define-own-property obj "value"
                     `(data (value . ,(data-property-value desc))
                            (writable . #t)
                            (enumerable . #t)
                            (configurable . #t))
                     #f)
-              (send obj define-own-property "writable"
+              (define-own-property obj "writable"
                     `(data (value . ,(data-property-writable? desc))
                            (writable . #t)
                            (enumerable . #t)
                            (configurable . #t))
                     #f))
             (begin
-              (send obj define-own-property "get"
+              (define-own-property obj "get"
                     `(data (value . ,(accessor-property-get desc))
                            (writable . #t)
                            (enumerable . #t)
                            (configurable . #t))
                     #f)
-              (send obj define-own-property "set"
+              (define-own-property obj "set"
                     `(data (value . ,(accessor-property-set desc))
                            (writable . #t)
                            (enumerable . #t)
                            (configurable . #t))
                     #f)))
-        (send obj define-own-property "enumerable"
+        (define-own-property obj "enumerable"
               `(data (value . ,(property-enumerable? desc))
                      (writable . #t)
                      (enumerable . #t)
                      (configurable . #t))
               #f)
-        (send obj define-own-property "configurable"
+        (define-own-property obj "configurable"
               `(data (value . ,(property-configurable? desc))
                      (writable . #t)
                      (enumerable . #t)

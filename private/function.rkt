@@ -134,14 +134,14 @@
                        [name (in-list (get-field formal-parameters f))])
               (cons (symbol->string name) arg))))]
          [arg-obj (instantiate arguments-object% (arg-map))])
-    (send arg-obj define-own-property
+    (define-own-property arg-obj
           "length"
           `(data (value . ,(length args))
                  (writable . #t)
                  (enumerable . #f)
                  (configurable . #t))
           #f)
-    (send arg-obj define-own-property
+    (define-own-property arg-obj
           "callee"
           `(data (value . ,f)
                  (writable . #t)
@@ -159,7 +159,7 @@
            (new ecma-object%
                 [prototype object-prototype]
                 [class "Object"])])
-    (send f define-own-property
+    (define-own-property f
           "length"
           `(data
             (value . ,(length params))
@@ -167,7 +167,7 @@
             (enumerable . #f)
             (configurable . #f))
           #f)
-    (send proto define-own-property
+    (define-own-property proto
           "constructor"
           `(data
             (value . ,f)
@@ -175,7 +175,7 @@
             (enumerable . #f)
             (configurable . #t))
           #f)
-    (send f define-own-property
+    (define-own-property f
           "prototype"
           `(data
             (value . ,proto)
@@ -297,7 +297,7 @@
          [prototype function-prototype]
          [call-proc wrapper]
          [formal-parameters 'TODO]))
-  (send f define-own-property
+  (define-own-property f
         "length"
         `(data
           (value . ,typical-arity)

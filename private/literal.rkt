@@ -8,6 +8,7 @@
          "../object.rkt"
          "array.rkt"
          "environment.rkt"
+         "object.rkt"
          (prefix-in
           ecma:
           (combine-in
@@ -26,7 +27,7 @@
     (for ([i (in-naturals)]
           [elt (in-list elements)]
           #:unless (eq? 'undefined elt))
-      (send obj define-own-property
+      (define-own-property obj
             (ecma:to-string i)
             `(data
               (value . ,elt)
@@ -69,8 +70,7 @@
        #`(let ([obj (new ecma-object%
                          [prototype object-prototype]
                          [class "Object"])])
-           (send obj
-                 define-own-property
+           (define-own-property obj
                  pname
                  pdesc
                  #f) ...

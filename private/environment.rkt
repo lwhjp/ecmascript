@@ -166,8 +166,8 @@
     (define/override (has-binding? n)
       (has-property? binding-object n))
     (define/override (create-mutable-binding! n d)
-      (send binding-object
-            define-own-property
+      (define-own-property
+            binding-object
             n
             `(data
               (value . undefined)
