@@ -35,58 +35,6 @@
 
     (super-new)
 
-    (define/public (put! p v [throw? #t])
-      (if (send this can-put? p)
-          (let ([own (get-own-property this p)])
-            (if (data-property? own)
-                (send this define-own-property p `(data (value . ,v)) throw?)
-                (let ([prop (get-property this p)])
-                  (if (accessor-property? prop)
-                      (send (accessor-property-set prop) call this v)
-                      (send this define-own-property
-                            p
-                            `(data
-                              (value . ,v)
-                              (writable . #t)
-                              (enumerable . #t)
-                              (configurable . #t))
-                            throw?)))))
-          (when throw?
-            (raise-native-error
-             'type
-             (format "~a: can't put" p)))))
-
-    (define/public (can-put? p)
-      (let ([prop (get-own-property this p)])
-        (cond
-          [(accessor-property? prop)
-           (if (accessor-property-set prop) #t #f)]
-          [(data-property? prop)
-           (data-property-writable? prop)]
-          [(not prototype)
-           extensible?]
-          [else
-           (let ([inherited (get-property prototype p)])
-             (cond
-               [(accessor-property? inherited)
-                (if (accessor-property-set inherited) #t #f)]
-               [(and (data-property? inherited) extensible?)
-                (data-property-writable? inherited)]
-               [else extensible?]))])))
-
-    (define/public (delete! p [throw? #t])
-      (let ([prop (get-own-property this p)])
-        (if prop
-            (if (property-configurable? prop)
-                (begin
-                  (hash-remove! properties p)
-                  #t)
-                (and throw?
-                     (raise-native-error
-                      'type
-                      (format "~a: not configurable" p))))
-            #t)))
-
     (define (generic-desc? desc)
       (and (not (data-desc? desc))
            (not (accessor-desc? desc))))

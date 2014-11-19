@@ -41,11 +41,10 @@
                delete-binding!
                (reference-name ref)))]
     [else
-     (send (to-object
-            (reference-base ref))
-           delete!
-           (reference-name ref)
-           (reference-strict? ref))]))
+     (delete-property!
+      (to-object (reference-base ref))
+      (reference-name ref)
+      (reference-strict? ref))]))
 
 (define (op:void v)
   (get-value v)

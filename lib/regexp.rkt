@@ -60,7 +60,7 @@
                        (substring s (car p) (cdr p)))
                      positions))])
         (when global
-          (send r put! "lastIndex" (cdar positions)))
+          (set-property-value! r "lastIndex" (cdar positions)))
         (define-object-properties a
           ["index" (caar positions)]
           ["input" s])

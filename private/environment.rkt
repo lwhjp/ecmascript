@@ -65,10 +65,11 @@
       [(eq? 'undefined base)
        (if (ecma:reference-strict? v)
            (raise-native-error 'reference "not bound")
-           (send global-object put!
-                 (ecma:reference-name v)
-                 w
-                 #f))]
+           (set-property-value!
+            global-object
+            (ecma:reference-name v)
+            w
+            #f))]
       [(is-a? base environment-record%)
        (send base
              set-mutable-binding!
@@ -76,17 +77,17 @@
              w
              (ecma:reference-strict? v))]
       [(is-a? base ecma-object%)
-       (send base
-             put!
-             (ecma:reference-name v)
-             w
-             (ecma:reference-strict? v))]
+       (set-property-value!
+        base
+        (ecma:reference-name v)
+        w
+        (ecma:reference-strict? v))]
       [else
        (let ([o (ecma:to-object base)]
              [p (ecma:reference-name v)]
              [throw? (ecma:reference-strict? v)])
          (if (and
-              (send o can-put? p)
+              (can-set-property? o p)
               (not (data-property?
                     (get-own-property o p))))
              (let ([prop (get-property o p)])
@@ -175,7 +176,11 @@
               (configurable . ,d))
             #t))
     (define/override (set-mutable-binding! n v s)
-      (send binding-object put! n v s))
+      (set-property-value!
+       binding-object
+       n
+       v
+       s))
     (define/override (get-binding-value n s)
       (if (has-property? binding-object n)
           (get-property-value binding-object n)
@@ -185,7 +190,7 @@
                (format "~a: undefined" n))
               'undefined)))
     (define/override (delete-binding! n)
-      (send binding-object delete! n #f))
+      (delete-property! binding-object n #f))
     (define/override (implicit-this-value)
       (if provide-this? binding-object 'undefined))))
 

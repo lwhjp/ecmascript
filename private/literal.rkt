@@ -3,11 +3,11 @@
 (require (for-syntax racket/base
                      syntax/parse
                      syntax/stx)
-         racket/class
+         (only-in racket/class new send)
          racket/provide
+         "../object.rkt"
          "array.rkt"
          "environment.rkt"
-         "object.rkt"
          (prefix-in
           ecma:
           (combine-in
@@ -34,7 +34,7 @@
               (enumerable . #t)
               (configurable . #t))
             #f))
-    (send obj put! "length" (length elements))
+    (set-property-value! obj "length" (length elements))
     obj))
 
 (define-syntax (ecma:object stx)
