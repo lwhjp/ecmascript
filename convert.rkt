@@ -9,7 +9,8 @@
          "object.rkt"
          "private/builtin.rkt"
          "private/error.rkt"
-         "private/object.rkt")
+         "private/object.rkt"
+         "private/this.rkt")
 
 (provide (all-defined-out))
 
@@ -22,7 +23,7 @@
           (let ([f (get-property-value v method)])
             (when (and (object? f)
                        (object-method-arity-includes? f 'call 1))
-              (let ([v (send f call v)])
+              (let ([v (apply/this f v)])
                 (unless (object? v)
                   (return v))))))
         (raise-native-error 'type))

@@ -2,7 +2,6 @@
 
 (require (for-syntax racket/base)
          "global-object.rkt"
-         "../convert.rkt"
          "../types.rkt")
 
 (provide (all-defined-out))

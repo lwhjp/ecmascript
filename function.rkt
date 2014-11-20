@@ -2,13 +2,14 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
-         (only-in racket/class is-a? send)
+         (only-in racket/class get-field is-a? send)
          racket/stxparam
          "private/environment.rkt"
          "private/error.rkt"
          "private/function.rkt"
          "private/global-object.rkt"
          "private/this.rkt"
+         "convert.rkt"
          "object.rkt"
          "types.rkt")
 
@@ -36,7 +37,15 @@
                     (send base implicit-this-value)]))
                'undefined)])
       (let ([argvs (map get-value args)])
-        (send func call this-value . argvs)))))
+        (apply/this
+         (cond
+           [(or (null? this-value)
+                (undefined? this-value))
+            global-object]
+           [(object? this-value) this-value]
+           [else (to-object this-value)])
+         (get-field call-proc func)
+         argvs)))))
 
 (define (new ref . args)
   (let ([constructor (get-value ref)])

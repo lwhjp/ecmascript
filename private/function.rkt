@@ -18,6 +18,7 @@
          "object.rkt")
 
 (provide function%
+         has-instance?
          constructor%
          activation%
          function:prototype
@@ -36,30 +37,20 @@
                 formal-parameters
                 #;code)
 
-    (super-new [class "Function"])
+    (super-new [class "Function"])))
 
-    (define/public (call this-arg . args)
-      (ecma:apply/this
-       (cond
-         [(or (ecma:null? this-arg) (ecma:undefined? this-arg))
-          global-object]
-         [(object? this-arg) this-arg]
-         [else (ecma:to-object this-arg)])
-       call-proc
-       args))
-
-    (define/public (has-instance? v)
-      (and
-       (object? v)
-       (let ([o (get-property-value this "prototype")])
-         (unless (object? o)
-           (raise-native-error 'type "not an object"))
-         (let loop ([v v])
-           (let ([v (get-field prototype v)])
-             (and
-              v
-              (or (eq? o v)
-                  (loop v))))))))))
+(define (has-instance? f v)
+  (and
+   (object? v)
+   (let ([o (get-property-value f "prototype")])
+     (unless (object? o)
+       (raise-native-error 'type "not an object"))
+     (let loop ([v v])
+       (let ([v (get-field prototype v)])
+         (and
+          v
+          (or (eq? o v)
+              (loop v))))))))
 
 (define constructor%
   (class function%
@@ -78,20 +69,11 @@
             result
             obj)))))
 
-(define native-function%
-  (class function%
-    (inherit-field call-proc)
-    (super-new)
-    (define/override (call this-arg . args)
-      (ecma:apply/this this-arg call-proc args))))
-
 (define native-constructor%
   (class constructor%
     (inherit-field call-proc)
     (init-field construct-proc)
     (super-new)
-    (define/override (call this-arg . args)
-      (apply call-proc this-arg args))
     (define/override (construct . args)
       (apply construct-proc args))))
 
@@ -289,7 +271,7 @@
                   [arg (in-sequences args (in-cycle '(undefined)))])
          arg)))))
   (define f
-    (new native-function%
+    (new function%
          [prototype function:prototype]
          [call-proc wrapper]
          [formal-parameters 'TODO]))
