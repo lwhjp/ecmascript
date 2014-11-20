@@ -1,10 +1,6 @@
 #lang racket/base
 
-(require (only-in racket/class
-                  instantiate
-                  object-method-arity-includes?
-                  send)
-         racket/math
+(require racket/math
          racket/string
          "object.rkt"
          "private/builtin.rkt"
@@ -15,16 +11,16 @@
 (provide (all-defined-out))
 
 (define (to-primitive v [hint 'number])
-  (if (object? v)
+  (if (Object? v)
       (let/ec return
         (for ([method (if (eq? 'string hint)
                           '("toString" "valueOf")
                           '("valueOf" "toString"))])
           (let ([f (get-property-value v method)])
-            (when (and (object? f)
-                       (object-method-arity-includes? f 'call 1))
-              (let ([v (apply/this f v)])
-                (unless (object? v)
+            (when (and (Object? f)
+                       (procedure? f))
+              (let ([v (apply/this v f '())])
+                (unless (Object? v)
                   (return v))))))
         (raise-native-error 'type))
       v))
@@ -36,7 +32,7 @@
     [(boolean? v) v]
     [(number? v) (not (or (zero? v) (nan? v)))]
     [(string? v) (not (string=? v ""))]
-    [(object? v) #t]))
+    [(Object? v) #t]))
 
 (define (to-number v)
   (cond
@@ -45,7 +41,7 @@
     [(boolean? v) (if v 1 0)]
     [(number? v) v]
     [(string? v) (or (string->number (string-trim v)) +nan.0)]
-    [(object? v) (to-number (to-primitive v 'number))]))
+    [(Object? v) (to-number (to-primitive v 'number))]))
 
 (define (to-integer v)
   (let ([v (to-number v)])
@@ -84,13 +80,13 @@
        [(infinite? v) "Infinity"]
        [else (number->string v)])]
     [(string? v) v]
-    [(object? v) (to-string (to-primitive v 'string))]))
+    [(Object? v) (to-string (to-primitive v 'string))]))
 
 (define (to-object v)
   (cond
     [(eq? v 'undefined) (raise-native-error 'type "undefined")]
     [(eq? v 'null) (raise-native-error 'type "null")]
-    [(boolean? v) (instantiate boolean% (v) [prototype boolean:prototype])]
-    [(number? v) (instantiate number% (v) [prototype number:prototype])]
-    [(string? v) (instantiate string% (v) [prototype string:prototype])]
-    [(object? v) v]))
+    [(boolean? v) (make-Boolean v)]
+    [(number? v) (make-Number v)]
+    [(string? v) (make-String v)]
+    [(Object? v) v]))

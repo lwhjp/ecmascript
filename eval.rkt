@@ -16,7 +16,7 @@
 (provide (contract-out
           (rename ecma:eval eval
                   (->* (string?)
-                       (object? namespace?)
+                       (Object? namespace?)
                        any))
           [make-global-namespace (-> namespace?)])
          eval-read-interaction)

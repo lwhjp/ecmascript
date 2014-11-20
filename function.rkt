@@ -2,7 +2,7 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
-         (only-in racket/class get-field is-a? send)
+         (only-in racket/class is-a? send)
          racket/stxparam
          "private/environment.rkt"
          "private/error.rkt"
@@ -14,25 +14,21 @@
          "types.rkt")
 
 (provide (all-defined-out)
+         Function?
+         constructor?
          this
          return
          function)
 
-(define (function? v)
-  (is-a? v function%))
-
-(define (constructor? v)
-  (is-a? v constructor%))
-
 (define (call ref . args)
   (let ([func (get-value ref)])
-    (unless (function? func)
+    (unless (Function? func)
       (raise-native-error 'type "not a function"))
     (let ([this-value
            (if (reference? ref)
                (let ([base (reference-base ref)])
                  (cond
-                   [(object? base) base]
+                   [(Object? base) base]
                    [(is-a? base environment-record%)
                     (send base implicit-this-value)]))
                'undefined)])
@@ -42,9 +38,9 @@
            [(or (null? this-value)
                 (undefined? this-value))
             global-object]
-           [(object? this-value) this-value]
+           [(Object? this-value) this-value]
            [else (to-object this-value)])
-         (get-field call-proc func)
+         func
          argvs)))))
 
 (define (new ref . args)
@@ -52,4 +48,4 @@
     (unless (constructor? constructor)
       (raise-native-error 'type "not a constructor"))
     (let ([argvs (map get-value args)])
-      (apply (get-field construct-proc constructor) argvs))))
+      (apply (constructor-new-proc constructor) argvs))))

@@ -1,11 +1,8 @@
 #lang racket/base
 
-(require racket/class
-         "object.rkt")
+(require "object.rkt")
 
 (provide global-object)
 
 (define global-object
-  (new ecma-object%
-       [prototype #f]
-       [class "Object"]))
+  (Object #f (make-hash) #t))

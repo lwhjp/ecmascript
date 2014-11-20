@@ -1,7 +1,6 @@
 #lang racket/base
 
 (require math/flonum
-         (except-in racket/class this)
          "../private/builtin.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
@@ -24,41 +23,40 @@
           (ecma:to-number value))]
        [construct
         (λ ([value 0])
-          (instantiate number% ((ecma:to-number value))
-            [prototype number:prototype]))])
+          (make-Number (ecma:to-number value)))])
     (make-native-constructor call construct)))
 
 (define-object-properties number-constructor
-  ["prototype" number:prototype]
+  ["prototype" Number:prototype]
   ["MAX_VALUE" +max.0]
   ["MIN_VALUE" +min.0]
   ["NaN" +nan.0]
   ["NEGATIVE_INFINITY" -inf.0]
   ["POSITIVE_INFINITY" +inf.0])
 
-(define-object-properties number:prototype
+(define-object-properties Number:prototype
   ["constructor" number-constructor]
   ["toString"
    (native-method (radix)
      (if (= 10 (ecma:to-number radix))
-         (ecma:to-string (get-field value this))
+         (ecma:to-string (Number-value this))
          (number->string
-          (get-field value this)
+          (Number-value this)
           (ecma:to-number radix))))]
   ["toLocaleString"
    (native-method ()
-     (number->string (get-field value this)))]
+     (number->string (Number-value this)))]
   ["valueOf"
    (native-method ()
-     (get-field value this))]
+     (Number-value this))]
   ["toFixed"
    (native-method (fractionDigits)
      (real->decimal-string
-      (get-field value this)
+      (Number-value this)
       (ecma:to-integer fractionDigits)))]
   ["toExponential"
    (native-method (fractionDigits)
-     (number->string (get-field value this)))]
+     (number->string (Number-value this)))]
   ["toPrecision"
    (native-method (precision)
-     (number->string (get-field value this)))])
+     (number->string (Number-value this)))])

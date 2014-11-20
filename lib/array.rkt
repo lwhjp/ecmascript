@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require (only-in racket/class is-a? send)
-         racket/string
+(require racket/string
          "../object.rkt"
          "../private/array.rkt"
          "../private/environment.rkt"
@@ -30,29 +29,27 @@
     (make-native-constructor call construct)))
 
 (define-object-properties array-constructor
-  ["prototype" array:prototype]
+  ["prototype" Array:prototype]
   ["isArray"
    (native-method (arg)
-     (is-a? arg array%))])
+     (Array? arg))])
 
-(define-object-properties array:prototype
+(define-object-properties Array:prototype
   ["constructor" array-constructor]
   ["toString"
    (native-method ()
      (let* ([array (ecma:to-object this)]
             [func (get-property-value array "join")])
-       (if (is-a? func function%)
-           (send func call this)
-           (send (get-value
-                  (member
-                   (member (id Object)
-                           "prototype")
-                   "toString"))
-                 call
-                 this))))]
+       (if (Function? func)
+           (func)
+           ((get-value
+             (member
+              (member (id Object)
+                      "prototype")
+              "toString"))))))]
   ["toLocaleString"
    (native-method ()
-     (send (get-property-value this "toString") call this))]
+     ((get-property-value this "toString")))]
   ; TODO: concat
   ["join"
    (native-method (separator)

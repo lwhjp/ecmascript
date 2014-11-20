@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require racket/class
-         racket/math
+(require racket/math
          "../private/function.rkt"
          "../private/object.rkt"
          (prefix-in
@@ -16,9 +15,7 @@
   `(["Math" . ,math]))
 
 (define math
-  (new ecma-object%
-    [prototype object:prototype]
-    [class "Math"]))
+  (Object Object:prototype (make-hash) #t))
 
 (define-syntax-rule (wrap-math fn arg ...)
   (native-method (arg ...)

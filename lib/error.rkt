@@ -2,7 +2,6 @@
 
 (require (for-syntax racket/base
                      racket/syntax)
-         (except-in racket/class object? this)
          "../object.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
@@ -26,15 +25,13 @@
     ["TypeError" . ,type-error-constructor]
     ["URIError" . ,uri-error-constructor]))
 
-(define error%
-  (class ecma-object%
-    (super-new [class "Error"])))
+(struct Error Object ()
+  #:property prop:class 'Error)
 
 (define (make-error-prototype+constructor name super-prototype)
   (letrec
       ([prototype
-        (new error%
-             [prototype super-prototype])]
+        (Error super-prototype (make-hash) #t)]
        [constructor
         (letrec
             ([call
@@ -42,13 +39,14 @@
                 (apply construct args))]
              [construct
               (λ ([message 'undefined])
-                (new error%
-                     [prototype prototype]
-                     [initial-properties
-                      (if (eq? 'undefined message)
-                          '()
-                          `(("message" . ,(make-data-property
-                                           (ecma:to-string message)))))]))])
+                (Error
+                 prototype
+                 (make-hash
+                  (if (eq? 'undefined message)
+                      '()
+                      `(("message" . ,(make-data-property
+                                       (ecma:to-string message))))))
+                 #t))])
           (make-native-constructor call construct))])
     (define-object-properties prototype
       ["constructor" constructor]
@@ -59,7 +57,7 @@
     (values prototype constructor)))
 
 (define-values (error:prototype error-constructor)
-  (make-error-prototype+constructor "Error" object:prototype))
+  (make-error-prototype+constructor "Error" Object:prototype))
 
 (define-syntax (define-native-error stx)
   (syntax-case stx ()
@@ -83,7 +81,7 @@
                        cons
                        (λ (msg)
                          (throw
-                          (send cons-id construct msg))))))))]))
+                          ((constructor-new-proc cons-id) msg))))))))]))
 
 (define-native-error "Eval")
 (define-native-error "Range")
@@ -96,7 +94,7 @@
   ["toString"
    (make-native-function
     (λ ()
-      (unless (object? this)
+      (unless (Object? this)
         (raise-native-error 'type "this: not an object"))
       (define name
         (let ([name (get-property-value this "name")])

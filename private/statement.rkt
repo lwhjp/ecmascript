@@ -2,7 +2,7 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
-         (only-in racket/class get-field send)
+         (only-in racket/class send)
          racket/provide
          racket/stxparam
          "environment.rkt"
@@ -117,8 +117,7 @@
         (void)
         (let ([obj (to-object exper-value)])
           (for/fold ([v (void)])
-                    ([(name prop) (in-hash
-                                   (get-field properties obj))]
+                    ([(name prop) (in-hash (Object-properties obj))]
                      #:when (property-enumerable? prop))
             (put-value! lhs (get-property-value obj name))
             body)))))

@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require racket/class
-         "error.rkt")
+(require "error.rkt")
 
 (provide (all-defined-out))
 
@@ -23,30 +22,28 @@
                                 #:configurable [configurable? #f])
   (accessor-property configurable? enumerable? set get))
 
-(define ecma-object%
-  (class object%
-    (init-field prototype
-                class
-                [extensible? #t])
+(define-values (prop:class has-class? get-class)
+  (make-struct-type-property 'class))
 
-    (init [initial-properties '()])
-
-    (field [properties (make-hash initial-properties)])
-
-    (super-new)))
+(struct Object
+  (prototype
+   properties
+   [extensible? #:mutable])
+  #:constructor-name Object
+  #:property prop:class 'Object)
 
 (define (get-property object name)
   (hash-ref
-   (get-field properties object)
+   (Object-properties object)
    name
    (λ ()
-     (let ([prototype (get-field prototype object)])
+     (let ([prototype (Object-prototype object)])
        (and prototype
             (get-property prototype name))))))
 
 (define (get-own-property object name)
   (hash-ref
-   (get-field properties object)
+   (Object-properties object)
    name
    #f))
 
@@ -76,11 +73,11 @@
         [current (get-own-property object name)])
     (cond
       [(not current)
-       (if (not (get-field extensible? object))
+       (if (not (Object-extensible? object))
            (reject)
            (begin
              (hash-set!
-              (get-field properties object)
+              (Object-properties object)
               name
               (if (accessor-desc? desc)
                   (make-accessor-property #:get (desc-get desc 'get 'undefined)
@@ -111,7 +108,7 @@
                                               #:enumerable (property-enumerable? current))
                       (make-data-property #:configurable (property-configurable? current)
                                           #:enumerable (property-enumerable? current)))])
-             (hash-set! (get-field properties object) name current)
+             (hash-set! (Object-properties object) name current)
              (update-property current desc))
            (reject))]
       [(and (data-property? current) (data-desc? desc))
@@ -132,21 +129,19 @@
 
 (define-syntax-rule (define-object-properties obj [prop val] ...)
   (begin
-    (hash-set! (get-field properties obj)
+    (hash-set! (Object-properties obj)
                prop
                (make-data-property val
                                    #:writable #t
                                    #:enumerable #f
                                    #:configurable #t)) ...))
 
-(define object:prototype
-  (new ecma-object%
-       [prototype #f]
-       [class "Object"]))
+(define Object:prototype
+  (Object #f (make-hash) #t))
 
 (define (from-property-descriptor desc)
   (if desc
-      (let ([obj (new ecma-object% [class "Object"] [prototype object:prototype])])
+      (let ([obj (Object Object:prototype (make-hash) #t)])
         (if (data-property? desc)
             (begin
               (define-own-property obj "value"
@@ -190,9 +185,9 @@
       'undefined))
 
 (define (to-property-descriptor obj)
-  (unless (is-a? obj ecma-object%)
+  (unless (Object? obj)
     (raise-native-error 'type "not an object"))
-  (let ([oprops (get-field properties obj)])
+  (let ([oprops (Object-properties obj)])
     (define-values (enumerable? configurable?
                     value writable? get set)
       (apply

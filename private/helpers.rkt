@@ -1,11 +1,9 @@
 #lang racket/base
 
 (require (for-syntax racket/base
-                     syntax/parse)
-         (only-in racket/class new get-field))
+                     syntax/parse))
 
-(provide make-object
-         extend-object)
+(provide extend-object)
 
 (begin-for-syntax
   (define-syntax-class property-name
@@ -55,27 +53,11 @@
                            setter
                            getter)]))
 
-(define-syntax make-object
-  (syntax-parser
-   [(_ (~optional class-name:str
-                  #:defaults ([class-name "Object"]))
-       (~optional proto-expr
-                  #:defaults ([proto-expr #'object:prototype]))
-       prop:property-clause ...)
-    #'(new
-       ecma-object%
-       [class class-name]
-       [prototype proto-expr]
-       [initial-properties
-        (list
-         (cons prop.name.str
-               prop.constructor) ...)])]))
-
 (define-syntax extend-object
   (syntax-parser
    [(_ obj prop:property-clause ...)
     #`(hash-set*!
-       (get-field properties obj)
+       (Object-properties obj)
        #,@(foldr
            list*
            '()

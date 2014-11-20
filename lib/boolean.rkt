@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require (except-in racket/class this)
-         "../private/builtin.rkt"
+(require "../private/builtin.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
          "../private/this.rkt"
@@ -23,20 +22,19 @@
           (ecma:to-boolean value))]
        [construct
         (λ ([value #f])
-          (instantiate boolean% ((ecma:to-boolean value))
-            [prototype boolean:prototype]))])
+          (make-Boolean (ecma:to-boolean value)))])
     (make-native-constructor call construct)))
 
 (define-object-properties boolean-constructor
-  ["prototype" boolean:prototype])
+  ["prototype" Boolean:prototype])
 
-(define-object-properties boolean:prototype
+(define-object-properties Boolean:prototype
   ["constructor" boolean-constructor]
   ["toString"
    (native-method ()
-     (if (get-field value this)
+     (if (Boolean-value this)
          "true"
          "false"))]
   ["valueOf"
    (native-method ()
-     (get-field value this))])
+     (Boolean-value this))])

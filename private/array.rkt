@@ -1,20 +1,11 @@
 #lang racket/base
 
-(require racket/class
-         "object.rkt")
+(require "object.rkt")
 
 (provide (all-defined-out))
 
-(define array%
-  (class ecma-object%
-    (super-new
-     [class "Array"]
-     [initial-properties
-      `(("length" . ,(make-data-property 0
-                       #:writable #t
-                       #:configurable #f
-                       #:enumerable #f)))])))
+(struct Array Object ()
+  #:property prop:class "Array")
 
-(define array:prototype
-  (new array%
-       [prototype object:prototype]))
+(define Array:prototype
+  (Array Object:prototype (make-hash) #t))

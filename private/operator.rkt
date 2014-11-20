@@ -61,13 +61,13 @@
           [(boolean? v) "boolean"]
           [(number? v) "number"]
           [(string? v) "string"]
-          [(is-a? v function%) "function"]
-          [(object? v) "object"]))))
+          [(Function? v) "function"]
+          [(Object? v) "object"]))))
 
 (define (op:instanceof a b)
   (define lval (get-value a))
   (define rval (get-value b))
-  (unless (is-a? rval function%)
+  (unless (Function? rval)
     (raise-native-error 'type "not a function"))
   (has-instance? rval lval))
 
@@ -175,17 +175,17 @@
               (cond
                 [(number? b) (= a b)]
                 [(string? b) (op:== a (to-number b))]
-                [(object? b) (op:== a (to-primitive b))]
+                [(Object? b) (op:== a (to-primitive b))]
                 [else #f])]
              [(string? a)
               (cond
                 [(string? b) (string=? a b)]
                 [(number? b) (op:== (to-number a) b)]
-                [(object? b) (op:== a (to-primitive b))]
+                [(Object? b) (op:== a (to-primitive b))]
                 [else #f])]
-             [(object? a)
+             [(Object? a)
               (cond
-                [(object? b) (eq? a b)]
+                [(Object? b) (eq? a b)]
                 [(or (string? b) (number? b)) (op:== (to-primitive a) b)]
                 [else #f])]))])
     (values

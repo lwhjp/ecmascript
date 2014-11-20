@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require (except-in racket/class object? this)
-         "../object.rkt"
+(require "../object.rkt"
          "../private/builtin.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
@@ -19,9 +18,12 @@
   `(["RegExp" . ,regexp-constructor]))
 
 (define (make-regexp-object pattern flags prototype)
-  (let ([obj
-         (instantiate regexp% (pattern flags)
-           [prototype prototype])])
+  (let ([obj (RegExp
+              prototype
+              (make-hash)
+              #t
+              pattern
+              flags)])
     (define-object-properties obj
       ["source" pattern]
       ["global" (regexp-match? "g" flags)]
@@ -48,7 +50,7 @@
       (string-append
        (if ignore-case "i" "")
        (if multiline "m" ""))
-      (get-field pattern r))))
+      (RegExp-pattern r))))
   (define positions
     (regexp-match-positions
      re
@@ -69,13 +71,13 @@
       'null))
 
 (define regexp:prototype
-  (make-regexp-object "" "" object:prototype))
+  (make-regexp-object "" "" Object:prototype))
 
 (define regexp-constructor
   (letrec
       ([call
         (λ (pattern [flags 'undefined])
-          (if (and (is-a? pattern regexp%)
+          (if (and (RegExp? pattern)
                    (eq? 'undefined flags))
               pattern
               (construct pattern flags)))]
@@ -83,9 +85,9 @@
         (λ ([pattern ""] [flags 'undefined])
           (define p
             (cond
-              [(is-a? pattern regexp%)
+              [(RegExp? pattern)
                (if (eq? 'undefined flags)
-                   (get-field pattern pattern)
+                   (RegExp-pattern pattern)
                    (raise-native-error 'type))]
               [else (ecma:to-string pattern)]))
           (make-regexp-object

@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require (only-in racket/class get-field)
-         racket/match
+(require racket/match
          racket/math
          racket/runtime-path
          net/uri-codec
@@ -16,7 +15,7 @@
   (define imported-properties
     ((dynamic-require mod 'get-properties)))
   (define global-property-map
-    (get-field properties global-object))
+    (Object-properties global-object))
   (for ([prop (in-list imported-properties)])
     (match-define (cons name value) prop)
     (hash-set! global-property-map
