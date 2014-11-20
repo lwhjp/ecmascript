@@ -46,9 +46,7 @@
          [(object? this-arg) this-arg]
          [else (ecma:to-object this-arg)])
        call-proc
-       (λ (env)
-         (bind-arguments! env args))
-       '()))
+       args))
 
     (define/public (has-instance? v)
       (and
@@ -61,20 +59,7 @@
              (and
               v
               (or (eq? o v)
-                  (loop v))))))))
-
-    (define (bind-arguments! env args)
-      (for ([arg-name (in-list (map symbol->string formal-parameters))]
-            [v (in-sequences (in-list args)
-                             (in-cycle (list ecma:undefined)))])
-        (unless (send env has-binding? arg-name)
-          (send env create-mutable-binding! arg-name))
-        (send env set-mutable-binding! arg-name v #f))
-      (unless (send env has-binding? "arguments")
-          (send env create-immutable-binding! "arguments"))
-        (send env initialize-immutable-binding!
-              "arguments"
-              (make-arguments-object this args)))))
+                  (loop v))))))))))
 
 (define constructor%
   (class function%
@@ -152,6 +137,19 @@
           #f)
     arg-obj))
 
+(define (bind-arguments! f formal-parameters env args)
+  (for ([arg-name (in-list (map symbol->string formal-parameters))]
+        [v (in-sequences (in-list args)
+                         (in-cycle (list ecma:undefined)))])
+    (unless (send env has-binding? arg-name)
+      (send env create-mutable-binding! arg-name))
+    (send env set-mutable-binding! arg-name v #f))
+  (unless (send env has-binding? "arguments")
+    (send env create-immutable-binding! "arguments"))
+  (send env initialize-immutable-binding!
+        "arguments"
+        (make-arguments-object f args)))
+
 (define (make-function params proc)
   (let ([f (new constructor%
                 [prototype function:prototype]
@@ -207,10 +205,11 @@
        (~optional (~seq #:vars (var-id:id ...)))
        (~optional (~seq body:expr ...+)))
     #`(let ([scope-env (new-declarative-environment lexical-environment)])
-        (let ([f (make-function '(param ...)
-                   (λ (bind-args)
-                     (let ([local-env (new-declarative-environment scope-env)])
-                       (bind-args local-env)
+        (letrec
+            ([f (make-function '(param ...)
+                  (λ args                     
+                    (let ([local-env (new-declarative-environment scope-env)])
+                       (bind-arguments! f '(param ...) local-env args)
                        (let/ec escape
                          (syntax-parameterize
                              ([return-binding (make-rename-transformer #'escape)])
