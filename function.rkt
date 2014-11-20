@@ -52,4 +52,4 @@
     (unless (constructor? constructor)
       (raise-native-error 'type "not a constructor"))
     (let ([argvs (map get-value args)])
-      (send constructor construct . argvs))))
+      (apply (get-field construct-proc constructor) argvs))))

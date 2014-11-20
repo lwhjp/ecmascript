@@ -13,6 +13,7 @@
           ecma:
           (combine-in
            "../convert.rkt"
+           "../function.rkt"
            "../types.rkt")))
 
 (provide (filtered-out
@@ -77,4 +78,4 @@
            obj))]))
 
 (define (ecma:regexp pattern flags)
-  (send (get-value (id RegExp)) construct pattern flags))
+  (ecma:new (id RegExp) pattern flags))

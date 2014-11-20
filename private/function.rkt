@@ -54,28 +54,8 @@
 
 (define constructor%
   (class function%
-    (init-field)
-
-    (super-new)
-
-    (define/public (construct . args)
-      (let* ([prot (get-property-value this "prototype")]
-             [prot (if (object? prot) prot object:prototype)]
-             [obj (new ecma-object%
-                       [class (get-field class prot)]
-                       [prototype prot])]
-             [result (send this call obj . args)])
-        (if (object? result)
-            result
-            obj)))))
-
-(define native-constructor%
-  (class constructor%
-    (inherit-field call-proc)
     (init-field construct-proc)
-    (super-new)
-    (define/override (construct . args)
-      (apply construct-proc args))))
+    (super-new)))
 
 (define activation%
   (class ecma-object%
@@ -133,10 +113,23 @@
         (make-arguments-object f args)))
 
 (define (make-function params proc)
-  (let ([f (new constructor%
-                [prototype function:prototype]
-                [call-proc proc]
-                [formal-parameters params])]
+  (letrec
+      ([f (new
+           constructor%
+           [prototype function:prototype]
+           [call-proc proc]
+           [construct-proc
+            (λ args
+              (let* ([prot (get-property-value f "prototype")]
+                     [prot (if (object? prot) prot object:prototype)]
+                     [obj (new ecma-object%
+                               [class (get-field class prot)]
+                               [prototype prot])]
+                     [result (ecma:apply/this obj proc args)])
+                (if (object? result)
+                    result
+                    obj)))]
+           [formal-parameters params])]
         [proto
            (new ecma-object%
                 [prototype object:prototype]
@@ -243,7 +236,7 @@
      (send env-rec set-mutable-binding! name fn #f))))
 
 (define (make-native-constructor call-proc construct-proc)
-  (new native-constructor%
+  (new constructor%
        [prototype function:prototype]
        [call-proc call-proc]
        [formal-parameters 'TODO]
