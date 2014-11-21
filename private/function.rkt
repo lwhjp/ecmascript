@@ -230,15 +230,15 @@
       [(list? arity)
        (argmax typical-arity arity)]
       [(arity-at-least? arity)
-       (add1 (arity-at-least-value arity))]
+       (arity-at-least-value arity)]
       [else arity])))
 
 (define (make-native-function proc)
   (define arity
-    (sub1 (typical-arity proc)))
+    (typical-arity proc))
   (define wrapper
     (λ args
-      (if (procedure-arity-includes? proc (add1 (length args)))
+      (if (procedure-arity-includes? proc (length args))
           (apply proc args)
       (apply
        proc
