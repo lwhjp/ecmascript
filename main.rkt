@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require "convert.rkt"
+(require (for-syntax racket/base)
+         "convert.rkt"
          "eval.rkt"
          "function.rkt"
          "init.rkt"
@@ -36,7 +37,8 @@
 
          (rename-out
           [ecma:module-begin #%module-begin]
-          [ecma:top-interaction #%top-interaction])
+          [ecma:top-interaction #%top-interaction]
+          [ecma:top #%top])
 
          #%app
          #%datum)
@@ -48,3 +50,7 @@
 
 (define-syntax-rule (ecma:top-interaction . form)
   (get-value form))
+
+(define-syntax (ecma:top stx)
+  (syntax-case stx ()
+    [(_ . v) #'(id v)]))
