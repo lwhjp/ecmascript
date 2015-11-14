@@ -43,7 +43,9 @@
 
 (define-syntax-rule (ecma:module-begin form ...)
   (#%module-begin
-   (current-read-interaction eval-read-interaction)
+   (module #%configure-runtime racket/base
+     (require ecmascript/eval)
+     (current-read-interaction eval-read-interaction))
    form ...))
 
 (define-syntax-rule (ecma:top-interaction . form)
