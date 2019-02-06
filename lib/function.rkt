@@ -59,7 +59,7 @@
       (define args
         (for/list ([i (in-range (to-uint32 length))])
           (get-property-value arg-array (to-string i))))
-      (apply/this this-arg this arg-array)))]
+      (apply/this this-arg this args)))]
   ["call"
    (make-native-function
     (λ (this-arg . args)
