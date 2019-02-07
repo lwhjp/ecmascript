@@ -57,17 +57,32 @@
    (λ args
      ecma:undefined)))
 
-(struct Arguments Object (map)
+(struct Arguments Object ()
   #:property prop:class 'Arguments)
 
-(define (make-arguments-object f args)
-  (let* ([arg-map
-          (make-hash
-           (reverse
-            (for/list ([arg (in-list args)]
-                       [name (in-list (Function-formal-parameters f))])
-              (cons (symbol->string name) arg))))]
-         [arg-obj (Arguments Object:prototype (make-hash) #t arg-map)])
+(define (make-arguments-object f args env)
+  (define formal-parameters (Function-formal-parameters f))
+  (let ([arg-obj (Arguments Object:prototype (make-hash) #t)])
+    (for ([arg-name (in-sequences (in-list (map symbol->string formal-parameters))
+                                  (in-cycle (list #f)))]
+          [arg-v (in-sequences (in-list args)
+                               (in-cycle (list ecma:undefined)))]
+          [index (in-range (max (length formal-parameters)
+                                (length args)))])
+      (define-own-property arg-obj
+        (number->string index)
+        `(data (value . ,arg-v)
+               (writable . #t)
+               (enumerable . #t)
+               (configurable . #t))
+        #f)
+      (when arg-name
+        (define-own-property arg-obj
+          arg-name
+          `(accessor (get . ,(λ () (send env get-binding-value arg-name #t)))
+                     (set . ,(λ (v) (send env set-mutable-binding! arg-name v #t)))
+                     (configurable . #t))
+          #f)))
     (define-own-property arg-obj
           "length"
           `(data (value . ,(length args))
@@ -95,7 +110,7 @@
     (send env create-immutable-binding! "arguments"))
   (send env initialize-immutable-binding!
         "arguments"
-        (make-arguments-object f args)))
+        (make-arguments-object f args env)))
 
 (define (make-function params proc)
   (letrec
