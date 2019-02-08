@@ -95,5 +95,8 @@ Array.prototype.pop=(function(){
                                   this.length-=1;
                                   return ret;
                                   });
+Array.prototype.push=(function(x){
+         this[this.length]=x;
+});
 ")
 (ecma:eval prelude)
