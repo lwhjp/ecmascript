@@ -99,6 +99,5 @@ Array.prototype.push=(function(x){
          this[this.length]=x;
          this.length+=1;
 });
-undefined;
 ")
-(ecma:eval prelude)
+(void (ecma:eval prelude))
