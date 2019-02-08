@@ -97,6 +97,7 @@ Array.prototype.pop=(function(){
                                   });
 Array.prototype.push=(function(x){
          this[this.length]=x;
+         this.length+=1;
 });
 ")
 (ecma:eval prelude)
