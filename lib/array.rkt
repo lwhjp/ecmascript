@@ -65,8 +65,6 @@
       (if (eq? 'undefined separator)
           ","
           (ecma:to-string separator))))]
-  ; TODO: pop
-  ; TODO: push
   ; TODO: reverse
   ; TODO: shift
   ; TODO: slice
