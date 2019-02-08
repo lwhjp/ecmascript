@@ -101,3 +101,4 @@ Array.prototype.push=(function(x){
 });
 ")
 (ecma:eval prelude)
+(void)
