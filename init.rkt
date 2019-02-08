@@ -82,3 +82,18 @@
                 lib:object
                 lib:regexp
                 lib:string))
+
+(define prelude "
+undefined=[][0];
+Array.prototype.pop=(function(){
+                                if(this.length===0){
+                                                    return undefined;
+                                                           }
+                                  var i=this.length-1;
+                                  var ret=this[i];
+                                  delete this[i];
+                                  this.length-=1;
+                                  return ret;
+                                  });
+")
+(ecma:eval prelude)
