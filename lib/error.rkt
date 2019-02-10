@@ -95,15 +95,15 @@
   ["toString"
    (make-native-function
     (λ ()
-      (unless (Object? this)
+      (unless (Object? ecma:this)
         (raise-native-error 'type "this: not an object"))
       (define name
-        (let ([name (get-property-value this "name")])
+        (let ([name (get-property-value ecma:this "name")])
           (if (ecma:undefined? name)
               "Error"
               (ecma:to-string name))))
       (define msg
-        (let ([msg (get-property-value this "message")])
+        (let ([msg (get-property-value ecma:this "message")])
           (if (ecma:undefined? msg)
               ""
               (ecma:to-string msg))))

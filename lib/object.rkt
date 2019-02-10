@@ -142,14 +142,14 @@
    (make-native-function
     (λ ()
       (cond
-        [(eq? 'undefined this) "[object Undefined]"]
-        [(eq? 'null this) "[object Null]"]
+        [(eq? 'undefined ecma:this) "[object Undefined]"]
+        [(eq? 'null ecma:this) "[object Null]"]
         [(format "[object ~a]"
-                 (get-field class-name (ecma:to-object this)))])))]
+                 (get-field class-name (ecma:to-object ecma:this)))])))]
   ["toLocaleString"
    (make-native-function
     (λ ()
-      (define o (ecma:to-object this))
+      (define o (ecma:to-object ecma:this))
       (define f (get-property-value o "toString"))
       (unless (Function? f)
         (raise-native-error 'type "toString: not a function"))
@@ -157,19 +157,19 @@
   ["valueOf"
    (make-native-function
     (λ ()
-      (ecma:to-object this)))]
+      (ecma:to-object ecma:this)))]
   ["hasOwnProperty"
    (make-native-function
     (λ (v)
       (property?
        (get-own-property
-        (ecma:to-object this)
+        (ecma:to-object ecma:this)
         (ecma:to-string v)))))]
   ["isPrototypeOf"
    (make-native-function
     (λ (v)
       (and (Object? v)
-           (let ([o (ecma:to-object this)])
+           (let ([o (ecma:to-object ecma:this)])
              (let loop ([v (get-field prototype v)])
                (and (not (eq? 'null v))
                     (or (eq? o v)
@@ -179,7 +179,7 @@
     (λ (v)
       (define prop
         (get-own-property
-         (ecma:to-object this)
+         (ecma:to-object ecma:this)
          (ecma:to-string v)))
       (and (property? prop)
            (property-enumerable? prop))))])

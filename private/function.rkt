@@ -8,14 +8,14 @@
          (prefix-in
           ecma:
           (combine-in
-           "this.rkt"
            "../convert.rkt"
            "../types.rkt"))
          "../object.rkt"
          "environment.rkt"
          "error.rkt"
          "global-object.rkt"
-         "object.rkt")
+         "object.rkt"
+         "this.rkt")
 
 (provide Function%
          Function?
@@ -132,7 +132,7 @@
                   (let* ([prot (get-property-value f "prototype")]
                          [prot (if (Object? prot) prot Object:prototype)]
                          [obj (new Object% [prototype prot])]
-                         [result (ecma:apply/this obj proc args)])
+                         [result (apply/this obj proc args)])
                     (if (Object? result)
                         result
                         obj)))])]

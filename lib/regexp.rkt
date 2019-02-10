@@ -102,16 +102,16 @@
   ["constructor" regexp-constructor]
   ["exec"
    (native-method (string)
-     (exec-regexp this string))]
+     (exec-regexp ecma:this string))]
   ["test"
    (native-method (string)
-     (not (eq? 'null (exec-regexp this string))))]
+     (not (eq? 'null (exec-regexp ecma:this string))))]
   ["toString"
    (native-method ()
      (string-append
       "/"
-      (ecma:to-string (get-property-value this "source"))
+      (ecma:to-string (get-property-value ecma:this "source"))
       "/"
-      (if (ecma:to-boolean (get-property-value this "global")) "g" "")
-      (if (ecma:to-boolean (get-property-value this "ignoreCase")) "i" "")
-      (if (ecma:to-boolean (get-property-value this "multiline")) "m" "")))])
+      (if (ecma:to-boolean (get-property-value ecma:this "global")) "g" "")
+      (if (ecma:to-boolean (get-property-value ecma:this "ignoreCase")) "i" "")
+      (if (ecma:to-boolean (get-property-value ecma:this "multiline")) "m" "")))])

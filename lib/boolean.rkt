@@ -33,9 +33,9 @@
   ["constructor" boolean-constructor]
   ["toString"
    (native-method ()
-     (if (get-field value this)
+     (if (get-field value ecma:this)
          "true"
          "false"))]
   ["valueOf"
    (native-method ()
-     (get-field value this))])
+     (get-field value ecma:this))])

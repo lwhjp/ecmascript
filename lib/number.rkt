@@ -40,24 +40,24 @@
   ["toString"
    (native-method (radix)
      (if (= 10 (ecma:to-number radix))
-         (ecma:to-string (get-field value this))
+         (ecma:to-string (get-field value ecma:this))
          (number->string
-          (get-field value this)
+          (get-field value ecma:this)
           (ecma:to-number radix))))]
   ["toLocaleString"
    (native-method ()
-     (number->string (get-field value this)))]
+     (number->string (get-field value ecma:this)))]
   ["valueOf"
    (native-method ()
-     (get-field value this))]
+     (get-field value ecma:this))]
   ["toFixed"
    (native-method (fractionDigits)
      (real->decimal-string
-      (get-field value this)
+      (get-field value ecma:this)
       (ecma:to-integer fractionDigits)))]
   ["toExponential"
    (native-method (fractionDigits)
-     (number->string (get-field value this)))]
+     (number->string (get-field value ecma:this)))]
   ["toPrecision"
    (native-method (precision)
-     (number->string (get-field value this)))])
+     (number->string (get-field value ecma:this)))])

@@ -16,9 +16,10 @@
 (provide (all-defined-out)
          Function?
          constructor?
-         this
          return
-         function)
+         function
+ (rename-out
+  [ecma:this this]))
 
 (define (call ref . args)
   (let ([func (get-value ref)])

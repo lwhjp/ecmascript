@@ -47,12 +47,12 @@
   ["toString"
    (make-native-function
     (λ ()
-      (check-is-function this)
+      (check-is-function ecma:this)
       "function"))]
   ["apply"
    (make-native-function
     (λ (this-arg arg-array)
-      (check-is-function this)
+      (check-is-function ecma:this)
       (define length
         (if (Object? arg-array)
             (get-property-value arg-array "length")
@@ -60,11 +60,11 @@
       (define args
         (for/list ([i (in-range (to-uint32 length))])
           (get-property-value arg-array (to-string i))))
-      (apply/this this-arg (get-field proc this) args)))]
+      (apply/this this-arg (get-field proc ecma:this) args)))]
   ["call"
    (make-native-function
     (λ (this-arg . args)
-      (check-is-function this)
-      (apply/this this-arg (get-field proc this) args)))]
+      (check-is-function ecma:this)
+      (apply/this this-arg (get-field proc ecma:this) args)))]
   ; TODO: bind
   )

@@ -13,7 +13,7 @@
          "types.rkt"
          (prefix-in ecma: "eval.rkt"))
 
-(this-binding global-object)
+(current-ecma:this global-object)
 
 (define (import-library mod)
   (define imported-properties

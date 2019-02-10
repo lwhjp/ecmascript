@@ -4,14 +4,12 @@
 
 (provide (all-defined-out))
 
-(define this-binding
-  (make-parameter #f))
+(define current-ecma:this (make-parameter #f))
 
-(define (apply/this this-arg proc . args)
-  (parameterize ([this-binding this-arg])
-    (apply apply proc args)))
+(define-syntax (ecma:this stx)
+  (syntax-case stx ()
+    [_ (identifier? stx) (syntax/loc stx (current-ecma:this))]))
 
-(define-syntax this
-  (λ (stx)
-    (syntax-protect
-     #'(this-binding))))
+(define (apply/this this-arg proc args)
+  (parameterize ([current-ecma:this this-arg])
+    (apply proc args)))

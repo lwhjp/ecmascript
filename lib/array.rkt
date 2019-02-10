@@ -39,7 +39,7 @@
   ["constructor" array-constructor]
   ["toString"
    (native-method ()
-     (let* ([array (ecma:to-object this)]
+     (let* ([array (ecma:to-object ecma:this)]
             [func (get-property-value array "join")])
        (define proc
          (if (Function? func)
@@ -52,15 +52,15 @@
        (proc)))]
   ["toLocaleString"
    (native-method ()
-     ((get-field proc (get-property-value this "toString"))))]
+     ((get-field proc (get-property-value ecma:this "toString"))))]
   ; TODO: concat
   ["join"
    (native-method (separator)
      (string-join
       (for/list ([i (in-range
                      (ecma:to-uint32
-                      (get-property-value this "length")))])
-        (let ([elt (get-property-value this (number->string i))])
+                      (get-property-value ecma:this "length")))])
+        (let ([elt (get-property-value ecma:this (number->string i))])
           (if (or (ecma:undefined? elt)
                   (ecma:null? elt))
               ""
