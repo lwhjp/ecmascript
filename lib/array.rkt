@@ -69,11 +69,9 @@
           ","
           (ecma:to-string separator))))]
   ; TODO: reverse
-  ; TODO: shift
   ; TODO: slice
   ; TODO: sort
   ; TODO: splice
-  ; TODO: unshift
   ; TODO: indexOf
   ; TODO: lastIndexOf
   ; TODO: every
