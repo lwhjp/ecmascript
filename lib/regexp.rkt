@@ -6,12 +6,12 @@
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/primitive.rkt"
          "../private/this.rkt"
          (prefix-in ecma:
                     (combine-in
                      "../private/literal.rkt"
-                     "../convert.rkt"
-                     "../types.rkt")))
+                     "../convert.rkt")))
 
 (provide get-properties)
 
@@ -67,7 +67,7 @@
           ["index" (caar positions)]
           ["input" s])
         a)
-      'null))
+      ecma:null))
 
 (define regexp:prototype
   (make-regexp-object "" "" Object:prototype))
@@ -75,23 +75,23 @@
 (define regexp-constructor
   (letrec
       ([call
-        (λ (pattern [flags 'undefined])
+        (λ (pattern [flags ecma:undefined])
           (if (and (is-a? pattern RegExp%)
-                   (eq? 'undefined flags))
+                   (ecma:undefined? flags))
               pattern
               (construct pattern flags)))]
        [construct
-        (λ ([pattern ""] [flags 'undefined])
+        (λ ([pattern ""] [flags ecma:undefined])
           (define p
             (cond
               [(is-a? pattern RegExp%)
-               (if (eq? 'undefined flags)
+               (if (ecma:undefined? flags)
                    (get-field pattern pattern)
                    (raise-native-error 'type))]
               [else (ecma:to-string pattern)]))
           (make-regexp-object
            p
-           (if (eq? 'undefined flags) "" (ecma:to-string flags))
+           (if (ecma:undefined? flags) "" (ecma:to-string flags))
            regexp:prototype))])
     (make-native-constructor call construct)))
 
@@ -105,7 +105,7 @@
      (exec-regexp ecma:this string))]
   ["test"
    (native-method (string)
-     (not (eq? 'null (exec-regexp ecma:this string))))]
+     (not (ecma:null? (exec-regexp ecma:this string))))]
   ["toString"
    (native-method ()
      (string-append

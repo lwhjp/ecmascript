@@ -9,12 +9,12 @@
          "array.rkt"
          "environment.rkt"
          "object.rkt"
+         "primitive.rkt"
          (prefix-in
           ecma:
           (combine-in
            "../convert.rkt"
-           "../function.rkt"
-           "../types.rkt")))
+           "../function.rkt")))
 
 (provide (filtered-out
           (λ (name)
@@ -26,7 +26,7 @@
   (let ([obj (new Array%)])
     (for ([i (in-naturals)]
           [elt (in-list elements)]
-          #:unless (eq? 'undefined elt))
+          #:unless (ecma:undefined? elt))
       (define-own-property obj
             (ecma:to-string i)
             `(data

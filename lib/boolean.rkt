@@ -8,8 +8,7 @@
          (prefix-in
           ecma:
           (combine-in
-           "../convert.rkt"
-           "../types.rkt")))
+           "../convert.rkt")))
 
 (provide get-properties)
 

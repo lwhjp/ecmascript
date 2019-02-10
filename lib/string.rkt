@@ -7,12 +7,12 @@
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/primitive.rkt"
          "../private/this.rkt"
          (prefix-in
           ecma:
           (combine-in
-           "../convert.rkt"
-           "../types.rkt")))
+           "../convert.rkt")))
 
 (provide get-properties)
 
@@ -116,7 +116,7 @@
      (let* ([s (ecma:to-string ecma:this)]
             [len (string-length s)]
             [int-start (ecma:to-integer start)]
-            [int-end (if (eq? 'undefined end) len (ecma:to-integer end))]
+            [int-end (if (ecma:undefined? end) len (ecma:to-integer end))]
             [final-start (min (max int-start 0) len)]
             [final-end (min (max int-end 0) len)]
             [from (min final-start final-end)]

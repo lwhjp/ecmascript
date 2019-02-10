@@ -7,13 +7,13 @@
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/primitive.rkt"
          "../private/statement.rkt"
          "../private/this.rkt"
          (prefix-in
           ecma:
           (combine-in
-           "../convert.rkt"
-           "../types.rkt")))
+           "../convert.rkt")))
 
 (provide get-properties)
 
@@ -40,11 +40,11 @@
               (λ args
                 (apply construct args))]
              [construct
-              (λ ([message 'undefined])
+              (λ ([message ecma:undefined])
                 (new Error%
                      [prototype prototype]
                      [properties (make-hash
-                                  (if (eq? 'undefined message)
+                                  (if (ecma:undefined? message)
                                       '()
                                       `(("message" . ,(make-data-property
                                                        (ecma:to-string message))))))]))])

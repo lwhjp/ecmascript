@@ -7,12 +7,12 @@
          "../private/environment.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/primitive.rkt"
          "../private/this.rkt"
          [prefix-in ecma:
                     (combine-in
                      "../private/literal.rkt"
-                     "../convert.rkt"
-                     "../types.rkt")])
+                     "../convert.rkt")])
 
 (provide get-properties)
 
@@ -65,7 +65,7 @@
                   (ecma:null? elt))
               ""
               (ecma:to-string elt))))
-      (if (eq? 'undefined separator)
+      (if (ecma:undefined? separator)
           ","
           (ecma:to-string separator))))]
   ; TODO: pop

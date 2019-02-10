@@ -8,13 +8,13 @@
          (prefix-in
           ecma:
           (combine-in
-           "../convert.rkt"
-           "../types.rkt"))
+           "../convert.rkt"))
          "../object.rkt"
          "environment.rkt"
          "error.rkt"
          "global-object.rkt"
          "object.rkt"
+         "primitive.rkt"
          "this.rkt")
 
 (provide Function%
@@ -263,7 +263,7 @@
       (apply
        proc
        (for/list ([i (in-range arity)]
-                  [arg (in-sequences args (in-cycle '(undefined)))])
+                  [arg (in-sequences args (in-cycle (list ecma:undefined)))])
          arg)))))
   (define f
     (new Function%

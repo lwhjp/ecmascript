@@ -32,7 +32,7 @@
                    [(Object? base) base]
                    [(is-a? base environment-record%)
                     (send base implicit-this-value)]))
-               'undefined)])
+               undefined)])
       (let ([argvs (map get-value args)])
         (apply/this
          (cond

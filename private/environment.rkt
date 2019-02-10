@@ -7,11 +7,11 @@
          "error.rkt"
          "global-object.rkt"
          "object.rkt"
+         "primitive.rkt"
          (prefix-in
           ecma:
           (combine-in
-           "../convert.rkt"
-           "../types.rkt")))
+           "../convert.rkt")))
 
 (provide get-value
          put-value!
@@ -26,25 +26,25 @@
          member)
 
 (define (get-value v)
-  (if (ecma:reference? v)
-      (let ([base (ecma:reference-base v)])
+  (if (reference? v)
+      (let ([base (reference-base v)])
         (cond
-          [(eq? 'undefined base)
+          [(ecma:undefined? base)
            (raise-native-error
             'reference
             (format
              "~a: undefined"
-             (ecma:reference-name v)))]
+             (reference-name v)))]
           [(is-a? base environment-record%)
            (send base
                  get-binding-value
-                 (ecma:reference-name v)
-                 (ecma:reference-strict? v))]
+                 (reference-name v)
+                 (reference-strict? v))]
           [(Object? base)
-           (get-property-value base (ecma:reference-name v))]
+           (get-property-value base (reference-name v))]
           [else
            (let ([o (ecma:to-object base)]
-                 [p (ecma:reference-name v)])
+                 [p (reference-name v)])
              (let ([prop (get-property o p)])
                (cond
                  [(data-property? prop)
@@ -53,39 +53,39 @@
                   (let ([getter (accessor-property-get prop)])
                     (if getter
                         (send getter call base)
-                        'undefined))]
-                 [else 'undefined])))]))
+                        ecma:undefined))]
+                 [else ecma:undefined])))]))
       v))
 
 (define (put-value! v w)
-  (unless (ecma:reference? v)
+  (unless (reference? v)
     (raise-native-error 'reference "not a reference"))
-  (let ([base (ecma:reference-base v)])
+  (let ([base (reference-base v)])
     (cond
-      [(eq? 'undefined base)
-       (if (ecma:reference-strict? v)
+      [(ecma:undefined base)
+       (if (reference-strict? v)
            (raise-native-error 'reference "not bound")
            (set-property-value!
             global-object
-            (ecma:reference-name v)
+            (reference-name v)
             w
             #f))]
       [(is-a? base environment-record%)
        (send base
              set-mutable-binding!
-             (ecma:reference-name v)
+             (reference-name v)
              w
-             (ecma:reference-strict? v))]
+             (reference-strict? v))]
       [(Object? base)
        (set-property-value!
         base
-        (ecma:reference-name v)
+        (reference-name v)
         w
-        (ecma:reference-strict? v))]
+        (reference-strict? v))]
       [else
        (let ([o (ecma:to-object base)]
-             [p (ecma:reference-name v)]
-             [throw? (ecma:reference-strict? v)])
+             [p (reference-name v)]
+             [throw? (reference-strict? v)])
          (if (and
               (can-set-property? o p)
               (not (data-property?
@@ -123,7 +123,7 @@
     (define/override (has-binding? n)
       (hash-has-key? bindings n))
     (define/override (create-mutable-binding! n [d #f])
-      (hash-set! bindings n (mutable-binding 'undefined d)))
+      (hash-set! bindings n (mutable-binding ecma:undefined d)))
     (define/override (set-mutable-binding! n v s)
       (let ([b (hash-ref bindings n)])
         (if (mutable-binding? b)
@@ -141,7 +141,7 @@
                     (raise-native-error
                      'reference
                      (format "~a: not bound" n))
-                    'undefined)])))
+                    ecma:undefined)])))
     (define/override (delete-binding! n)
       (let ([b (hash-ref bindings n #f)])
         (cond
@@ -152,7 +152,7 @@
            #t]
           [else #f])))
     (define/override (implicit-this-value)
-      'undefined)
+      ecma:undefined)
     (define/public (create-immutable-binding! n)
       (hash-set! bindings n 'uninitialized-immutable-binding))
     (define/public (initialize-immutable-binding! n v)
@@ -170,7 +170,7 @@
             binding-object
             n
             `(data
-              (value . undefined)
+              (value . ,ecma:undefined)
               (writable . #t)
               (enumerable . #t)
               (configurable . ,d))
@@ -188,11 +188,11 @@
               (raise-native-error
                'reference
                (format "~a: undefined" n))
-              'undefined)))
+              ecma:undefined)))
     (define/override (delete-binding! n)
       (delete-property! binding-object n #f))
     (define/override (implicit-this-value)
-      (if provide-this? binding-object 'undefined))))
+      (if provide-this? binding-object ecma:undefined))))
 
 (define (new-declarative-environment e)
   (new declarative-environment-record%
@@ -204,17 +204,17 @@
     [outer e]))
 
 (define (get-identifier-reference lex name strict?)
-  (if (eq? 'null lex)
-      (ecma:reference 'undefined name strict?)
+  (if (ecma:null? lex)
+      (reference ecma:undefined name strict?)
       (if (send lex has-binding? name)
-          (ecma:reference lex name strict?)
+          (reference lex name strict?)
           (get-identifier-reference
            (get-field outer lex)
            name
            strict?))))
 
 (define global-environment
-  (new-object-environment global-object 'null))
+  (new-object-environment global-object ecma:null))
 
 (define-syntax-parameter variable-environment
   (make-rename-transformer #'global-environment))
@@ -241,7 +241,7 @@
 (define-syntax (member stx)
   (syntax-case stx ()
     [(_ base prop)
-     #`(ecma:reference
+     #`(reference
         (ecma:to-object (get-value base))
         #,(if (identifier? #'prop)
               (symbol->string (syntax-e #'prop))

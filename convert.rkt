@@ -7,6 +7,7 @@
          "private/builtin.rkt"
          "private/error.rkt"
          "private/object.rkt"
+         "private/primitive.rkt"
          "private/this.rkt")
 
 (provide (all-defined-out))
@@ -30,8 +31,8 @@
 
 (define (to-boolean v)
   (cond
-    [(eq? v 'undefined) #f]
-    [(eq? v 'null) #f]
+    [(ecma:undefined? v) #f]
+    [(ecma:null?) #f]
     [(boolean? v) v]
     [(number? v) (not (or (zero? v) (nan? v)))]
     [(string? v) (not (string=? v ""))]
@@ -39,8 +40,8 @@
 
 (define (to-number v)
   (cond
-    [(eq? v 'undefined) +nan.0]
-    [(eq? v 'null) 0]
+    [(ecma:undefined? v) +nan.0]
+    [(ecma:null? v) 0]
     [(boolean? v) (if v 1 0)]
     [(number? v) v]
     [(string? v) (or (string->number (string-trim v)) +nan.0)]
@@ -74,8 +75,8 @@
 
 (define (to-string v)
   (cond
-    [(eq? v 'undefined) "undefined"]
-    [(eq? v 'null) "null"]
+    [(ecma:undefined? v) "undefined"]
+    [(ecma:null? v) "null"]
     [(boolean? v) (if v "true" "false")]
     [(number? v)
      (cond
@@ -87,8 +88,8 @@
 
 (define (to-object v)
   (cond
-    [(eq? v 'undefined) (raise-native-error 'type "undefined")]
-    [(eq? v 'null) (raise-native-error 'type "null")]
+    [(ecma:undefined? v) (raise-native-error 'type "undefined")]
+    [(ecma:null? v) (raise-native-error 'type "null")]
     [(boolean? v) (make-Boolean v)]
     [(number? v) (make-Number v)]
     [(string? v) (make-String v)]

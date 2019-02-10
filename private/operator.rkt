@@ -9,7 +9,7 @@
          "error.rkt"
          "function.rkt"
          "object.rkt"
-         "../types.rkt"
+         "primitive.rkt"
          (for-syntax racket/base))
 
 (provide (filtered-out
@@ -30,7 +30,7 @@
 (define (op:delete ref)
   (cond
     [(not (reference? ref)) #t]
-    [(eq? 'undefined (reference-base ref))
+    [(ecma:undefined? (reference-base ref))
      (if (reference-strict? ref)
          (raise-native-error 'syntax)
          #t)]
@@ -48,16 +48,16 @@
 
 (define (op:void v)
   (get-value v)
-  'undefined)
+  ecma:undefined)
 
 (define (op:typeof v)
   (if (and (reference? v)
-           (eq? 'undefined (reference-base v)))
+           (ecma:undefined? (reference-base v)))
       "undefined"
       (let ([v (get-value v)])
         (cond
-          [(eq? 'undefined v) "undefined"]
-          [(eq? 'null v) "object"]
+          [(ecma:undefined? v) "undefined"]
+          [(ecma:null? v) "object"]
           [(boolean? v) "boolean"]
           [(number? v) "number"]
           [(string? v) "string"]
@@ -160,12 +160,12 @@
   (let ([compare
          (λ (a b)
            (cond
-             [(eq? 'undefined a)
-              (or (eq? 'undefined b)
-                  (eq? 'null b))]
-             [(eq? 'null a)
-              (or (eq? 'null b)
-                  (eq? 'undefined b))]
+             [(ecma:undefined? a)
+              (or (ecma:undefined? b)
+                  (ecma:null? b))]
+             [(ecma:null? a)
+              (or (ecma:null? b)
+                  (ecma:undefined? b))]
              [(boolean? a)
               (if (boolean? b)
                   (eq? a b)

@@ -8,6 +8,7 @@
          "environment.rkt"
          "function.rkt"
          "object.rkt"
+         "primitive.rkt"
          "../convert.rkt"
          "../object.rkt"
          (prefix-in ecma: "operator.rkt"))
@@ -111,8 +112,8 @@
 
 (define-syntax-rule (stmt:for-in lhs expr body)
   (let ([exper-value (get-value expr)])
-    (if (or (eq? 'null exper-value)
-            (eq? 'undefined exper-value))
+    (if (or (ecma:null? exper-value)
+            (ecma:undefined? exper-value))
         (void)
         (let ([obj (to-object exper-value)])
           (for/fold ([v (void)])

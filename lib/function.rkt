@@ -9,8 +9,7 @@
          "../private/this.rkt"
          "../convert.rkt"
          "../eval.rkt"
-         "../object.rkt"
-         "../types.rkt")
+         "../object.rkt")
 
 (provide get-properties)
 

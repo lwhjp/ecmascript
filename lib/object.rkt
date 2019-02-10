@@ -5,12 +5,12 @@
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/primitive.rkt"
          "../private/this.rkt"
          (prefix-in ecma:
                     (combine-in
                      "../private/literal.rkt"
-                     "../convert.rkt"
-                     "../types.rkt")))
+                     "../convert.rkt")))
 
 (provide get-properties)
 
@@ -23,7 +23,7 @@
         (λ args
           (apply construct args))]
        [construct
-        (λ ([value 'undefined])
+        (λ ([value ecma:undefined])
           (cond
             [(Object? value) value]
             [(or (string? value)
@@ -58,7 +58,7 @@
      (unless (or (ecma:null? o) (Object? o))
        (raise-native-error 'type "not an object or null"))
      (let ([obj (new Object% [prototype (if (ecma:null? o) #f o)])])
-       (unless (eq? 'undefined properties)
+       (unless (ecma:undefined? properties)
          (for ([(pname pdesc) (in-hash
                                (get-field properties
                                 (ecma:to-object properties)))]
@@ -142,8 +142,8 @@
    (make-native-function
     (λ ()
       (cond
-        [(eq? 'undefined ecma:this) "[object Undefined]"]
-        [(eq? 'null ecma:this) "[object Null]"]
+        [(ecma:undefined? ecma:this) "[object Undefined]"]
+        [(ecma:null? ecma:this) "[object Null]"]
         [(format "[object ~a]"
                  (get-field class-name (ecma:to-object ecma:this)))])))]
   ["toLocaleString"
@@ -171,7 +171,7 @@
       (and (Object? v)
            (let ([o (ecma:to-object ecma:this)])
              (let loop ([v (get-field prototype v)])
-               (and (not (eq? 'null v))
+               (and (not (ecma:null? v))
                     (or (eq? o v)
                         (loop (get-field prototype v)))))))))]
   ["propertyIsEnumerable"

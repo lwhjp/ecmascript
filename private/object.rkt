@@ -2,6 +2,7 @@
 
 (require racket/class
          "error.rkt"
+         "primitive.rkt"
          (only-in "this.rkt" apply/this))
 
 (provide (all-defined-out))
@@ -10,7 +11,7 @@
 
 (struct data-property property (writable? value) #:mutable #:transparent)
 
-(define (make-data-property [value 'undefined]
+(define (make-data-property [value ecma:undefined]
                             #:writable [writable? #f]
                             #:enumerable [enumerable? #f]
                             #:configurable [configurable? #f])
@@ -48,8 +49,8 @@
                 [get (if (procedure? get) get (get-field proc get))])
            (if get
                (apply/this this get '())
-               'undefined))]
-        [else 'undefined]))
+               ecma:undefined))]
+        [else ecma:undefined]))
     (define/public (can-put? name)
       (define prop (get-own-property name))
       (cond
@@ -134,11 +135,11 @@
                   properties
                   name
                   (if (accessor-desc? desc)
-                      (make-accessor-property #:get (desc-get desc 'get 'undefined)
-                                              #:set (desc-get desc 'set 'undefined)
+                      (make-accessor-property #:get (desc-get desc 'get ecma:undefined)
+                                              #:set (desc-get desc 'set ecma:undefined)
                                               #:enumerable (desc-get desc 'enumerable #f)
                                               #:configurable (desc-get desc 'configurable #f))
-                      (make-data-property (desc-get desc 'value 'undefined)
+                      (make-data-property (desc-get desc 'value ecma:undefined)
                                           #:writable (desc-get desc 'writable #f)
                                           #:enumerable (desc-get desc 'enumerable #f)
                                           #:configurable (desc-get desc 'configurable #f))))
@@ -174,9 +175,9 @@
                (update-property current desc))]
           [else
            (if (and (not (property-configurable? current))
-                    (or (and (desc-get desc 'set 'undefined)
+                    (or (and (desc-get desc 'set ecma:undefined)
                              #| TODO |#)
-                        (and (desc-get desc 'get 'undefined)
+                        (and (desc-get desc 'get ecma:undefined)
                              #| TODO |#)))
                (reject)
                (update-property current desc))])))))
@@ -253,7 +254,7 @@
                      (configurable . #t))
               #f)
         obj)
-      'undefined))
+      ecma:undefined))
 
 (define (to-property-descriptor obj)
   (unless (Object? obj)
@@ -265,23 +266,23 @@
        values
        (map
         (λ (name)
-          (hash-ref oprops name 'undefined))
+          (hash-ref oprops name ecma:undefined))
         '("enumerable" "configurable"
           "value" "writable" "get" "set"))))
     (define-values (kind attrs)
       (cond
-        [(or (not (eq? 'undefined value))
-             (not (eq? 'undefined writable?)))
+        [(or (not (ecma:undefined? value))
+             (not (ecma:undefined? writable?)))
          (values 'data
                  (append
-                  (if (eq? 'undefined value) '() `((value . ,value)))
-                  (if (eq? 'undefined writable?) '() `((writable . ,writable?)))))]
+                  (if (ecma:undefined? value) '() `((value . ,value)))
+                  (if (ecma:undefined? writable?) '() `((writable . ,writable?)))))]
         [else
          (values 'accessor
                  (append
-                  (if (eq? 'undefined get) '() `((get . ,get)))
-                  (if (eq? 'undefined set) '() `((set . ,set)))))]))
+                  (if (ecma:undefined? get) '() `((get . ,get)))
+                  (if (ecma:undefined? set) '() `((set . ,set)))))]))
     (cons kind
           (append attrs
-                  (if (eq? 'undefined enumerable?) '() `((enumerable . ,enumerable?)))
-                  (if (eq? 'undefined configurable?) '() `((configurable . ,configurable?)))))))
+                  (if (ecma:undefined? enumerable?) '() `((enumerable . ,enumerable?)))
+                  (if (ecma:undefined? configurable?) '() `((configurable . ,configurable?)))))))
