@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/math
+(require racket/class
+         racket/math
          "../private/function.rkt"
          "../private/object.rkt"
          (prefix-in
@@ -14,8 +15,7 @@
 (define (get-properties)
   `(["Math" . ,math]))
 
-(define math
-  (Object Object:prototype (make-hash) #t))
+(define math (new Object%))
 
 (define-syntax-rule (wrap-math fn arg ...)
   (native-method (arg ...)

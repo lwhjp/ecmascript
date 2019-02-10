@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/list
+(require (only-in racket/class get-field is-a? new)
+         racket/list
          racket/string
          "../private/builtin.rkt"
          "../private/error.rkt"
@@ -25,11 +26,7 @@
           (ecma:to-string value))]
        [construct
         (λ ([value ""])
-          (String
-           String:prototype
-           (make-hash)
-           #t
-           (ecma:to-string value)))])
+          (new String% [value (ecma:to-string value)]))])
     (make-native-constructor call construct)))
 
 (define-object-properties string-constructor
@@ -43,14 +40,14 @@
   ["constructor" string-constructor]
   ["toString"
    (native-method ()
-     (unless (String? this)
+     (unless (is-a? this String%)
        (raise-native-error 'type "not a string"))
-     (String-value this))]
+     (get-field value this))]
   ["valueOf"
    (native-method ()
-     (unless (String? this)
+     (unless (is-a? this String%)
        (raise-native-error 'type "not a string"))
-     (String-value this))]
+     (get-field value this))]
   ["charAt"
    (native-method (pos)
      (let ([s (ecma:to-string this)]

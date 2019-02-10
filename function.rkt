@@ -2,7 +2,7 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
-         (only-in racket/class is-a? send)
+         (only-in racket/class get-field is-a? send)
          racket/stxparam
          "private/environment.rkt"
          "private/error.rkt"
@@ -40,7 +40,7 @@
             global-object]
            [(Object? this-value) this-value]
            [else (to-object this-value)])
-         func
+         (get-field proc func)
          argvs)))))
 
 (define (new ref . args)
@@ -48,4 +48,4 @@
     (unless (constructor? constructor)
       (raise-native-error 'type "not a constructor"))
     (let ([argvs (map get-value args)])
-      (apply (constructor-new-proc constructor) argvs))))
+      (apply (get-field new-proc constructor) argvs))))

@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require "../private/builtin.rkt"
+(require (only-in racket/class get-field)
+         "../private/builtin.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
          "../private/this.rkt"
@@ -32,9 +33,9 @@
   ["constructor" boolean-constructor]
   ["toString"
    (native-method ()
-     (if (Boolean-value this)
+     (if (get-field value this)
          "true"
          "false"))]
   ["valueOf"
    (native-method ()
-     (Boolean-value this))])
+     (get-field value this))])

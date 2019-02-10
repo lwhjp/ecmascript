@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/string
+(require (only-in racket/class get-field)
+         racket/string
          "../object.rkt"
          "../private/array.rkt"
          "../private/environment.rkt"
@@ -40,16 +41,18 @@
    (native-method ()
      (let* ([array (ecma:to-object this)]
             [func (get-property-value array "join")])
-       (if (Function? func)
-           (func)
-           ((get-value
-             (member
-              (member (id Object)
-                      "prototype")
-              "toString"))))))]
+       (define proc
+         (if (Function? func)
+             (get-field proc func)
+             (get-field proc (get-value
+                              (member
+                               (member (id Object)
+                                       "prototype")
+                               "toString")))))
+       (proc)))]
   ["toLocaleString"
    (native-method ()
-     ((get-property-value this "toString")))]
+     ((get-field proc (get-property-value this "toString"))))]
   ; TODO: concat
   ["join"
    (native-method (separator)

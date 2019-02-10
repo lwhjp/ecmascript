@@ -1,8 +1,9 @@
 #lang racket/base
 
-(require "object.rkt")
+(require racket/class
+         "object.rkt")
 
 (provide global-object)
 
 (define global-object
-  (Object #f (make-hash) #t))
+  (new Object% [prototype #f]))

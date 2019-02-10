@@ -1,13 +1,11 @@
 #lang racket/base
 
-(require (for-syntax racket/base)
-         "global-object.rkt"
-         "../types.rkt")
+(require (for-syntax racket/base))
 
 (provide (all-defined-out))
 
 (define this-binding
-  (make-parameter global-object))
+  (make-parameter #f))
 
 (define (apply/this this-arg proc . args)
   (parameterize ([this-binding this-arg])

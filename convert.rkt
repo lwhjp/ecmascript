@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/math
+(require (only-in racket/class get-field field-bound?)
+         racket/math
          racket/string
          "object.rkt"
          "private/builtin.rkt"
@@ -18,8 +19,10 @@
                           '("valueOf" "toString"))])
           (let ([f (get-property-value v method)])
             (when (and (Object? f)
-                       (procedure? f))
-              (let ([v (apply/this v f '())])
+                       ; TODO: refactor so that we can don't have to reflect here
+                       ; (private/function.rkt includes this file)
+                       (field-bound? proc f))
+              (let ([v (apply/this v (get-field proc f) '())])
                 (unless (Object? v)
                   (return v))))))
         (raise-native-error 'type))
