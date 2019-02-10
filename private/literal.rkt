@@ -35,7 +35,6 @@
               (enumerable . #t)
               (configurable . #t))
             #f))
-    (set-property-value! obj "length" (length elements))
     obj))
 
 (define-syntax (ecma:object stx)
