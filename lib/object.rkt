@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require "../object.rkt"
+(require (only-in racket/class get-field new set-field!)
+         "../object.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
@@ -29,8 +30,7 @@
                  (boolean? value)
                  (number? value))
              (ecma:to-object value)]
-            [else
-             (Object Object:prototype (make-hash) #t)]))])
+            [else (new Object%)]))])
     (make-native-constructor call construct)))
 
 (define (check-is-object o)
@@ -42,7 +42,7 @@
   ["getPrototypeOf"
    (native-method (o)
      (check-is-object o)
-     (Object-prototype o))]
+     (get-field prototype o))]
   ["getOwnPropertyDescriptor"
    (native-method (o p)
      (from-property-descriptor
@@ -52,18 +52,15 @@
      (check-is-object o)
      (apply
       ecma:array
-      (hash-keys (Object-properties o))))]
+      (hash-keys (get-field properties o))))]
   ["create"
    (native-method (o properties)
-     (unless (or (null? o) (Object? o))
+     (unless (or (ecma:null? o) (Object? o))
        (raise-native-error 'type "not an object or null"))
-     (let ([obj (Object
-                 (if (null? o) #f o)
-                 (make-hash)
-                 #t)])
+     (let ([obj (new Object% [prototype (if (ecma:null? o) #f o)])])
        (unless (eq? 'undefined properties)
          (for ([(pname pdesc) (in-hash
-                               (Object-properties
+                               (get-field properties
                                 (ecma:to-object properties)))]
                #:when (property-enumerable? pdesc))
            (define-own-property obj pname
@@ -82,7 +79,7 @@
    (native-method (o properties)
      (check-is-object o)
      (for ([(pname pdesc) (in-hash
-                           (Object-properties
+                           (get-field properties
                             (ecma:to-object properties)))]
            #:when (property-enumerable? pdesc))
        (define-own-property o pname
@@ -93,49 +90,49 @@
   ["seal"
    (native-method (o)
      (check-is-object o)
-     (for ([prop (in-hash-values (Object-properties o))])
+     (for ([prop (in-hash-values (get-field properties o))])
        (set-property-configurable?! prop #f))
-     (set-Object-extensible?! o #f)
+     (set-field! extensible? o #f)
      o)]
   ["freeze"
    (native-method (o)
      (check-is-object o)
-     (for ([prop (in-hash-values (Object-properties o))])
+     (for ([prop (in-hash-values (get-field properties o))])
        (when (data-property? prop)
          (set-data-property-writable?! prop #f))
        (set-property-configurable?! prop #f))
-     (set-Object-extensible?! o #f)
+     (set-field! extensible? o #f)
      o)]
   ["preventExtensions"
    (native-method (o)
      (check-is-object o)
-     (set-Object-extensible?! o #f)
+     (set-field! extensible? o #f)
      o)]
   ["isSealed"
    (native-method (o)
      (check-is-object o)
-     (and (not (Object-extensible? o))
-          (for/and ([prop (in-hash-values (Object-properties o))])
+     (and (not (get-field extensible? o))
+          (for/and ([prop (in-hash-values (get-field properties o))])
             (not (property-configurable? prop)))))]
   ["isFrozen"
    (native-method (o)
      (check-is-object o)
-     (and (not (Object-extensible? o))
-          (for/and ([prop (in-hash-values (Object-properties o))])
+     (and (not (get-field extensible? o))
+          (for/and ([prop (in-hash-values (get-field properties o))])
             (and (not (property-configurable? prop))
                  (not (and (data-property? prop)
                            (data-property-writable? prop)))))))]
   ["isExtensible"
    (native-method (o)
      (check-is-object o)
-     (Object-extensible? o))]
+     (get-field extensible? o))]
   ["keys"
    (native-method (o)
      (check-is-object o)
      (apply
       ecma:array
       (for/list ([(name prop) (in-hash
-                               (Object-properties o))]
+                               (get-field properties o))]
                  #:when (property-enumerable? prop))
         name)))])
 
@@ -148,7 +145,7 @@
         [(eq? 'undefined this) "[object Undefined]"]
         [(eq? 'null this) "[object Null]"]
         [(format "[object ~a]"
-                 (get-class (ecma:to-object this)))])))]
+                 (get-field class-name (ecma:to-object this)))])))]
   ["toLocaleString"
    (make-native-function
     (λ ()
@@ -173,10 +170,10 @@
     (λ (v)
       (and (Object? v)
            (let ([o (ecma:to-object this)])
-             (let loop ([v (Object-prototype v)])
+             (let loop ([v (get-field prototype v)])
                (and (not (eq? 'null v))
                     (or (eq? o v)
-                        (loop (Object-prototype v)))))))))]
+                        (loop (get-field prototype v)))))))))]
   ["propertyIsEnumerable"
    (make-native-function
     (λ (v)

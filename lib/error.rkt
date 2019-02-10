@@ -2,6 +2,7 @@
 
 (require (for-syntax racket/base
                      racket/syntax)
+         (except-in racket/class this)
          "../object.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
@@ -25,13 +26,14 @@
     ["TypeError" . ,type-error-constructor]
     ["URIError" . ,uri-error-constructor]))
 
-(struct Error Object ()
-  #:property prop:class 'Error)
+(define Error%
+  (class ecma-object%
+    (super-new [class-name 'Error])))
 
 (define (make-error-prototype+constructor name super-prototype)
   (letrec
       ([prototype
-        (Error super-prototype (make-hash) #t)]
+        (new Error% [prototype super-prototype])]
        [constructor
         (letrec
             ([call
@@ -39,14 +41,13 @@
                 (apply construct args))]
              [construct
               (λ ([message 'undefined])
-                (Error
-                 prototype
-                 (make-hash
-                  (if (eq? 'undefined message)
-                      '()
-                      `(("message" . ,(make-data-property
-                                       (ecma:to-string message))))))
-                 #t))])
+                (new Error%
+                     [prototype prototype]
+                     [properties (make-hash
+                                  (if (eq? 'undefined message)
+                                      '()
+                                      `(("message" . ,(make-data-property
+                                                       (ecma:to-string message))))))]))])
           (make-native-constructor call construct))])
     (define-object-properties prototype
       ["constructor" constructor]
@@ -81,7 +82,7 @@
                        cons
                        (λ (msg)
                          (throw
-                          ((constructor-new-proc cons-id) msg))))))))]))
+                          ((get-field new-proc cons-id) msg))))))))]))
 
 (define-native-error "Eval")
 (define-native-error "Range")

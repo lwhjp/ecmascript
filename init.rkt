@@ -1,21 +1,25 @@
 #lang racket/base
 
-(require racket/match
+(require (only-in racket/class get-field)
+         racket/match
          racket/math
          racket/runtime-path
          net/uri-codec
          "private/function.rkt"
          "private/global-object.rkt"
          "private/object.rkt"
+         "private/this.rkt"
          "convert.rkt"
          "types.rkt"
          (prefix-in ecma: "eval.rkt"))
+
+(this-binding global-object)
 
 (define (import-library mod)
   (define imported-properties
     ((dynamic-require mod 'get-properties)))
   (define global-property-map
-    (Object-properties global-object))
+    (get-field properties global-object))
   (for ([prop (in-list imported-properties)])
     (match-define (cons name value) prop)
     (hash-set! global-property-map

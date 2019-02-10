@@ -1,35 +1,52 @@
 #lang racket/base
 
-(require "object.rkt")
+(require racket/class
+         "object.rkt")
 
 (provide (all-defined-out))
 
-(struct Boolean Object (value)
-  #:property prop:class 'Boolean)
+(define Boolean%
+  (class ecma-object%
+    (init [prototype Boolean:prototype])
+    (init-field [value #f])
+    (super-new [class-name 'Boolean]
+               [prototype prototype])))
 
 (define Boolean:prototype
-  (Boolean Object:prototype (make-hash) #t #f))
+  (new Boolean% [prototype Object:prototype]))
 
 (define (make-Boolean value)
-  (Boolean Boolean:prototype (make-hash) #t value))
+  (new Boolean% [value value]))
 
-(struct Number Object (value)
-  #:property prop:class 'Number)
+(define Number%
+  (class ecma-object%
+    (init [prototype Number:prototype])
+    (init-field [value 0])
+    (super-new [class-name 'Number]
+               [prototype prototype])))
 
 (define Number:prototype
-  (Number Object:prototype (make-hash) #t 0))
+  (new Number% [prototype Object:prototype]))
 
 (define (make-Number value)
-  (Number Number:prototype (make-hash) #t value))
+  (new Number% [value value]))
 
-(struct RegExp Object (pattern flags)
-  #:property prop:class 'RegExp)
+(define RegExp%
+  (class ecma-object%
+    (init prototype)
+    (init-field pattern flags)
+    (super-new [class-name 'RegExp]
+               [prototype prototype])))
 
-(struct String Object (value)
-  #:property prop:class 'String)
+(define String%
+  (class ecma-object%
+    (init [prototype String:prototype])
+    (init-field [value ""])
+    (super-new [class-name 'String]
+               [prototype prototype])))
 
 (define String:prototype
-  (String Object:prototype (make-hash) #t ""))
+  (new String% [prototype Object:prototype]))
 
 (define (make-String value)
-  (String String:prototype (make-hash) #t value))
+  (new String% [value value]))

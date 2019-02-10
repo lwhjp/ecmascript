@@ -2,7 +2,7 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
-         (only-in racket/class send)
+         (only-in racket/class get-field send)
          racket/provide
          racket/stxparam
          "environment.rkt"
@@ -10,7 +10,6 @@
          "object.rkt"
          "../convert.rkt"
          "../object.rkt"
-         "../types.rkt"
          (prefix-in ecma: "operator.rkt"))
 
 (provide (filtered-out
@@ -85,7 +84,7 @@
         (~optional (~seq #:update update))
         body ...)
      #`(let/ec escape
-         #,(or (attribute init) '(void))
+         #,(or (attribute init) #'(void))
          (let loop ([rv (void)])
            (loop
             (let ([new-rv
@@ -107,7 +106,7 @@
                            (stmt:block
                             body ...)
                            (stmt:break))))])
-              #,(or (attribute update) '(void))
+              #,(or (attribute update) #'(void))
               new-rv))))]))
 
 (define-syntax-rule (stmt:for-in lhs expr body)
@@ -117,7 +116,7 @@
         (void)
         (let ([obj (to-object exper-value)])
           (for/fold ([v (void)])
-                    ([(name prop) (in-hash (Object-properties obj))]
+                    ([(name prop) (in-hash (get-field properties obj))]
                      #:when (property-enumerable? prop))
             (put-value! lhs (get-property-value obj name))
             body)))))

@@ -3,6 +3,7 @@
 (require (for-syntax racket/base
                      syntax/parse
                      syntax/stx)
+         (only-in racket/class new)
          racket/provide
          "../object.rkt"
          "array.rkt"
@@ -22,7 +23,7 @@
           (all-defined-out)))
 
 (define (ecma:array . elements)
-  (let ([obj (Array Array:prototype (make-hash) #t)])
+  (let ([obj (new Array%)])
     (for ([i (in-naturals)]
           [elt (in-list elements)]
           #:unless (eq? 'undefined elt))
@@ -66,7 +67,7 @@
      (with-syntax
          ([(pname ...) (stx-map parse-name #'(name ...))]
           [(pdesc ...) (stx-map parse-def #'(def ...))])
-       #`(let ([obj (Object Object:prototype (make-hash) #t)])
+       #`(let ([obj (new Object%)])
            (define-own-property obj
                  pname
                  pdesc

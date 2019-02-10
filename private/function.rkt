@@ -17,8 +17,10 @@
          "global-object.rkt"
          "object.rkt")
 
-(provide (struct-out Function)
-         (struct-out constructor)
+(provide Function%
+         Function?
+         constructor%
+         constructor?
          has-instance?
          Function:prototype
          make-function
@@ -29,11 +31,22 @@
          make-native-function
          native-method)
 
-(struct Function Object (formal-parameters call-proc)
-  #:property prop:class 'Function
-  #:property prop:procedure (struct-field-index call-proc))
+(define Function%
+  (class ecma-object%
+    (init [prototype Function:prototype])
+    (init-field [formal-parameters '()]
+                [proc (λ args ecma:undefined)])
+    (super-new [class-name 'Function]
+               [prototype prototype])))
 
-(struct constructor Function (new-proc))
+(define (Function? v) (is-a? v Function%))
+
+(define constructor%
+  (class Function%
+    (init-field new-proc)
+    (super-new)))
+
+(define (constructor? v) (is-a? v constructor%))
 
 (define (has-instance? f v)
   (and
@@ -42,27 +55,24 @@
      (unless (Object? o)
        (raise-native-error 'type "not an object"))
      (let loop ([v v])
-       (let ([v (Object-prototype v)])
+       (let ([v (get-field prototype v)])
          (and
           v
           (or (eq? o v)
               (loop v))))))))
 
 (define Function:prototype
-  (Function
-   Object:prototype
-   (make-hash)
-   #t
-   '()
-   (λ args
-     ecma:undefined)))
+  (new Function% [prototype Object:prototype]))
 
-(struct Arguments Object ()
-  #:property prop:class 'Arguments)
+(define Arguments%
+  (class ecma-object%
+    (init [prototype Object:prototype])
+    (super-new [class-name 'Arguments]
+               [prototype prototype])))
 
 (define (make-arguments-object f args env)
-  (define formal-parameters (Function-formal-parameters f))
-  (let ([arg-obj (Arguments Object:prototype (make-hash) #t)])
+  (define formal-parameters (get-field formal-parameters f))
+  (let ([arg-obj (new Arguments%)])
     (for ([arg-name (in-sequences (in-list (map symbol->string formal-parameters))
                                   (in-cycle (list #f)))]
           [arg-v (in-sequences (in-list args)
@@ -114,21 +124,19 @@
 
 (define (make-function params proc)
   (letrec
-      ([f (constructor
-           Function:prototype
-           (make-hash)
-           #t
-           params
-           proc
-           (λ args
-             (let* ([prot (get-property-value f "prototype")]
-                    [prot (if (Object? prot) prot Object:prototype)]
-                    [obj (Object prot (make-hash) #t)]
-                    [result (ecma:apply/this obj proc args)])
-               (if (Object? result)
-                   result
-                   obj))))]
-       [proto (Object Object:prototype (make-hash) #t)])
+      ([f (new constructor%
+               [formal-parameters params]
+               [proc proc]
+               [new-proc
+                (λ args
+                  (let* ([prot (get-property-value f "prototype")]
+                         [prot (if (Object? prot) prot Object:prototype)]
+                         [obj (new Object% [prototype prot])]
+                         [result (ecma:apply/this obj proc args)])
+                    (if (Object? result)
+                        result
+                        obj)))])]
+       [proto (new Object%)])
     (define-own-property f
           "length"
           `(data
@@ -231,13 +239,10 @@
      (send env-rec set-mutable-binding! name fn #f))))
 
 (define (make-native-constructor call-proc construct-proc)
-  (constructor
-   Function:prototype
-   (make-hash)
-   #t
-   'TODO
-   call-proc
-   construct-proc))
+  (new constructor%
+       [formal-parameters 'TODO]
+       [proc call-proc]
+       [new-proc construct-proc]))
 
 (define (typical-arity proc)
   (let ([arity (procedure-arity proc)])
@@ -261,12 +266,9 @@
                   [arg (in-sequences args (in-cycle '(undefined)))])
          arg)))))
   (define f
-    (Function
-     Function:prototype
-     (make-hash)
-     #t
-     'TODO
-     wrapper))
+    (new Function%
+         [formal-parameters 'TODO]
+         [proc wrapper]))
   (define-own-property f
         "length"
         `(data

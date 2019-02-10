@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require math/flonum
+         (only-in racket/class get-field)
          "../private/builtin.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
@@ -39,24 +40,24 @@
   ["toString"
    (native-method (radix)
      (if (= 10 (ecma:to-number radix))
-         (ecma:to-string (Number-value this))
+         (ecma:to-string (get-field value this))
          (number->string
-          (Number-value this)
+          (get-field value this)
           (ecma:to-number radix))))]
   ["toLocaleString"
    (native-method ()
-     (number->string (Number-value this)))]
+     (number->string (get-field value this)))]
   ["valueOf"
    (native-method ()
-     (Number-value this))]
+     (get-field value this))]
   ["toFixed"
    (native-method (fractionDigits)
      (real->decimal-string
-      (Number-value this)
+      (get-field value this)
       (ecma:to-integer fractionDigits)))]
   ["toExponential"
    (native-method (fractionDigits)
-     (number->string (Number-value this)))]
+     (number->string (get-field value this)))]
   ["toPrecision"
    (native-method (precision)
-     (number->string (Number-value this)))])
+     (number->string (get-field value this)))])

@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/match
+(require (only-in racket/class get-field)
+         racket/match
          racket/string
          "../private/error.rkt"
          "../private/function.rkt"
@@ -59,11 +60,11 @@
       (define args
         (for/list ([i (in-range (to-uint32 length))])
           (get-property-value arg-array (to-string i))))
-      (apply/this this-arg this args)))]
+      (apply/this this-arg (get-field proc this) args)))]
   ["call"
    (make-native-function
     (λ (this-arg . args)
       (check-is-function this)
-      (apply/this this-arg this args)))]
+      (apply/this this-arg (get-field proc this) args)))]
   ; TODO: bind
   )
