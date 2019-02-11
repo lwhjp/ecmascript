@@ -1,5 +1,5 @@
 #lang scribble/manual
-@(require (for-label "../private/statement.rkt"
+@(require (for-label "../lang/statement.rkt"
                      "../types.rkt"))
 
 @title{Statements}

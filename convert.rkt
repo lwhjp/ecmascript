@@ -1,14 +1,15 @@
 #lang racket/base
 
-(require (only-in racket/class get-field field-bound?)
+(require racket/class
          racket/math
          racket/string
-         "object.rkt"
-         "private/builtin.rkt"
          "private/error.rkt"
+         "private/function.rkt"
          "private/object.rkt"
          "private/primitive.rkt"
-         "private/this.rkt")
+         (only-in "lib/boolean.rkt" make-Boolean)
+         (only-in "lib/number.rkt" make-Number)
+         (only-in "lib/string.rkt" make-String))
 
 (provide (all-defined-out))
 
@@ -19,11 +20,8 @@
                           '("toString" "valueOf")
                           '("valueOf" "toString"))])
           (let ([f (get-property-value v method)])
-            (when (and (Object? f)
-                       ; TODO: refactor so that we can don't have to reflect here
-                       ; (private/function.rkt includes this file)
-                       (field-bound? proc f))
-              (let ([v (apply/this v (get-field proc f) '())])
+            (when (Function? f)
+              (let ([v (send f call v '())])
                 (unless (Object? v)
                   (return v))))))
         (raise-native-error 'type))
@@ -32,7 +30,7 @@
 (define (to-boolean v)
   (cond
     [(ecma:undefined? v) #f]
-    [(ecma:null?) #f]
+    [(ecma:null? v) #f]
     [(boolean? v) v]
     [(number? v) (not (or (zero? v) (nan? v)))]
     [(string? v) (not (string=? v ""))]

@@ -2,18 +2,18 @@
 
 (require (for-syntax racket/base
                      racket/syntax)
-         (except-in racket/class this)
-         "../object.rkt"
+         racket/class
+         racket/lazy-require
          "../private/error.rkt"
-         "../private/function.rkt"
          "../private/object.rkt"
          "../private/primitive.rkt"
-         "../private/statement.rkt"
          "../private/this.rkt"
-         (prefix-in
-          ecma:
-          (combine-in
-           "../convert.rkt")))
+         (only-in "object.rkt" Object:prototype)
+         "util.rkt")
+
+(lazy-require
+ ["../lang/statement.rkt" (throw)]
+ ["../convert.rkt" (to-string)])
 
 (provide get-properties)
 
@@ -35,20 +35,15 @@
       ([prototype
         (new Error% [prototype super-prototype])]
        [constructor
-        (letrec
-            ([call
-              (λ args
-                (apply construct args))]
-             [construct
-              (λ ([message ecma:undefined])
-                (new Error%
-                     [prototype prototype]
-                     [properties (make-hash
-                                  (if (ecma:undefined? message)
-                                      '()
-                                      `(("message" . ,(make-data-property
-                                                       (ecma:to-string message))))))]))])
-          (make-native-constructor call construct))])
+        (make-native-function
+         (λ ([message ecma:undefined])
+           (new Error%
+                [prototype prototype]
+                [properties (make-hash
+                             (if (ecma:undefined? message)
+                                 '()
+                                 `(("message" . ,(make-data-property
+                                                  (to-string message))))))])))])
     (define-object-properties prototype
       ["constructor" constructor]
       ["name" name]
@@ -82,7 +77,7 @@
                        cons
                        (λ (msg)
                          (throw
-                          ((get-field new-proc cons-id) msg))))))))]))
+                          (send cons-id construct (list msg)))))))))]))
 
 (define-native-error "Eval")
 (define-native-error "Range")
@@ -101,12 +96,12 @@
         (let ([name (get-property-value ecma:this "name")])
           (if (ecma:undefined? name)
               "Error"
-              (ecma:to-string name))))
+              (to-string name))))
       (define msg
         (let ([msg (get-property-value ecma:this "message")])
           (if (ecma:undefined? msg)
               ""
-              (ecma:to-string msg))))
+              (to-string msg))))
       (cond
         [(string=? "" name) msg]
         [(string=? "" msg) name]

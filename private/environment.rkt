@@ -1,29 +1,23 @@
 #lang racket/base
 
-(require (for-syntax racket/base)
-         racket/class
-         racket/stxparam
-         "../object.rkt"
+(require racket/class
+         racket/lazy-require
          "error.rkt"
          "global-object.rkt"
          "object.rkt"
-         "primitive.rkt"
-         (prefix-in
-          ecma:
-          (combine-in
-           "../convert.rkt")))
+         "primitive.rkt")
+
+(lazy-require
+ ["../convert.rkt" (to-object)])
 
 (provide get-value
          put-value!
          environment-record%
          new-declarative-environment
          new-object-environment
+         get-identifier-reference
          global-environment
-         variable-environment
-         lexical-environment
-         id
-         create-variables!
-         member)
+         create-variables!)
 
 (define (get-value v)
   (if (reference? v)
@@ -43,7 +37,7 @@
           [(Object? base)
            (get-property-value base (reference-name v))]
           [else
-           (let ([o (ecma:to-object base)]
+           (let ([o (to-object base)]
                  [p (reference-name v)])
              (let ([prop (get-property o p)])
                (cond
@@ -62,7 +56,7 @@
     (raise-native-error 'reference "not a reference"))
   (let ([base (reference-base v)])
     (cond
-      [(ecma:undefined base)
+      [(ecma:undefined? base)
        (if (reference-strict? v)
            (raise-native-error 'reference "not bound")
            (set-property-value!
@@ -83,7 +77,7 @@
         w
         (reference-strict? v))]
       [else
-       (let ([o (ecma:to-object base)]
+       (let ([o (to-object base)]
              [p (reference-name v)]
              [throw? (reference-strict? v)])
          (if (and
@@ -213,37 +207,10 @@
            name
            strict?))))
 
+;; TODO: this should also be parameterized
 (define global-environment
   (new-object-environment global-object ecma:null))
-
-(define-syntax-parameter variable-environment
-  (make-rename-transformer #'global-environment))
-
-(define-syntax-parameter lexical-environment
-  (make-rename-transformer #'global-environment))
-
-(define-syntax (id stx)
-  (syntax-case stx ()
-    [(_ sym)
-     (unless (identifier? #'sym)
-       (raise-syntax-error #f "not an identifier" stx #'sym))
-     (with-syntax ([name (symbol->string
-                          (syntax-e #'sym))])
-       #'(get-identifier-reference
-          lexical-environment
-          name
-          #f))]))
 
 (define (create-variables! env-rec ids)
   (for ([id (in-list (map symbol->string ids))])
     (send env-rec create-mutable-binding! id #f)))
-
-(define-syntax (member stx)
-  (syntax-case stx ()
-    [(_ base prop)
-     #`(reference
-        (ecma:to-object (get-value base))
-        #,(if (identifier? #'prop)
-              (symbol->string (syntax-e #'prop))
-              #'(ecma:to-string (get-value prop)))
-        #f)]))

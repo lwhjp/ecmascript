@@ -3,7 +3,7 @@
 (require racket/contract
          racket/list
          racket/match
-         "primitive.rkt"
+         "../private/primitive.rkt"
          (prefix-in ast: "../ast.rkt"))
 
 (provide/contract

@@ -3,7 +3,7 @@
 (require racket/class
          "error.rkt"
          "primitive.rkt"
-         (only-in "this.rkt" apply/this))
+         "this.rkt")
 
 (provide (all-defined-out))
 
@@ -182,12 +182,6 @@
                (reject)
                (update-property current desc))])))))
 
-(define Object%
-  (class ecma-object%
-    (init [prototype Object:prototype])
-    (super-new [class-name 'Object]
-               [prototype prototype])))
-
 (define (Object? v) (is-a? v ecma-object%))
 
 (define (get-property object name)
@@ -195,6 +189,21 @@
 
 (define (get-own-property object name)
   (send object get-own-property name))
+
+(define (get-property-value object name)
+  (send object get name))
+
+(define (can-set-property? object name)
+  (send object can-put? name))
+
+(define (set-property-value! object name v [throw? #t])
+  (send object put name v throw?))
+
+(define (has-property? object name)
+  (send object has-property? name))
+
+(define (delete-property! object name [throw? #t])
+  (send object delete name throw?))
 
 (define (define-own-property object name desc throw?)
   (send object define-own-property name desc throw?))
@@ -207,82 +216,3 @@
                                    #:writable #t
                                    #:enumerable #f
                                    #:configurable #t)) ...))
-
-(define Object:prototype
-  (new Object% [prototype #f]))
-
-(define (from-property-descriptor desc)
-  (if desc
-      (let ([obj (new Object%)])
-        (if (data-property? desc)
-            (begin
-              (define-own-property obj "value"
-                    `(data (value . ,(data-property-value desc))
-                           (writable . #t)
-                           (enumerable . #t)
-                           (configurable . #t))
-                    #f)
-              (define-own-property obj "writable"
-                    `(data (value . ,(data-property-writable? desc))
-                           (writable . #t)
-                           (enumerable . #t)
-                           (configurable . #t))
-                    #f))
-            (begin
-              (define-own-property obj "get"
-                    `(data (value . ,(accessor-property-get desc))
-                           (writable . #t)
-                           (enumerable . #t)
-                           (configurable . #t))
-                    #f)
-              (define-own-property obj "set"
-                    `(data (value . ,(accessor-property-set desc))
-                           (writable . #t)
-                           (enumerable . #t)
-                           (configurable . #t))
-                    #f)))
-        (define-own-property obj "enumerable"
-              `(data (value . ,(property-enumerable? desc))
-                     (writable . #t)
-                     (enumerable . #t)
-                     (configurable . #t))
-              #f)
-        (define-own-property obj "configurable"
-              `(data (value . ,(property-configurable? desc))
-                     (writable . #t)
-                     (enumerable . #t)
-                     (configurable . #t))
-              #f)
-        obj)
-      ecma:undefined))
-
-(define (to-property-descriptor obj)
-  (unless (Object? obj)
-    (raise-native-error 'type "not an object"))
-  (let ([oprops (get-field properties obj)])
-    (define-values (enumerable? configurable?
-                    value writable? get set)
-      (apply
-       values
-       (map
-        (λ (name)
-          (hash-ref oprops name ecma:undefined))
-        '("enumerable" "configurable"
-          "value" "writable" "get" "set"))))
-    (define-values (kind attrs)
-      (cond
-        [(or (not (ecma:undefined? value))
-             (not (ecma:undefined? writable?)))
-         (values 'data
-                 (append
-                  (if (ecma:undefined? value) '() `((value . ,value)))
-                  (if (ecma:undefined? writable?) '() `((writable . ,writable?)))))]
-        [else
-         (values 'accessor
-                 (append
-                  (if (ecma:undefined? get) '() `((get . ,get)))
-                  (if (ecma:undefined? set) '() `((set . ,set)))))]))
-    (cons kind
-          (append attrs
-                  (if (ecma:undefined? enumerable?) '() `((enumerable . ,enumerable?)))
-                  (if (ecma:undefined? configurable?) '() `((configurable . ,configurable?)))))))

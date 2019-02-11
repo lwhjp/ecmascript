@@ -1,6 +1,6 @@
 #lang scribble/manual
-@(require (for-label "../private/literal.rkt"
-                     "../private/operator.rkt"
+@(require (for-label "../lang/literal.rkt"
+                     "../lang/operator.rkt"
                      "../types.rkt"))
 
 @title{Literals and Operators}

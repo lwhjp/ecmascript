@@ -5,5 +5,4 @@ ecmascript
 #:language-info #(ecmascript/lang/language-info get-language-info #f)
 #:whole-body-readers? #t
 
-(require "../init.rkt"
-         "../private/read.rkt")
+(require "read.rkt")

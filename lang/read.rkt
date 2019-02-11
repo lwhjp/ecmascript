@@ -1,9 +1,9 @@
 #lang racket/base
 
 (require ragg/support
+         "../private/error.rkt"
          "../parse.rkt"
-         "../private/compile.rkt"
-         "../private/error.rkt")
+         "compile.rkt")
 
 (provide (all-defined-out))
 

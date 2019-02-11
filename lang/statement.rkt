@@ -2,15 +2,15 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
-         (only-in racket/class get-field send)
+         racket/class
          racket/provide
          racket/stxparam
-         "environment.rkt"
-         "function.rkt"
-         "object.rkt"
-         "primitive.rkt"
+         "../private/environment.rkt"
+         "../private/object.rkt"
+         "../private/primitive.rkt"
          "../convert.rkt"
-         "../object.rkt"
+         (only-in "environment.rkt" lexical-environment)
+         (only-in "function.rkt" begin-scope)
          (prefix-in ecma: "operator.rkt"))
 
 (provide (filtered-out

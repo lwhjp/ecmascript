@@ -1,16 +1,15 @@
 #lang racket/base
 
-(require (only-in racket/class is-a? send)
+(require (for-syntax racket/base)
+         racket/class
          racket/math
          racket/provide
-         "../convert.rkt"
-         "../object.rkt"
-         "environment.rkt"
-         "error.rkt"
-         "function.rkt"
-         "object.rkt"
-         "primitive.rkt"
-         (for-syntax racket/base))
+         "../private/environment.rkt"
+         "../private/error.rkt"
+         "../private/function.rkt"
+         "../private/object.rkt"
+         "../private/primitive.rkt"
+         "../convert.rkt")
 
 (provide (filtered-out
           (λ (name)

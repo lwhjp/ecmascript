@@ -5,13 +5,13 @@
          racket/math
          racket/runtime-path
          net/uri-codec
-         "private/function.rkt"
          "private/global-object.rkt"
          "private/object.rkt"
          "private/this.rkt"
+         (only-in "lib/util.rkt" native-method)
          "convert.rkt"
-         "types.rkt"
-         (prefix-in ecma: "eval.rkt"))
+         (prefix-in ecma: "eval.rkt")
+         "types.rkt")
 
 (current-ecma:this global-object)
 
