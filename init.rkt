@@ -86,3 +86,36 @@
                 lib:object
                 lib:regexp
                 lib:string))
+
+(define prelude "
+undefined=[][0];
+Array.prototype.pop=(function(){
+                                if(this.length===0){
+                                                    return undefined;
+                                                           }
+                                  var i=this.length-1;
+                                  var ret=this[i];
+                                  delete this[i];
+                                  this.length-=1;
+                                  return ret;
+                                  });
+Array.prototype.push=(function(x){
+         this[this.length]=x;
+});
+Array.prototype.shift=(function(){
+    var ret=this[0];
+    for(var i=1;i<this.length;i++){
+        this[i-1]=this[i];
+    }
+    this.length-=1;
+    return ret;
+});
+Array.prototype.unshift=(function(x){
+    var len=this.length;
+    for(var i=len-1;i>=0;i--){
+        this[i+1]=this[i];
+    }
+    this[0]=x;
+});
+")
+(void (ecma:eval prelude))
