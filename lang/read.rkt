@@ -24,5 +24,5 @@
           (raise-native-error 'syntax (exn-message e)))])
     (let ([ast (read-program src in)])
       (if (eof-object? ast)
-          eof
+          '()
           (ecmascript->racket ast)))))
