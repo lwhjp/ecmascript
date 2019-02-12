@@ -3,46 +3,25 @@
 (require (for-syntax racket/base
                      syntax/parse
                      syntax/stx)
-         (only-in racket/class new)
-         racket/provide
-         "../object.rkt"
-         "array.rkt"
+         racket/class
+         "../private/environment.rkt"
+         "../private/object.rkt"
+         (only-in "../lib/array.rkt" make-array)
+         (only-in "../lib/object.rkt" Object%)
+         "../convert.rkt"
          "environment.rkt"
-         "object.rkt"
-         (prefix-in
-          ecma:
-          (combine-in
-           "../convert.rkt"
-           "../function.rkt"
-           "../types.rkt")))
+         (prefix-in ecma: "function.rkt"))
 
-(provide (filtered-out
-          (λ (name)
-            (and (regexp-match? #rx"^ecma:" name)
-                 (substring name 5)))
-          (all-defined-out)))
+(provide
+ (all-defined-out)
+ (rename-out [make-array array]))
 
-(define (ecma:array . elements)
-  (let ([obj (new Array%)])
-    (for ([i (in-naturals)]
-          [elt (in-list elements)]
-          #:unless (eq? 'undefined elt))
-      (define-own-property obj
-            (ecma:to-string i)
-            `(data
-              (value . ,elt)
-              (writable . #t)
-              (enumerable . #t)
-              (configurable . #t))
-            #f))
-    obj))
-
-(define-syntax (ecma:object stx)
+(define-syntax (object stx)
   (define parse-name
     (syntax-parser
       [v:id (symbol->string (syntax-e #'v))]
       [v:str #'v]
-      [v:number #'(ecma:to-string v)]))
+      [v:number #'(to-string v)]))
   (define parse-def
     (syntax-parser
       [(expr)
@@ -73,5 +52,5 @@
                  #f) ...
            obj))]))
 
-(define (ecma:regexp pattern flags)
+(define (regexp pattern flags)
   (ecma:new (id RegExp) pattern flags))

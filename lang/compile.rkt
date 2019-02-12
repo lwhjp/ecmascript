@@ -3,6 +3,7 @@
 (require racket/contract
          racket/list
          racket/match
+         "../private/primitive.rkt"
          (prefix-in ast: "../ast.rkt"))
 
 (provide/contract
@@ -82,7 +83,7 @@
          ,@(map (λ (elt)
                   (if elt
                       (compile-expression elt)
-                      'undefined))
+                      ecma:undefined))
                 elements))
        loc)]
     [(ast:expression:literal _ (ast:literal:object loc props))

@@ -4,7 +4,7 @@
                               this
                               return)
                      "../parse.rkt"
-                     "../private/statement.rkt"
+                     "../lang/statement.rkt"
                      "../types.rkt"))
 
 @title{Parsing ECMAScript}

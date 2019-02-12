@@ -2,14 +2,15 @@
 
 (require (for-syntax racket/base
                      syntax/parse)
-         (only-in racket/class get-field send)
+         racket/class
          racket/provide
          racket/stxparam
-         "environment.rkt"
-         "function.rkt"
-         "object.rkt"
+         "../private/environment.rkt"
+         "../private/object.rkt"
+         "../private/primitive.rkt"
          "../convert.rkt"
-         "../object.rkt"
+         (only-in "environment.rkt" lexical-environment)
+         (only-in "function.rkt" begin-scope)
          (prefix-in ecma: "operator.rkt"))
 
 (provide (filtered-out
@@ -111,8 +112,8 @@
 
 (define-syntax-rule (stmt:for-in lhs expr body)
   (let ([exper-value (get-value expr)])
-    (if (or (eq? 'null exper-value)
-            (eq? 'undefined exper-value))
+    (if (or (ecma:null? exper-value)
+            (ecma:undefined? exper-value))
         (void)
         (let ([obj (to-object exper-value)])
           (for/fold ([v (void)])

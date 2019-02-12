@@ -1,13 +1,15 @@
 #lang racket/base
 
-(require (only-in racket/class get-field field-bound?)
+(require racket/class
          racket/math
          racket/string
-         "object.rkt"
-         "private/builtin.rkt"
          "private/error.rkt"
+         "private/function.rkt"
          "private/object.rkt"
-         "private/this.rkt")
+         "private/primitive.rkt"
+         (only-in "lib/boolean.rkt" make-Boolean)
+         (only-in "lib/number.rkt" make-Number)
+         (only-in "lib/string.rkt" make-String))
 
 (provide (all-defined-out))
 
@@ -18,11 +20,8 @@
                           '("toString" "valueOf")
                           '("valueOf" "toString"))])
           (let ([f (get-property-value v method)])
-            (when (and (Object? f)
-                       ; TODO: refactor so that we can don't have to reflect here
-                       ; (private/function.rkt includes this file)
-                       (field-bound? proc f))
-              (let ([v (apply/this v (get-field proc f) '())])
+            (when (Function? f)
+              (let ([v (send f call v '())])
                 (unless (Object? v)
                   (return v))))))
         (raise-native-error 'type))
@@ -30,8 +29,8 @@
 
 (define (to-boolean v)
   (cond
-    [(eq? v 'undefined) #f]
-    [(eq? v 'null) #f]
+    [(ecma:undefined? v) #f]
+    [(ecma:null? v) #f]
     [(boolean? v) v]
     [(number? v) (not (or (zero? v) (nan? v)))]
     [(string? v) (not (string=? v ""))]
@@ -39,8 +38,8 @@
 
 (define (to-number v)
   (cond
-    [(eq? v 'undefined) +nan.0]
-    [(eq? v 'null) 0]
+    [(ecma:undefined? v) +nan.0]
+    [(ecma:null? v) 0]
     [(boolean? v) (if v 1 0)]
     [(number? v) v]
     [(string? v) (or (string->number (string-trim v)) +nan.0)]
@@ -74,8 +73,8 @@
 
 (define (to-string v)
   (cond
-    [(eq? v 'undefined) "undefined"]
-    [(eq? v 'null) "null"]
+    [(ecma:undefined? v) "undefined"]
+    [(ecma:null? v) "null"]
     [(boolean? v) (if v "true" "false")]
     [(number? v)
      (cond
@@ -87,8 +86,8 @@
 
 (define (to-object v)
   (cond
-    [(eq? v 'undefined) (raise-native-error 'type "undefined")]
-    [(eq? v 'null) (raise-native-error 'type "null")]
+    [(ecma:undefined? v) (raise-native-error 'type "undefined")]
+    [(ecma:null? v) (raise-native-error 'type "null")]
     [(boolean? v) (make-Boolean v)]
     [(number? v) (make-Number v)]
     [(string? v) (make-String v)]

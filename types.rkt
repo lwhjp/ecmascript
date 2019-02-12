@@ -1,28 +1,23 @@
 #lang racket/base
 
+(require "private/primitive.rkt")
+
 (provide (all-defined-out)
          boolean?
          number?
-         string?)
+         string?
+ (struct-out reference)
+ (rename-out
+  [ecma:undefined undefined]
+  [ecma:null null]
+  [ecma:undefined? undefined?]
+  [ecma:null? null?]))
 
-(define undefined 'undefined)
-
-(define null 'null)
-
-(define (defined? v)
-  (not (eq? 'undefined v)))
-
-(define (undefined? v)
-  (eq? 'undefined v))
-
-(define (null? v)
-  (eq? 'null v))
+(define (defined? v) (not (ecma:undefined? v)))
 
 (define (primitive-value? v)
-  (or (undefined? v)
-      (null? v)
+  (or (ecma:undefined? v)
+      (ecma:null? v)
       (boolean? v)
       (number? v)
       (string? v)))
-
-(struct reference (base name strict?) #:transparent)

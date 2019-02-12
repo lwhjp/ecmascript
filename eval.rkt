@@ -1,17 +1,13 @@
 #lang racket/base
 
-(require (prefix-in ecma:
-           (combine-in
-            "private/function.rkt"
-            "private/global-object.rkt"
-            "private/object.rkt"))
-         racket/port
+(require racket/port
          racket/runtime-path
          racket/contract/base
+         "private/global-object.rkt"
+         "lang/compile.rkt"
+         "lang/read.rkt"
          "object.rkt"
-         "parse.rkt"
-         "private/compile.rkt"
-         "private/read.rkt")
+         "parse.rkt")
 
 (provide (contract-out
           (rename ecma:eval eval
@@ -22,7 +18,7 @@
          eval-read-interaction)
 
 (define (ecma:eval prog
-                   [scope ecma:global-object]
+                   [scope global-object]
                    [namespace (make-global-namespace)])
   (let ([stx (with-input-from-string prog
                (λ ()

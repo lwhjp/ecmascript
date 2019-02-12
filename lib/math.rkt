@@ -1,14 +1,14 @@
 #lang racket/base
 
 (require racket/class
+         racket/lazy-require
          racket/math
-         "../private/function.rkt"
          "../private/object.rkt"
-         (prefix-in
-          ecma:
-          (combine-in
-           "../convert.rkt"
-           "../types.rkt")))
+         (only-in "object.rkt" Object%)
+         "util.rkt")
+
+(lazy-require
+ ["../convert.rkt" (to-number)])
 
 (provide get-properties)
 
@@ -19,7 +19,7 @@
 
 (define-syntax-rule (wrap-math fn arg ...)
   (native-method (arg ...)
-    (fn (ecma:to-number arg) ...)))
+    (fn (to-number arg) ...)))
 
 (define-object-properties math
   ["E" (exp 1)]

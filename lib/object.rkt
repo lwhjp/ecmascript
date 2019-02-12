@@ -1,37 +1,120 @@
 #lang racket/base
 
-(require (only-in racket/class get-field new set-field!)
-         "../object.rkt"
+(require racket/class
+         racket/lazy-require
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
+         "../private/primitive.rkt"
          "../private/this.rkt"
-         (prefix-in ecma:
-                    (combine-in
-                     "../private/literal.rkt"
-                     "../convert.rkt"
-                     "../types.rkt")))
+         "util.rkt")
 
-(provide get-properties)
+(lazy-require
+ ["array.rkt" (make-array)]
+ ["../convert.rkt" (to-object to-string)])
+
+(provide get-properties
+ Object%
+ Object:prototype)
 
 (define (get-properties)
   `(["Object" . ,object-constructor]))
 
+(define Object%
+  (class ecma-object%
+    (init [prototype Object:prototype])
+    (super-new [class-name 'Object]
+               [prototype prototype])))
+
+(define Object:prototype
+  (new Object% [prototype #f]))
+
 (define object-constructor
-  (letrec
-      ([call
-        (λ args
-          (apply construct args))]
-       [construct
-        (λ ([value 'undefined])
-          (cond
-            [(Object? value) value]
-            [(or (string? value)
-                 (boolean? value)
-                 (number? value))
-             (ecma:to-object value)]
-            [else (new Object%)]))])
-    (make-native-constructor call construct)))
+  (make-native-function
+   (λ ([value ecma:undefined])
+     (cond
+       [(Object? value) value]
+       [(or (string? value)
+            (boolean? value)
+            (number? value))
+        (to-object value)]
+       [else (new Object%)]))))
+
+(define (from-property-descriptor desc)
+  (if desc
+      (let ([obj (new Object%)])
+        (if (data-property? desc)
+            (begin
+              (define-own-property obj "value"
+                    `(data (value . ,(data-property-value desc))
+                           (writable . #t)
+                           (enumerable . #t)
+                           (configurable . #t))
+                    #f)
+              (define-own-property obj "writable"
+                    `(data (value . ,(data-property-writable? desc))
+                           (writable . #t)
+                           (enumerable . #t)
+                           (configurable . #t))
+                    #f))
+            (begin
+              (define-own-property obj "get"
+                    `(data (value . ,(accessor-property-get desc))
+                           (writable . #t)
+                           (enumerable . #t)
+                           (configurable . #t))
+                    #f)
+              (define-own-property obj "set"
+                    `(data (value . ,(accessor-property-set desc))
+                           (writable . #t)
+                           (enumerable . #t)
+                           (configurable . #t))
+                    #f)))
+        (define-own-property obj "enumerable"
+              `(data (value . ,(property-enumerable? desc))
+                     (writable . #t)
+                     (enumerable . #t)
+                     (configurable . #t))
+              #f)
+        (define-own-property obj "configurable"
+              `(data (value . ,(property-configurable? desc))
+                     (writable . #t)
+                     (enumerable . #t)
+                     (configurable . #t))
+              #f)
+        obj)
+      ecma:undefined))
+
+(define (to-property-descriptor obj)
+  (unless (Object? obj)
+    (raise-native-error 'type "not an object"))
+  (let ([oprops (get-field properties obj)])
+    (define-values (enumerable? configurable?
+                    value writable? get set)
+      (apply
+       values
+       (map
+        (λ (name)
+          (hash-ref oprops name ecma:undefined))
+        '("enumerable" "configurable"
+          "value" "writable" "get" "set"))))
+    (define-values (kind attrs)
+      (cond
+        [(or (not (ecma:undefined? value))
+             (not (ecma:undefined? writable?)))
+         (values 'data
+                 (append
+                  (if (ecma:undefined? value) '() `((value . ,value)))
+                  (if (ecma:undefined? writable?) '() `((writable . ,writable?)))))]
+        [else
+         (values 'accessor
+                 (append
+                  (if (ecma:undefined? get) '() `((get . ,get)))
+                  (if (ecma:undefined? set) '() `((set . ,set)))))]))
+    (cons kind
+          (append attrs
+                  (if (ecma:undefined? enumerable?) '() `((enumerable . ,enumerable?)))
+                  (if (ecma:undefined? configurable?) '() `((configurable . ,configurable?)))))))
 
 (define (check-is-object o)
   (unless (Object? o)
@@ -46,22 +129,22 @@
   ["getOwnPropertyDescriptor"
    (native-method (o p)
      (from-property-descriptor
-      (get-own-property o (ecma:to-string p))))]
+      (get-own-property o (to-string p))))]
   ["getOwnPropertyNames"
    (native-method (o)
      (check-is-object o)
      (apply
-      ecma:array
+      make-array
       (hash-keys (get-field properties o))))]
   ["create"
    (native-method (o properties)
      (unless (or (ecma:null? o) (Object? o))
        (raise-native-error 'type "not an object or null"))
      (let ([obj (new Object% [prototype (if (ecma:null? o) #f o)])])
-       (unless (eq? 'undefined properties)
+       (unless (ecma:undefined? properties)
          (for ([(pname pdesc) (in-hash
                                (get-field properties
-                                (ecma:to-object properties)))]
+                                (to-object properties)))]
                #:when (property-enumerable? pdesc))
            (define-own-property obj pname
                  (to-property-descriptor
@@ -71,7 +154,7 @@
   ["defineProperty"
    (native-method (o p attributes)
      (check-is-object o)
-     (define-own-property o (ecma:to-string p)
+     (define-own-property o (to-string p)
            (to-property-descriptor attributes)
            #t)
      o)]
@@ -80,7 +163,7 @@
      (check-is-object o)
      (for ([(pname pdesc) (in-hash
                            (get-field properties
-                            (ecma:to-object properties)))]
+                            (to-object properties)))]
            #:when (property-enumerable? pdesc))
        (define-own-property o pname
              (to-property-descriptor
@@ -130,7 +213,7 @@
    (native-method (o)
      (check-is-object o)
      (apply
-      ecma:array
+      make-array
       (for/list ([(name prop) (in-hash
                                (get-field properties o))]
                  #:when (property-enumerable? prop))
@@ -142,14 +225,14 @@
    (make-native-function
     (λ ()
       (cond
-        [(eq? 'undefined this) "[object Undefined]"]
-        [(eq? 'null this) "[object Null]"]
+        [(ecma:undefined? ecma:this) "[object Undefined]"]
+        [(ecma:null? ecma:this) "[object Null]"]
         [(format "[object ~a]"
-                 (get-field class-name (ecma:to-object this)))])))]
+                 (get-field class-name (to-object ecma:this)))])))]
   ["toLocaleString"
    (make-native-function
     (λ ()
-      (define o (ecma:to-object this))
+      (define o (to-object ecma:this))
       (define f (get-property-value o "toString"))
       (unless (Function? f)
         (raise-native-error 'type "toString: not a function"))
@@ -157,21 +240,21 @@
   ["valueOf"
    (make-native-function
     (λ ()
-      (ecma:to-object this)))]
+      (to-object ecma:this)))]
   ["hasOwnProperty"
    (make-native-function
     (λ (v)
       (property?
        (get-own-property
-        (ecma:to-object this)
-        (ecma:to-string v)))))]
+        (to-object ecma:this)
+        (to-string v)))))]
   ["isPrototypeOf"
    (make-native-function
     (λ (v)
       (and (Object? v)
-           (let ([o (ecma:to-object this)])
+           (let ([o (to-object ecma:this)])
              (let loop ([v (get-field prototype v)])
-               (and (not (eq? 'null v))
+               (and (not (ecma:null? v))
                     (or (eq? o v)
                         (loop (get-field prototype v)))))))))]
   ["propertyIsEnumerable"
@@ -179,7 +262,7 @@
     (λ (v)
       (define prop
         (get-own-property
-         (ecma:to-object this)
-         (ecma:to-string v)))
+         (to-object ecma:this)
+         (to-string v)))
       (and (property? prop)
            (property-enumerable? prop))))])

@@ -1,21 +1,22 @@
 #lang racket/base
 
 (require (for-syntax racket/base)
+         "private/environment.rkt"
+         "private/global-object.rkt"
+         "lang/environment.rkt"
+         "lang/function.rkt"
+         "lang/literal.rkt"
+         "lang/operator.rkt"
+         "lang/statement.rkt"
          "convert.rkt"
          "eval.rkt"
          "function.rkt"
          "init.rkt"
-         "types.rkt"
-         "private/environment.rkt"
-         "private/function.rkt"
-         "private/global-object.rkt"
-         "private/literal.rkt"
-         "private/operator.rkt"
-         "private/statement.rkt")
+         "types.rkt")
 
-(provide (all-from-out "private/literal.rkt"
-                       "private/operator.rkt"
-                       "private/statement.rkt")
+(provide (all-from-out "lang/literal.rkt"
+                       "lang/operator.rkt"
+                       "lang/statement.rkt")
          ; TODO: several of these should be removed
          global-object
          new-object-environment

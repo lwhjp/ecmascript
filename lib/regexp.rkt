@@ -1,22 +1,30 @@
 #lang racket/base
 
-(require (only-in racket/class get-field is-a? new)
-         "../object.rkt"
-         "../private/builtin.rkt"
+(require racket/class
+         racket/lazy-require
          "../private/error.rkt"
-         "../private/function.rkt"
          "../private/object.rkt"
+         "../private/primitive.rkt"
          "../private/this.rkt"
-         (prefix-in ecma:
-                    (combine-in
-                     "../private/literal.rkt"
-                     "../convert.rkt"
-                     "../types.rkt")))
+         (only-in "array.rkt" make-array)
+         (only-in "function.rkt" Function%)
+         (only-in "object.rkt" Object:prototype)
+         "util.rkt")
+
+(lazy-require
+ ["../convert.rkt" (to-boolean to-string)])
 
 (provide get-properties)
 
 (define (get-properties)
   `(["RegExp" . ,regexp-constructor]))
+
+(define RegExp%
+  (class ecma-object%
+    (init prototype)
+    (init-field pattern flags)
+    (super-new [class-name 'RegExp]
+               [prototype prototype])))
 
 (define (make-regexp-object pattern flags prototype)
   (let ([obj (new RegExp%
@@ -57,7 +65,7 @@
      (if global last-index 0)))
   (if positions
       (let ([a (apply
-                ecma:array
+                make-array
                 (map (λ (p)
                        (substring s (car p) (cdr p)))
                      positions))])
@@ -67,33 +75,35 @@
           ["index" (caar positions)]
           ["input" s])
         a)
-      'null))
+      ecma:null))
 
 (define regexp:prototype
   (make-regexp-object "" "" Object:prototype))
 
 (define regexp-constructor
-  (letrec
-      ([call
-        (λ (pattern [flags 'undefined])
-          (if (and (is-a? pattern RegExp%)
-                   (eq? 'undefined flags))
-              pattern
-              (construct pattern flags)))]
-       [construct
-        (λ ([pattern ""] [flags 'undefined])
+  (new
+   (class Function%
+     (super-new [formal-parameters '(pattern flags)]
+                [proc (λ (pattern [flags ecma:undefined])
+                        (if (and (is-a? pattern RegExp%)
+                                 (ecma:undefined? flags))
+                            pattern
+                            (construct . (list pattern flags))))])
+     (define/override (construct args)
+       (apply
+        (λ ([pattern ""] [flags ecma:undefined])
           (define p
             (cond
               [(is-a? pattern RegExp%)
-               (if (eq? 'undefined flags)
+               (if (ecma:undefined? flags)
                    (get-field pattern pattern)
                    (raise-native-error 'type))]
-              [else (ecma:to-string pattern)]))
+              [else (to-string pattern)]))
           (make-regexp-object
            p
-           (if (eq? 'undefined flags) "" (ecma:to-string flags))
-           regexp:prototype))])
-    (make-native-constructor call construct)))
+           (if (ecma:undefined? flags) "" (to-string flags))
+           regexp:prototype))
+        args)))))
 
 (define-object-properties regexp-constructor
   ["prototype" regexp:prototype])
@@ -102,16 +112,16 @@
   ["constructor" regexp-constructor]
   ["exec"
    (native-method (string)
-     (exec-regexp this string))]
+     (exec-regexp ecma:this string))]
   ["test"
    (native-method (string)
-     (not (eq? 'null (exec-regexp this string))))]
+     (not (ecma:null? (exec-regexp ecma:this string))))]
   ["toString"
    (native-method ()
      (string-append
       "/"
-      (ecma:to-string (get-property-value this "source"))
+      (to-string (get-property-value ecma:this "source"))
       "/"
-      (if (ecma:to-boolean (get-property-value this "global")) "g" "")
-      (if (ecma:to-boolean (get-property-value this "ignoreCase")) "i" "")
-      (if (ecma:to-boolean (get-property-value this "multiline")) "m" "")))])
+      (if (to-boolean (get-property-value ecma:this "global")) "g" "")
+      (if (to-boolean (get-property-value ecma:this "ignoreCase")) "i" "")
+      (if (to-boolean (get-property-value ecma:this "multiline")) "m" "")))])

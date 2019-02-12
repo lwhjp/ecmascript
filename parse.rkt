@@ -8,8 +8,8 @@
          syntax/srcloc
          syntax/stx
          (prefix-in ast: "ast.rkt")
-         "private/grammar.rkt"
-         "private/lex.rkt")
+         "lang/grammar.rkt"
+         "lang/lex.rkt")
 
 (provide/contract
  [read-program
