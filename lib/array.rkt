@@ -13,7 +13,7 @@
          "util.rkt")
 
 (lazy-require
- ["../convert.rkt" (to-object to-string to-uint32)])
+ ["../convert.rkt" (to-integer to-object to-string to-uint32)])
 
 (provide get-properties
  Array%
@@ -81,7 +81,34 @@
           ","
           (to-string separator))))]
   ; TODO: reverse
-  ; TODO: slice
+  ["slice"
+   (native-method (start end)
+     (define o (to-object ecma:this))
+     (define a (new Array%))
+     (define len (to-uint32 (send o get "length")))
+     (define relative-start (to-integer start))
+     (define k
+       (if (negative? relative-start)
+           (max (+ len relative-end) 0)
+           (min relative-start len)))
+     (define relative-end (if (ecma:undefined? end) len (to-integer end)))
+     (define final
+       (if (negative? relative-end)
+           (max (+ len relative-end) 0)
+           (min relative-end len)))
+     (for ([n (in-naturals)]
+           [k (in-range k final)])
+       (define Pk (to-string k))
+       (when (send o has-property? Pk)
+         (send a define-own-property
+               (to-string n)
+               `(data
+                 (value . ,(send o get Pk))
+                 (writable . #t)
+                 (enumerable . #t)
+                 (configurable . #t))
+               #f)))
+     a)]
   ; TODO: sort
   ; TODO: splice
   ; TODO: indexOf
