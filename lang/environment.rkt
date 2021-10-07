@@ -4,9 +4,14 @@
          racket/stxparam
          "../private/environment.rkt"
          "../private/primitive.rkt"
+         "../private/realm.rkt"
          "../convert.rkt")
 
 (provide (all-defined-out))
+
+(define-syntax (global-environment stx)
+  (syntax-case stx ()
+    [_ (identifier? stx) #'(current-global-environment)]))
 
 (define-syntax-parameter variable-environment
   (make-rename-transformer #'global-environment))

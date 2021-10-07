@@ -7,9 +7,9 @@
          "../private/environment.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
-         "../private/global-object.rkt"
          "../private/object.rkt"
          "../private/primitive.rkt"
+         "../private/realm.rkt"
          "../private/this.rkt"
          "../lib/function.rkt"
          "../convert.rkt"
@@ -118,7 +118,7 @@
               (cond
                 [(or (ecma:null? this-value)
                      (ecma:undefined? this-value))
-                 global-object]
+                 (current-global-object)]
                 [(Object? this-value) this-value]
                 [else (to-object this-value)])
               argvs)))))

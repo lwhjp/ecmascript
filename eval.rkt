@@ -3,7 +3,7 @@
 (require racket/port
          racket/runtime-path
          racket/contract/base
-         "private/global-object.rkt"
+         "private/realm.rkt"
          "lang/compile.rkt"
          "lang/read.rkt"
          "object.rkt"
@@ -18,7 +18,7 @@
          eval-read-interaction)
 
 (define (ecma:eval prog
-                   [scope global-object]
+                   [scope (current-global-object)]
                    [namespace (make-global-namespace)])
   (let ([stx (with-input-from-string prog
                (λ ()

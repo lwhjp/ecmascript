@@ -3,9 +3,9 @@
 (require racket/class
          racket/lazy-require
          "error.rkt"
-         "global-object.rkt"
          "object.rkt"
-         "primitive.rkt")
+         "primitive.rkt"
+         "realm.rkt")
 
 (lazy-require
  ["../convert.rkt" (to-object)])
@@ -16,7 +16,6 @@
          new-declarative-environment
          new-object-environment
          get-identifier-reference
-         global-environment
          create-variables!)
 
 (define (get-value v)
@@ -60,7 +59,7 @@
        (if (reference-strict? v)
            (raise-native-error 'reference "not bound")
            (set-property-value!
-            global-object
+            (current-global-object)
             (reference-name v)
             w
             #f))]
@@ -206,10 +205,6 @@
            (get-field outer lex)
            name
            strict?))))
-
-;; TODO: this should also be parameterized
-(define global-environment
-  (new-object-environment global-object ecma:null))
 
 (define (create-variables! env-rec ids)
   (for ([id (in-list (map symbol->string ids))])
