@@ -139,4 +139,4 @@ Array.prototype.unshift=(function(x){
     this[0]=x;
 });
 ")
-    (void (ecma:eval prelude global-object))))
+    (void (ecma:eval prelude))))
