@@ -5,6 +5,7 @@
          racket/port
          (rename-in "private/eval.rkt"
                     [eval do-eval])
+         "private/default-environment.rkt"
          "private/init.rkt"
          "private/realm.rkt")
 
@@ -19,8 +20,6 @@
 
 (define (es-eval src
                  [realm (current-realm)])
-  (unless (is-a? realm realm%)
-    (error 'es-eval "a realm was not provided and (current-realm) has not been set"))
   (do-eval
    (cond
      [(string? src) src]

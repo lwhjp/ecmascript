@@ -8,7 +8,6 @@
          "realm.rkt"
          "../lang/compile.rkt"
          "../lang/read.rkt"
-         "../object.rkt"
          "../parse.rkt")
 
 (provide (contract-out
