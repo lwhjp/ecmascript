@@ -14,7 +14,7 @@
 
 (lazy-require
  ["../convert.rkt" (to-string to-uint32)]
- ["../eval.rkt" (eval)])
+ ["../private/eval.rkt" (eval)])
 
 (provide get-properties
  Function%

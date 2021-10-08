@@ -2,7 +2,7 @@
 
 (provide configure)
 
-(require ecmascript/eval)
+(require ecmascript/private/eval)
 
 (define (configure data)
   (current-read-interaction eval-read-interaction))

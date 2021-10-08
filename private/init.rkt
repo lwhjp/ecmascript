@@ -6,13 +6,13 @@
          racket/runtime-path
          net/uri-codec
          "environment.rkt"
+         (prefix-in ecma: "eval.rkt")
          "object.rkt"
          "primitive.rkt"
          "realm.rkt"
          "this.rkt"
          (only-in "../lib/util.rkt" native-method)
          "../convert.rkt"
-         (prefix-in ecma: "../eval.rkt")
          "../types.rkt")
 
 (provide make-realm)
