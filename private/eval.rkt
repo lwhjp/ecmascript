@@ -12,22 +12,24 @@
 
 (provide (contract-out
           (rename ecma:eval eval
-                  (->* (string?)
+                  (->* ((or/c string? input-port?))
                        ((is-a?/c realm%))
                        any)))
          eval-read-interaction)
 
-(define (ecma:eval prog
+(define (ecma:eval src
                    [realm (current-realm)])
-  (let ([stx (with-input-from-string prog
-               (λ ()
-                 (ecma:read-syntax)))])
-    (if (eof-object? stx)
-        (void)
-        (parameterize ([current-realm realm])
-          (eval
-           #`(begin #,@stx)
-           (force es-eval-namespace))))))
+  (define stx
+    (cond
+      [(string? src) (with-input-from-string src ecma:read-syntax)]
+      [(input-port? src) (parameterize ([current-input-port src])
+                           (ecma:read-syntax))]))
+  (if (eof-object? stx)
+      (void)
+      (parameterize ([current-realm realm])
+        (eval
+         #`(begin #,@stx)
+         (force es-eval-namespace)))))
 
 (define-namespace-anchor here)
 (define-runtime-module-path-index main-module "../lang/main.rkt")

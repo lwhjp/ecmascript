@@ -20,9 +20,9 @@
 
 (define (es-eval src
                  [realm (current-realm)])
-  (do-eval
-   (cond
-     [(string? src) src]
-     [(input-port? src) (port->string src)]
-     [(path? src) (call-with-input-file src port->string)])
-   realm))
+  (if (path? src)
+      (call-with-input-file src
+        (λ (in)
+          (port-count-lines! in)
+          (do-eval in realm)))
+      (do-eval src realm)))
