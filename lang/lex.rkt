@@ -6,64 +6,104 @@
 
 (provide lex)
 
-(define-lex-abbrev white-space
-  (:or #\u0009 #\u000B #\u000C #\u0020 #\u00A0 #\uFEFF))
+(define-lex-abbrevs
+  [TAB    #\u0009]  ; CHARACTER TABULATION
+  [LF     #\u000A]  ; LINE FEED
+  [VT     #\u000B]  ; LINE TABULATION
+  [FF     #\u000C]  ; FORM FEED
+  [CR     #\u000D]  ; CARRIAGE RETURN
+  [SP     #\u0020]  ; SPACE
+  [NBSP   #\u00A0]  ; NO-BREAK SPACE
+  [ZWNJ   #\u200C]  ; ZERO WIDTH NON-JOINER
+  [ZWJ    #\u200D]  ; ZERO WIDTH JOINER
+  [LS     #\u2028]  ; LINE SEPARATOR
+  [PS     #\u2029]  ; PARAGRAPH SEPARATOR
+  [ZWNBSP #\uFEFF]) ; ZERO WIDTH NO-BREAK SPACE
 
-(define-lex-abbrev line-terminator
-  (:or #\u000A #\u000D #\u2028 #\u2029))
+(define-lex-abbrev USP ; Unicode Space_Separator (Zs)
+  (:or #\u0020 #\u00A0 #\u1680 #\u2000 #\u2001 #\u2002
+       #\u2003 #\u2004 #\u2005 #\u2006 #\u2007 #\u2008
+       #\u2009 #\u200A #\u202F #\u205F #\u3000))
+
+(define-lex-abbrevs ; FIXME: these are not correct
+  [unicode-id-start alphabetic]
+  [unicode-id-continue (:or unicode-id-start numeric #\_)])
+
+(define-lex-abbrevs
+  [white-space (:or TAB VT FF SP NBSP ZWNBSP USP)]
+  [line-terminator (:or LF CR LS PS)]
+  [line-terminator-sequence (:or LF CR LS PS (:: CR LF))])
 
 (define-lex-abbrev comment
   (:or (:: "/*" (complement (:: any-string "*/" any-string)) "*/")
        (:: "//" (:* (char-complement line-terminator)))))
 
 (define-lex-abbrevs
-  [identifier (:: identifier-start (:* identifier-part))]
-  [identifier-start (:or alphabetic #\$ #\_)]
-  [identifier-part (:or identifier-start numeric)])
+  [identifier (:: (:? #\#) identifier-start (:* identifier-part))]
+  [identifier-start (:or unicode-id-start #\$ #\_)]
+  [identifier-part (:or unicode-id-continue #\$ ZWNJ ZWJ)])
 
-(define-lex-abbrevs
-  [keyword
-   (:or "break" "case" "catch" "continue" "debugger" "default" "delete"
-        "do" "else" "finally" "for" "function" "if" "in"
-        "instanceof" "new" "return" "switch" "this" "throw" "try"
-        "typeof" "var" "void" "while" "with")]
-  [future-reserved-word
-   (:or "class" "const" "enum" "export" "extends" "import" "super")]
-  [future-reserved-word-strict
-   (:or "implements" "interface" "let" "package" "private" "protected"
-        "public" "static" "yield")])
+;; FIXME: await, yield etc can be identifiers in some cases, so
+;; the parser needs to be able to handle both interpretations
+(define-lex-abbrev reserved-word
+  (:or "await" "break"
+       "case" "catch" "class" "const" "continue"
+       "debugger" "default" "delete" "do"
+       "else" "enum" "export" "extends"
+       "false" "finally" "for" "function"
+       "if" "import" "in" "instanceof"
+       "new" "null" "return" "super" "switch"
+       "this" "throw" "true" "try" "typeof"
+       "var" "void" "while" "with" "yield"))
 
-;; 7.6 Punctuators
 (define-lex-abbrevs
   [punctuator
    (:or "{"   "}"    "("   ")"   "["   "]"
-        "."   ";"    ","   "<"   ">"   "<="
-        ">="  "=="   "!="  "===" "!=="
+        "."   "..."  ";"   ","   "<"   ">"
+        "<="  ">="   "=="  "!="  "===" "!=="
         "+"   "-"    "*"   "%"   "++"  "--"
         "<<"  ">>"   ">>>" "&"   "|"   "^"
         "!"   "~"    "&&"  "||"  "?"   ":"
-        "="   "+="   "-="  "*="  "%="  "<<="
-        ">>=" ">>>=" "&="  "|="  "^=")]
+        "="   "+="   "-="  "*="  "%="  "**="
+        "<<=" ">>=" ">>>=" "&="  "|="  "^="
+        "&&=" "||="  "??=" "=>")]
   [div-punctuator
    (:or "/"   "/=")])
 
 (define-lex-abbrevs
-  [null-literal "null"]
-  [boolean-literal (:or "true" "false")]
-  [numeric-literal (:or decimal-literal hex-integer-literal)]
+  [numeric-literal
+   (:: (:or decimal-literal non-decimal-integer-literal) (:? #\n))]
   [decimal-literal
-   (:: (:or (:: decimal-integer-literal #\. (:* decimal-digit))
-            (:: #\. (:+ decimal-digit))
+   (:: (:or (:: decimal-integer-literal #\. (:? decimal-integer-literal))
+            (:: #\. decimal-integer-literal)
             decimal-integer-literal)
        (:? (:: (:or #\e #\E)
                (:or #\+ #\- nothing)
-               (:+ decimal-digit))))]
-  [decimal-integer-literal (:or #\0 (:: (:- decimal-digit #\0) (:* decimal-digit)))]
-  [decimal-digit (:/ #\0 #\9)]
-  [hex-integer-literal (:: (:or "0x" "0X") (:+ (:/ #\0 #\9 #\a #\f #\A #\F)))]
+               decimal-integer-literal)))]
+  [decimal-integer-literal (:+ decimal-digit)]
+  [decimal-digit (:/ "09")]
+  [non-decimal-integer-literal
+   (:or (:: (:or "0b" "0B") (:+ (char-set "01")))
+        (:: (:or "0o" "0O") (:+ (char-set "01234567")))
+        (:: (:or "0x" "0X") (:+ hex-digit)))]
+  [hex-digit (:/ "09AFaf")])
+
+(define-lex-abbrevs
   [string-literal
-   (:or (:: #\" (:* (:or (:: #\\ any-char) (char-complement #\"))) #\")
-        (:: #\' (:* (:or (:: #\\ any-char) (char-complement #\'))) #\'))]
+   (:or (:: #\" (:* double-string-character) #\")
+        (:: #\' (:* single-string-character) #\'))]
+  [double-string-character
+   (:or (:- any-char #\" #\\ line-terminator)
+        LS
+        PS
+        (:: #\\ (:or line-terminator any-char)))]
+  [single-string-character
+   (:or (:- any-char #\' #\\ line-terminator)
+        LS
+        PS
+        (:: #\\ (:or line-terminator any-char)))])
+
+(define-lex-abbrevs
   [regexp-literal
    (:: #\/ (:+ (:or (:: #\\ any-char) (char-complement #\/))) #\/ (:* identifier-part))])
 
@@ -118,11 +158,10 @@
    [(:+ white-space) 'WS]
    [line-terminator 'EOL]
    [comment 'COMMENT]
-   [(:or keyword future-reserved-word punctuator
-         div-punctuator null-literal boolean-literal)
-    lexeme]
+   [(:or reserved-word punctuator div-punctuator) lexeme]
    [identifier (token 'IDENTIFIER (string->symbol lexeme))]
    [numeric-literal (token 'NUMERIC (parse-number lexeme))]
    [string-literal (token 'STRING (parse-string lexeme))]
-   [regexp-literal (token 'REGEXP (parse-regexp lexeme))]
+   ; TODO: disable regexp for now until we have a smarter parser
+   ;[regexp-literal (token 'REGEXP (parse-regexp lexeme))]
    [(eof) (return-without-pos 'EOF)]))
