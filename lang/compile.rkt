@@ -36,7 +36,7 @@
         [(expression:binary _ l op r)
          `(,(c op) ,(c l) ,(c r))]
         [(expression:call _ f args)
-         `(,(c f) ,@(map c args))]
+         `(call ,(c f) ,@(map c args))]
         [(expression:comma _ l r)
          `(\, ,(c l) ,(c r))]
         [(expression:conditional _ t e1 e2)

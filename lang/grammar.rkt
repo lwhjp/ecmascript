@@ -23,7 +23,9 @@ __ < (WhiteSpace / LineTerminatorSequence / Comment)+;
 _ < __?;
 NoLineTerminator < (WhiteSpace / ('/*' ('*' !'/' / !LineTerminator [^*])* '*/') / SingleLineComment)?;
 
-SEMICOLON < NoLineTerminator (';' / LineTerminatorSequence (_ ';')?) / _ &'}';
+SEMICOLON <
+    NoLineTerminator (';' / LineTerminatorSequence (_ ';')?) /
+    _ (&'}' / !.);
 
 // Names and Keywords
 

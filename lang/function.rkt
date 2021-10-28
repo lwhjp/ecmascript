@@ -43,7 +43,7 @@
    [(_ (~optional name:id)
        (param:id ...)
        (~optional (~seq #:vars (var-id:id ...)))
-       (~optional (~seq body:expr ...+) #:defaults ([(body 1) (#'ecma:undefined)])))
+       (~optional (~seq body:expr ...+) #:defaults ([(body 1) (list #'ecma:undefined)])))
     #`(let ([scope-env (new-declarative-environment lexical-environment)])
         (letrec
             ([f (new Function%
@@ -71,7 +71,7 @@
     (pattern name:id
       #:attr init-stx #f)
     (pattern [name:id init:expr]
-      #:attr init-stx #'(put-value! (es:identifier name) (get-value init)))))
+      #:attr init-stx #'(put-value! (id name) (get-value init)))))
 
 (define-syntax es:var
   (syntax-parser
