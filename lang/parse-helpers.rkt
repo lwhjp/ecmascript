@@ -12,13 +12,17 @@
   (syntax-case stx ()
     ; TODO: get location information from PEG
     [_ (identifier? stx)
-       #'(list (current-source-name) #f #f #f #f)]))
+       #'#f ; TODO: DrRacket doesn't seem to like #f's in src-loc
+       #;#'(list (current-source-name) #f #f #f #f)]))
 
 (define (merge-locations l r)
-  (match-define (list src line column l-pos _) l)
-  (match-define (list _ _ _ r-pos r-span) r)
-  (define span #f #;(+ (- r-pos l-pos) r-span))
-  (list src line column l-pos span))
+  (match* (l r)
+    [(#f _) #f]
+    [(_ #f) #f]
+    [((list src line column l-pos _)
+      (list _ _ _ r-pos r-span))
+     (define span (and l-pos r-pos r-span (+ (- r-pos l-pos) r-span)))
+     (list src line column l-pos span)]))
 
 (define (associate-left xs)
   ; TODO: location
