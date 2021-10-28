@@ -45,7 +45,7 @@
 
 (define test262-all
   (let ([test-files (find-files (λ (path) (regexp-match? #rx"\\.js" path))
-                                test262-home)])
+                                (build-path test262-home "test"))])
     (test-suite
      "Test262"
      (for ([path (in-list test-files)])
