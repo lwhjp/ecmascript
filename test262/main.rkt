@@ -27,21 +27,34 @@
     (append
      '("assert.js" "sta.js")
      (hash-ref meta "includes" '())))
+  (define negative (hash-ref meta "negative" #f))
   (define (do-test strict?)
-    ; TODO: strict mode
-    (test-not-exn
-     (if strict? (string-append base-name " (Strict Mode)") base-name)
-     (thunk
-      (parameterize ([current-realm (make-realm)])
-        (for ([include (in-list includes)])
-          (es-eval (build-path test262-home "harness" include)))
-        ; TODO: host-defined functions
-        (es-eval path)))))
+    ; TODO: strict mode, CanBlock, locale
+    (define name (if strict? (string-append base-name " (Strict Mode)") base-name))
+    (define run
+      (thunk
+       (parameterize ([current-realm (make-realm)])
+         (for ([include (in-list includes)])
+           (es-eval (build-path test262-home "harness" include)))
+         ; TODO: host-defined functions
+         (es-eval path))))
+    (if negative
+        (test-exn
+         name
+         exn:fail? ; TODO: check phase, type
+         run)
+        (test-not-exn
+         name
+         run)))
   (cond
     [(member "module" flags) (void)] ; TODO
+    [(member "raw" flags) (do-test #f)]
+    [(member "async" flags) (void)] ; TODO
     [else
      (unless (member "onlyStrict" flags)
-       (do-test #f))]))
+       (do-test #f))
+     #;(unless (member "noStrict" flags)
+       (do-test #t))]))
 
 (define test262-all
   (let ([test-files (find-files (λ (path) (regexp-match? #rx"\\.js" path))
