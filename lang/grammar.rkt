@@ -1,120 +1,926 @@
-#lang ragg
+#lang reader "../private/parameterized-peg.rkt"
 
-program: (ws source-element)* ws
-source-element: statement | function-declaration
+(require peg/peg-result
+         "../ast.rkt"
+         "char-classes.rkt"
+         "parse-helpers.rkt");
 
-ws: (COMMENT | EOL | WS)*
-ws-no-eol: (COMMENT | WS)*
-eol-or-semicolon: EOL | ";" | INSERTED-SEMICOLON
+///
+/// Lexical grammar
+///
 
-;; Expressions
+// White Space and Comments
 
-primary-expression: "this" | identifier | literal | array-literal
-    | object-literal | "(" ws expression ws ")"
-identifier: IDENTIFIER
-literal: "null" | "true" | "false" | numeric | string | regexp
-numeric: NUMERIC
-string: STRING
-regexp: REGEXP
-array-literal: "[" [ws assignment-expression]
-                   (ws "," [ws assignment-expression])* ws "]"
-object-literal: "{" (ws property-assignment ws ",")*
-                    [ws property-assignment] ws [INSERTED-SEMICOLON] "}"
-property-assignment: property-name ws ":" ws assignment-expression |
-    IDENTIFIER ws property-name ws "(" ws ")" ws "{" (ws source-element)* ws "}" |
-    IDENTIFIER ws property-name ws "(" ws identifier ws ")" ws "{" (ws source-element)* ws "}"
-property-name: identifier | string | numeric
-member-expression:
-    primary-expression |
-    function-expression |
-    member-expression ws "[" ws expression ws "]" |
-    member-expression ws "." ws identifier |
-    "new" ws member-expression ws arguments
-new-expression:
-    member-expression |
-    "new" ws new-expression
-call-expression:
-    member-expression ws arguments |
-    call-expression ws arguments |
-    call-expression ws "[" ws expression ws "]" |
-    call-expression ws "." ws identifier
-arguments: "(" [ ws assignment-expression [ ws "," ws assignment-expression ]* ] ws ")"
-left-hand-side-expression: new-expression | call-expression
-postfix-expression: left-hand-side-expression ws-no-eol [ "++" | "--" ]
-unary-expression: postfix-expression | ("delete" | "void" | "typeof" | "++" | "--" | "+" | "-" | "~" | "!") ws unary-expression
-multiplicative-expression: [multiplicative-expression ws ("*" | "/" | "%") ws] unary-expression
-additive-expression: [additive-expression ws ("+" | "-") ws] multiplicative-expression
-shift-expression: [shift-expression ws ("<<" | ">>" | ">>>") ws] additive-expression
-relational-expression: [relational-expression ws ("<" | ">" | "<=" | ">=" | "instanceof" | "in") ws] shift-expression
-relational-expression-no-in: [relational-expression ws ("<" | ">" | "<=" | ">=" | "instanceof") ws] shift-expression
-equality-expression: [equality-expression ws ("==" | "!=" | "===" | "!==") ws] relational-expression
-equality-expression-no-in: [equality-expression-no-in ws ("==" | "!=" | "===" | "!==") ws] relational-expression-no-in
-bitwise-and-expression: [bitwise-and-expression ws "&" ws] equality-expression
-bitwise-and-expression-no-in: [bitwise-and-expression-no-in ws "&" ws] equality-expression-no-in
-bitwise-xor-expression: [bitwise-xor-expression ws "^" ws] bitwise-and-expression
-bitwise-xor-expression-no-in: [bitwise-xor-expression-no-in ws "^" ws] bitwise-and-expression-no-in
-bitwise-or-expression: [bitwise-or-expression ws "|" ws] bitwise-xor-expression
-bitwise-or-expression-no-in: [bitwise-or-expression-no-in ws "|" ws] bitwise-xor-expression-no-in
-logical-and-expression: [logical-and-expression ws "&&" ws] bitwise-or-expression
-logical-and-expression-no-in: [logical-and-expression-no-in ws "&&" ws] bitwise-or-expression-no-in
-logical-or-expression: [logical-or-expression ws "||" ws] logical-and-expression
-logical-or-expression-no-in: [logical-or-expression-no-in ws "||" ws] logical-and-expression-no-in
-conditional-expression: logical-or-expression [ ws "?" ws assignment-expression ws ":" ws assignment-expression]
-conditional-expression-no-in: logical-or-expression-no-in [ ws "?" ws assignment-expression ws ":" ws assignment-expression-no-in]
-assignment-expression:
-    conditional-expression |
-    left-hand-side-expression ws "=" ws assignment-expression |
-    left-hand-side-expression ws assignment-operator ws assignment-expression
-assignment-expression-no-in:
-    conditional-expression-no-in |
-    left-hand-side-expression ws "=" ws assignment-expression-no-in |
-    left-hand-side-expression ws assignment-operator ws assignment-expression-no-in
-assignment-operator: "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>=" | ">>>=" | "&=" | "^=" | "|="
-expression: [expression ws "," ws] assignment-expression
-expression-no-in: [expression-no-in ws "," ws] assignment-expression-no-in
+WhiteSpace <- TAB / VT / FF / SP / NBSP / ZWNBSP / USP;
+LineTerminator <- LF / CR / LS / PS;
+LineTerminatorSequence <- LF / CR !LF / LS / PS / CR LF;
 
-;; Statements
+Comment <- MultiLineComment / SingleLineComment;
+MultiLineComment <- ~'/*' ('*' !'/' / [^*])* ~'*/';
+SingleLineComment <- ~'//' (!LineTerminator .)*;
 
-statement: block | variable-statement | empty-statement | expression-statement |
-    if-statement | iteration-statement | continue-statement |
-    break-statement | return-statement | with-statement |
-    labelled-statement | switch-statement | throw-statement |
-    try-statement | debugger-statement
-block: "{" (ws statement)* ws "}"
-variable-statement: "var" ws variable-declaration-list ws eol-or-semicolon
-variable-declaration-list: variable-declaration (ws "," ws variable-declaration)*
-variable-declaration-list-no-in: variable-declaration-no-in (ws "," ws variable-declaration-no-in)*
-variable-declaration: identifier [ws "=" ws assignment-expression]
-variable-declaration-no-in: identifier [ws "=" ws assignment-expression-no-in]
-empty-statement: ws ";"
-expression-statement: expression ws eol-or-semicolon
-if-statement: "if" ws "(" ws expression ws ")" ws statement [ws "else" ws statement]
-iteration-statement:
-    "do" ws statement ws "while" ws "(" ws expression ws ")" ws eol-or-semicolon |
-    "while" ws "(" ws expression ws ")" ws statement |
-    "for" ws "(" ([ws expression-no-in] | ws "var" ws variable-declaration-list-no-in) ws ";"
-                 [ws expression] ws ";" [ws expression] ws ")" ws statement |
-    "for" ws "(" ws (left-hand-side-expression | "var" ws variable-declaration-no-in)
-                 ws "in" ws expression ws ")" ws statement
-continue-statement: "continue" [ws-no-eol identifier] ws eol-or-semicolon
-break-statement: "break" [ws-no-eol identifier] ws eol-or-semicolon
-return-statement: "return" [ws-no-eol expression] ws eol-or-semicolon
-with-statement: "with" ws "(" ws expression ws ")" ws statement
-switch-statement: "switch" ws "(" ws expression ws ")" ws case-block
-case-block: "{" (ws case-clause)* [ws default-clause (ws case-clause)*] ws "}"
-case-clause: "case" ws expression ws ":" (ws statement)*
-default-clause: "default" ws ":" (ws statement)*
-labelled-statement: identifier ws ":" ws statement
-throw-statement: "throw" ws-no-eol expression ws eol-or-semicolon
-try-statement: "try" ws block ws (catch | finally | catch ws finally)
-catch: "catch" ws "(" ws identifier ws ")" ws block
-finally: "finally" ws block
-debugger-statement: "debugger" ws eol-or-semicolon
+__ < (WhiteSpace / LineTerminatorSequence / Comment)+;
+_ < __?;
+NoLineTerminator < (WhiteSpace / ('/*' ('*' !'/' / !LineTerminator [^*])* '*/') / SingleLineComment)?;
 
-;; Function definition
+SEMICOLON < NoLineTerminator (';' / LineTerminatorSequence (_ ';')?) / _ &'}';
 
-function-declaration: "function" ws identifier ws "(" [ws formal-parameter-list] ws ")"
-    ws "{" (ws source-element)* ws "}"
-function-expression: "function" [ws identifier] ws "(" [ws formal-parameter-list] ws ")"
-    ws "{" (ws source-element)* ws "}"
-formal-parameter-list: identifier (ws "," ws identifier)*
+// Names and Keywords
+
+PrivateIdentifier <- '#' IdentifierName;
+IdentifierName <- IdentifierStart IdentifierPart*;
+IdentifierStart <- IdentifierStartChar / '\\' UnicodeEscapeSequence;
+IdentifierPart <- IdentifierPartChar / '\\' UnicodeEscapeSequence;
+IdentifierStartChar <- UnicodeIDStart / '$' / '_';
+IdentifierPartChar <- UnicodeIDContinue / '$' / ZWNJ / ZWJ;
+ReservedWord <-
+    ('await' / 'break' / 'case' / 'catch' / 'class' / 'const' / 'continue' /
+     'debugger' / 'default' / 'delete' / 'do' / 'else' / 'enum' / 'export' / 'extends' /
+     'false' / 'finally' / 'for' / 'function' / 'if' / 'import' / 'in' / 'instanceof' /
+     'new' / 'null' / 'return' / 'super' / 'switch' / 'this' / 'throw' / 'true' / 'try' /
+     'typeof' / 'var' / 'void' / 'while' / 'with' / 'yield')
+    !IdentifierPartChar;
+
+// Punctuators
+
+Punctuator <- OptionalChainingPunctuator / OtherPunctuator;
+OptionalChainingPunctuator <- '?.' !DecimalDigit;
+OtherPunctuator <- '>>>=' /
+    '...' / '===' / '!==' / '>>>' / '**=' / '<<=' / '>>=' / '&&=' / '||=' / '??=' /
+    '<=' / '>=' / '==' / '!=' / '**' / '++' / '--' / '<<' / '>>' / '&&' / '||' / '??' /
+    '+=' / '-=' / '*=' / '%=' / '&=' / '|=' / '^=' / '=>' /
+    '{' / '(' / ')' / '[' / ']' / '.' / ';' / ',' / '<' / '>' / '+' / '-' / '*' / '%' /
+    '&' / '|' / '^' / '!' / '~' / '?' / ':' / '=';
+DivPunctuator <- '/=' / '/';
+RightBracePunctuator <- '}';
+
+// Literals
+
+NullLiteral <- 'null' -> (literal:null location);
+
+BooleanLiteral <- t:'true' / 'false' -> (literal:boolean location (if t #t #f));
+
+NumericLiteralSeparator <- '_';
+NumericLiteral <-
+    s:(NonDecimalIntegerLiteral{+Sep} BigIntLiteralSuffix? /
+       LegacyOctalIntegerLiteral /
+       DecimalBigIntegerLiteral / DecimalLiteral)
+    -> (literal:number location s);
+DecimalBigIntegerLiteral <-
+    '0' BigIntLiteralSuffix /
+    NonZeroDigit DecimalDigits{+Sep}? BigIntLiteralSuffix /
+    NonZeroDigit NumericLiteralSeparator DecimalDigits{+Sep} BigIntLiteralSuffix;
+NonDecimalIntegerLiteral{Sep} <- BinaryIntegerLiteral{?Sep} / OctalIntegerLiteral{?Sep} / HexIntegerLiteral{?Sep};
+BigIntLiteralSuffix <- 'n';
+DecimalLiteral <-
+    DecimalIntegerLiteral ('.' DecimalDigits{+Sep}?)? ExponentPart{+Sep}? /
+    '.' DecimalDigits{+Sep} ExponentPart{+Sep}?;
+DecimalIntegerLiteral <-
+    NonZeroDigit NumericLiteralSeparator? DecimalDigits{+Sep}? /
+    NonOctalDecimalIntegerLiteral /
+    '0';
+DecimalDigits{Sep} <-
+    {~Sep} DecimalDigit+ /
+    {+Sep} DecimalDigit+ (NumericLiteralSeparator DecimalDigit+)*;
+DecimalDigit <- [0-9];
+NonZeroDigit <- [1-9];
+ExponentPart{Sep} <- ExponentIndicator SignedInteger{?Sep};
+ExponentIndicator <- [eE];
+SignedInteger{Sep} <- [+\-]? DecimalDigits{?Sep};
+BinaryIntegerLiteral{Sep} <- ('0b' / '0B') BinaryDigits{?Sep};
+BinaryDigits{Sep} <-
+    {~Sep} BinaryDigit+ /
+    {+Sep} BinaryDigit+ (NumericLiteralSeparator BinaryDigit+)*;
+BinaryDigit <- [01];
+OctalIntegerLiteral{Sep} <- ('0o' / '0O') OctalDigits{?Sep};
+OctalDigits{Sep} <-
+    {~Sep} OctalDigit+ /
+    {+Sep} OctalDigit+ (NumericLiteralSeparator OctalDigit+)*;
+LegacyOctalIntegerLiteral <- '0' OctalDigit+ !NonOctalDigit;
+NonOctalDecimalIntegerLiteral <- '0' OctalDigit* NonOctalDigit DecimalDigit*;
+OctalDigit <- [0-7];
+NonOctalDigit <- [89];
+HexIntegerLiteral{Sep} <- ('0x' / '0X') HexDigits{?Sep};
+HexDigits{Sep} <-
+    {~Sep} HexDigit+ /
+    {+Sep} HexDigit+ (NumericLiteralSeparator HexDigit+)*;
+HexDigit <- [0-9a-fA-F];
+
+StringLiteral <-
+    '"' s:DoubleStringCharacter* '"' /
+    '\'' s:SingleStringCharacter* '\''
+    -> (literal:string location (if (string? s) s (string)));
+DoubleStringCharacter <- !('"' / '\\' / LineTerminator) . / LS / PS / '\\' EscapeSequence / LineContinuation;
+SingleStringCharacter <- !('\'' / '\\' / LineTerminator) . / LS / PS / '\\' EscapeSequence / LineContinuation;
+LineContinuation <- ~'\\' LineTerminatorSequence;
+EscapeSequence <- CharacterEscapeSequence / '0' !DecimalDigit / LegacyOctalEscapeSequence /
+    NonOctalDecimalEscapeSequence / HexEscapeSequence / UnicodeEscapeSequence;
+CharacterEscapeSequence <- SingleEscapeCharacter / NonEscapeCharacter;
+SingleEscapeCharacter <- ["'\\bfnrtv];
+NonEscapeCharacter <- !(EscapeCharacter / LineTerminator) .;
+EscapeCharacter <- SingleEscapeCharacter / DecimalDigit / 'x' / 'u';
+LegacyOctalEscapeSequence <- '0' ![89] / [1-7] ![0-8] / [0-3] [0-7] ![0-7] / [4-7] [0-7] / [0-3] [0-7] [0-7];
+NonOctalDecimalEscapeSequence <- [89];
+HexEscapeSequence <- 'x' HexDigit HexDigit;
+UnicodeEscapeSequence <- ~'u' code:Hex4Digits / ~'u{' code:HexDigit+ ~'}';
+Hex4Digits <- HexDigit HexDigit HexDigit HexDigit;
+
+// Regular Expressions
+
+RegularExpressionLiteral <- '/' pattern:RegularExpressionBody '/' flags:RegularExpressionFlags
+    -> (literal:regexp location
+                       (if (string? pattern) pattern (string))
+                       (if (string? flags) (string->list flags) '()));
+RegularExpressionBody <- RegularExpressionFirstChar RegularExpressionChar*;
+RegularExpressionFirstChar <- ![*\\/\[] RegularExpressionNonTerminator /
+    RegularExpressionBackslashSequence / RegularExpressionClass;
+RegularExpressionChar <- ![\\/\[] RegularExpressionNonTerminator /
+    RegularExpressionBackslashSequence / RegularExpressionClass;
+RegularExpressionBackslashSequence <- '\\' RegularExpressionNonTerminator;
+RegularExpressionNonTerminator <- !LineTerminator .;
+RegularExpressionClass <- '[' RegularExpressionClassChar* ']';
+RegularExpressionClassChar <- ![\]\\] RegularExpressionNonTerminator / RegularExpressionBackslashSequence;
+RegularExpressionFlags <- IdentifierPartChar*;
+
+// TODO: templates
+
+///
+/// Expressions
+///
+
+IdentifierReference{Yield, Await} <- id:Identifier{?Yield, ?Await}
+    -> (expression:reference location id);
+
+BindingIdentifier{Yield, Await} <- Identifier{?Yield, ?Await};
+
+LabelIdentifier{Yield, Await} <- Identifier{?Yield, ?Await};
+
+Identifier{Yield, Await} <-
+    !ReservedWord name:IdentifierName /
+    {~Yield} name:'yield' /
+    {~Await} name:'await'
+    -> (identifier location name);
+
+// TODO: TemplateLiteral
+
+PrimaryExpression{Yield, Await} <-
+    ThisExpression / IdentifierReference{?Yield, ?Await} /
+    LiteralExpression{?Yield, ?Await} / FunctionExpression /
+    ClassExpression{?Yield, ?Await} / GeneratorExpression / AsyncFunctionExpression /
+    AsyncGeneratorExpression / RegularExpressionLiteral / // TODO: TemplateLiteral
+    ParenthesizedExpression{?Yield, ?Await};
+
+ThisExpression <- 'this' -> (expression:this location);
+
+LiteralExpression{Yield, Await} <-
+    e:(Literal / ArrayLiteral{?Yield, ?Await} / ObjectLiteral{?Yield, ?Await})
+    -> (expression:literal location e);
+
+ParenthesizedExpression{Yield, Await} <- '(' _ e:Expression{+In, ?Yield, ?Await} _ ')' -> e;
+
+Literal <- NullLiteral / BooleanLiteral / NumericLiteral / StringLiteral;
+
+ArrayLiteral{Yield, Await} <-
+    elements:(~'[' _ (ElementList{?Yield, ?Await} _ (~',' _ Elision?)? / Elision?) ~']')
+    -> (literal:array location elements);
+
+ElementList{Yield, Await} <-
+    Elision?
+    (AssignmentExpression{+In, ?Yield, ?Await} / SpreadElement{?Yield, ?Await})
+    (_ ~',' _ ElementList{?Yield, ?Await})*;
+
+Elision <- x:(',' _)+ -> (elision location (string-length x));
+
+SpreadElement{Yield, Await} <- '...' _ e:AssignmentExpression{+In, ?Yield, ?Await}
+    -> (spread location e);
+
+ObjectLiteral{Yield, Await} <- '{' _ properties:(PropertyDefinitionList{?Yield, ?Await} _ (',' _)?)? '}'
+    -> (literal:object location properties);
+
+PropertyDefinitionList{Yield, Await} <-
+    PropertyDefinition{?Yield, ?Await} (_ ~',' _ PropertyDefinition{?Yield, ?Await})*;
+
+PropertyDefinition{Yield, Await} <-
+    PropertyName{?Yield, ?Await} _ ':' _ AssignmentExpression{+In, ?Yield, ?Await} /
+    MethodDefinition{?Yield, ?Await} /
+    CoverInitializedName{?Yield, ?Await} /
+    IdentifierReference{?Yield, ?Await} /
+    '...' _ AssignmentExpression{+In, ?Yield, ?Wait};
+
+PropertyName{Yield, Await} <-
+    LiteralPropertyName /
+    ComputedPropertyName{?Yield, ?Await};
+
+LiteralPropertyName <- IdentifierName / StringLiteral / NumericLiteral;
+
+ComputedPropertyName{Yield, Await} <- '[' _ AssignmentExpression{+In, ?Yield, ?Await} _ ']';
+
+CoverInitializedName{Yield, Await} <- IdentifierReference{?Yield, ?Await} _ Initializer{+In, ?Yield, ?Await};
+
+Initializer{In, Yield, Await} <- ~'=' _ e:AssignmentExpression{?In, ?Yield, ?Await} -> e;
+
+// TODO: TemplateLiteral
+
+MemberExpression{Yield, Await} <-
+    base:(PrimaryExpression{?Yield, ?Await} /
+          SuperProperty{?Yield, ?Await} /
+          MetaProperty /
+          MemberExpression_New{?Yield, ?Await})
+    chain:(_ PropertyReference{?Yield, ?Await})*
+    -> (fold-chain base chain);
+
+PropertyReference{Yield, Await} <-
+    '[' _ property:Expression{+In, ?Yield, ?Await} _ ']' /
+    '.' _ property:PropertyIdentifier
+    -> (let ([loc location])
+         (λ (base)
+           (expression:member-reference (merge-locations (syntax-element-location base) loc) base property)));
+
+PropertyIdentifier <- n:(IdentifierName / PrivateIdentifier)
+    -> (identifier location n);
+
+MemberExpression_New{Yield, Await} <-
+    'new' _ constructor:MemberExpression{?Yield, ?Await} _ arguments:Arguments{?Yield, ?Await}
+    -> (expression:new location constructor arguments);
+
+SuperProperty{Yield, Await} <-
+    'super' _ ('[' _ property:Expression{+In, ?Yield, ?Await} _ ']' /
+               '.' _ property:PropertyIdentifier)
+    -> (expression:super-reference location property);
+
+MetaProperty <- NewTarget / ImportMeta;
+
+NewTarget <- 'new' _ '.' _ 'target';
+
+ImportMeta <- 'import' _ '.' _ 'meta';
+
+CallExpression{Yield, Await} <-
+    base:MemberExpression{?Yield, ?Await}
+    chain:(_ CallExpressionArguments{?Yield, ?Await}
+             (_ (CallExpressionArguments{?Yield, ?Await} / PropertyReference{?Yield, ?Await}))*)? /
+    base:(SuperCall{?Yield, ?Await} / ImportCall{?Yield, ?Await})
+    chain:(_ (CallExpressionArguments{?Yield, ?Await} / PropertyReference{?Yield, ?Await}))*
+    -> (fold-chain base chain);
+
+CallExpressionArguments{Yield, Await} <- arguments:Arguments{?Yield, ?Await}
+    -> (let ([loc location])
+         (λ (base) (expression:call (merge-locations (syntax-element-location base) loc) base arguments)));
+
+SuperCall{Yield, Await} <- 'super' _ arguments:Arguments{?Yield, ?Await}
+    -> (expression:super-call location arguments);
+
+ImportCall{Yield, Await} <- 'import' _ '(' _ AssignmentExpression{+In, ?Yield, ?Await} _ ')';
+
+Arguments{Yield, Await} <- ~'(' _ (ArgumentList{?Yield, ?Await} _ ~(',' _)?)? ~')';
+
+ArgumentList{Yield, Await} <-
+    (AssignmentExpression{+In, ?Yield, ?Await} / SpreadElement{?Yield, ?Await})
+    (_ ~',' _ ArgumentList{?Yield, ?Await})*;
+
+OptionalExpression{Yield, Await} <-
+    base:CallExpression{?Yield, ?Await} chain:(_ OptionalChain{?Yield, ?Await})*
+    -> (fold-chain base chain);
+
+OptionalChain{Yield, Await} <-
+    '?.' _ (args:Arguments{?Yield, ?Await} /
+            '[' _ property:Expression{+In, ?Yield, ?Await} _ ']' /
+            property:PropertyIdentifier) /
+    e:CallExpressionArguments{?Yield, ?Await} /
+    e:PropertyReference{?Yield, ?Await}
+    -> (or e
+           (let ([loc location])
+             (λ (base)
+               ((if args expression:call expression:member-reference)
+                (merge-locations (syntax-element-location base) loc)
+                (expression:optional base)
+                (or args property)))));
+
+NewExpression{Yield, Await} <-
+    'new' _ type:(MemberExpression{?Yield, ?Await} / NewExpression{?Yield, ?Await})
+    -> (expression:new location type '());
+
+LeftHandSideExpression{Yield, Await} <-
+    OptionalExpression{?Yield, ?Await} /
+    NewExpression{?Yield, ?Await};
+
+UpdateExpression{Yield, Await} <-
+    pre:UpdateOperator _ e:UnaryExpression{?Yield, ?Await} /
+    e:LeftHandSideExpression{?Yield, ?Await} (NoLineTerminator post:UpdateOperator)?
+    -> (cond
+         [pre (expression:unary location pre e)]
+         [post (expression:postfix location e post)]
+         [else e]);
+
+UpdateOperator <- op:('++' / '--') -> (operator location op);
+
+UnaryExpression{Yield, Await} <-
+    op:UnaryOperator _ e:UnaryExpression{?Yield, ?Await} /
+    e:UpdateExpression{?Yield, ?Await} /
+    {+Await} e:AwaitExpression{?Yield}
+    -> (if op (expression:unary location op e) e);
+
+UnaryOperator <- op:('delete' / 'void' / 'typeof' / '+' / '-' / '~' / '!') -> (operator location op);
+
+ExponentiationExpression{Yield, Await} <-
+    l:UpdateExpression{?Yield, ?Await} (_ op:ExponentiationOperator _ r:ExponentiationExpression{?Yield, ?Await})? /
+    e:UnaryExpression{?Yield, ?Await}
+    -> (if op (expression:binary location l op r) (or l e));
+
+ExponentiationOperator <- op:'**' -> (operator location op);
+
+MultiplicativeExpression{Yield, Await} <-
+    e:(ExponentiationExpression{?Yield, ?Await}
+       (_ MultiplicativeOperator _ ExponentiationExpression{?Yield, ?Await})*)
+    -> (associate-left e);
+
+MultiplicativeOperator <- op:[*/%] -> (operator location op);
+
+AdditiveExpression{Yield, Await} <-
+    e:(MultiplicativeExpression{?Yield, ?Await}
+       (_ AdditiveOperator _ MultiplicativeExpression{?Yield, ?Await})*)
+    -> (associate-left e);
+
+AdditiveOperator <- op:[+\-] -> (operator location op);
+
+ShiftExpression{Yield, Await} <-
+    e:(AdditiveExpression{?Yield, ?Await}
+       (_ ShiftOperator _ AdditiveExpression{?Yield, ?Await})*)
+    -> (associate-left e);
+
+ShiftOperator <- op:('<<' / '>>>' / '>>') -> (operator location op);
+
+RelationalExpression{In, Yield, Await} <-
+    {~In} e:(ShiftExpression{?Yield, ?Await}
+             (_ RelationalOperator{~In} _ ShiftExpression{?Yield, ?Await})*) /
+    {+In} e:((PrivateIdentifier _ InOperator _)?
+             (ShiftExpression{?Yield, ?Await}
+              (_ RelationalOperator{+In} _ ShiftExpression{?Yield, ?Await})*))
+    -> (associate-left e);
+
+RelationalOperator{In} <-
+    op:('<=' / '>=' / '<' / '>' / 'instanceof') /
+    {+In} op:'in'
+    -> (operator location op);
+
+InOperator <- op:'in' -> (operator location op);
+
+EqualityExpression{In, Yield, Await} <-
+    e:(RelationalExpression{?In, ?Yield, ?Await}
+       (_ EqualityOperator _ RelationalExpression{?In, ?Yield, ?Await})*)
+    -> (associate-left e);
+
+EqualityOperator <- op:('===' / '!==' / '==' / '!=') -> (operator location op);
+
+BitwiseANDExpression{In, Yield, Await} <-
+    e:(EqualityExpression{?In, ?Yield, ?Await}
+       (_ BitwiseANDOperator _ EqualityExpression{?In, ?Yield, ?Await})*)
+    -> (associate-left e);
+
+BitwiseANDOperator <- op:'&' -> (operator location op);
+
+BitwiseXORExpression{In, Yield, Await} <-
+    e:(BitwiseANDExpression{?In, ?Yield, ?Await}
+       (_ BitwiseXOROperator _ BitwiseANDExpression{?In, ?Yield, ?Await})*)
+    -> (associate-left e);
+
+BitwiseXOROperator <- op:'^' -> (operator location op);
+
+BitwiseORExpression{In, Yield, Await} <-
+    e:(BitwiseXORExpression{?In, ?Yield, ?Await}
+       (_ BitwiseOROperator _ BitwiseXORExpression{?In, ?Yield, ?Await})*)
+    -> (associate-left e);
+
+BitwiseOROperator <- op:'|' -> (operator location op);
+
+LogicalANDExpression{In, Yield, Await} <-
+    e:(BitwiseORExpression{?In, ?Yield, ?Await}
+       (_ LogicalANDOperator _ BitwiseORExpression{?In, ?Yield, ?Await})*)
+    -> (associate-left e);
+
+LogicalANDOperator <- op:'&&' -> (operator location op);
+
+LogicalORExpression{In, Yield, Await} <-
+    e:(LogicalANDExpression{?In, ?Yield, ?Await}
+       (_ LogicalOROperator _ LogicalANDExpression{?In, ?Yield, ?Await})*)
+    -> (associate-left e);
+
+LogicalOROperator <- op:'||' -> (operator location op);
+
+CoalesceExpression{In, Yield, Await} <-
+    e:(BitwiseORExpression{?In, ?Yield, ?Await}
+       (_ CoalesceOperator _ BitwiseORExpression{?In, ?Yield, ?Await})+)
+    -> (associate-left e);
+
+CoalesceOperator <- op:'??' -> (operator location op);
+
+ShortCircuitExpression{In, Yield, Await} <-
+    CoalesceExpression{?In, ?Yield, ?Await} / LogicalORExpression{?In, ?Yield, ?Await};
+
+ConditionalExpression{In, Yield, Await} <-
+    e:ShortCircuitExpression{?In, ?Yield, ?Await}
+    (_ '?' _ c:AssignmentExpression{+In, ?Yield, ?Await}
+     _ ':' _ a:AssignmentExpression{+In, ?Yield, ?Await})?
+    -> (if c (expression:conditional location e c a) e);
+
+AssignmentExpression{In, Yield, Await} <-
+    {+Yield} e:YieldExpression{?In, ?Await} /
+    e:ArrowFunction{?In, ?Yield, ?Await} /
+    e:AsyncArrowFunction{?In, ?Yield, ?Await} /
+    l:LeftHandSideExpression{?Yield, ?Await} _ op:AssignmentOperator _ r:AssignmentExpression{?In, ?Yield, ?Await} /
+    e:ConditionalExpression{?In, ?Yield, ?Await}
+    -> (or e (expression:binary location l op r));
+
+AssignmentOperator <-
+    op:('=' / '*=' / '/=' / '%=' / '+=' / '-=' /
+        '<<=' / '>>=' / '>>>=' / '&=' / '^=' / '|=' /
+        '**=' / '&&=' / '||=' / '??=')
+    -> (operator location op);
+
+AssignmentPattern{Yield, Await} <-
+    ObjectAssignmentPattern{?Yield, ?Await} /
+    ArrayAssignmentPattern{?Yield, ?Await};
+
+ObjectAssignmentPattern{Yield, Await} <-
+    '{' _ (AssignmentRestProperty{?Yield, ?Await} _)? '}' /
+    '{' _ AssignmentPropertyList{?Yield, ?Await} _ (',' _ (AssignmentRestProperty{?Yield, ?Await} _)?)? '}';
+
+ArrayAssignmentPattern{Yield, Await} <-
+    '[' _ (Elision _)? (AssignmentRestElement{?Yield, ?Await} _)? ']' /
+    '[' _ AssignmentElementList{?Yield, ?Await} _ (',' _ (Elision _)? (AssignmentRestElement{?Yield, ?Await} _)?)? ']';
+
+AssignmentRestProperty{Yield, Await} <- '...' _ DestructuringAssignmentTarget{?Yield, ?Await};
+
+AssignmentPropertyList{Yield, Await} <-
+    AssignmentProperty{?Yield, ?Await} (_ ',' _ AssignmentProperty{?Yield, ?Await})*;
+
+AssignmentElementList{Yield, Await} <-
+    AssignmentElisionElement{?Yield, ?Await} (_ ',' _ AssignmentElisionElement{?Yield, ?Await})*;
+
+AssignmentElisionElement{Yield, Await} <-
+    (Elision _)? AssignmentElement{?Yield, ?Await};
+
+AssignmentProperty{Yield, Await} <-
+    PropertyName{?Yield, ?Await} _ ':' _ AssignmentElement{?Yield, ?Await} /
+    IdentifierReference{?Yield, ?Await} (_ Initializer{+In, ?Yield, ?Await})?;
+
+AssignmentElement{Yield, Await} <-
+    DestructuringAssignmentTarget{?Yield, ?Await} (_ Initializer{+In, ?Yield, ?Await})?;
+
+AssignmentRestElement{Yield, Await} <-
+    '...' _ DestructuringAssignmentTarget{?Yield, ?Await};
+
+DestructuringAssignmentTarget{Yield, Await} <-
+    LeftHandSideExpression{?Yield, ?Await};
+
+CommaExpression{In, Yield, Await} <-
+    l:AssignmentExpression{?In, ?Yield, ?Await} (_ ',' _ r:CommaExpression{?In, ?Yield, ?Await})*
+    -> (if r (expression:comma location l r) l);
+
+Expression{In, Yield, Await} <- CommaExpression{?In, ?Yield, ?Await};
+
+//
+// Statements
+//
+
+Statement{Yield, Await, Return} <-
+    BlockStatement{?Yield, ?Await, ?Return} /
+    VariableStatement{?Yield, ?Await} /
+    EmptyStatement /
+    ExpressionStatement{?Yield, ?Await} /
+    IfStatement{?Yield, ?Await, ?Return} /
+    BreakableStatement{?Yield, ?Await, ?Return} /
+    ContinueStatement{?Yield, ?Await} /
+    BreakStatement{?Yield, ?Await} /
+    {+Return} ReturnStatement{?Yield, ?Await} /
+    WithStatement{?Yield, ?Await, ?Return} /
+    LabelledStatement{?Yield, ?Await, ?Return} /
+    ThrowStatement{?Yield, ?Await} /
+    TryStatement{?Yield, ?Await, ?Return} /
+    DebuggerStatement;
+
+Declaration{Yield, Await} <-
+    HoistableDeclaration{?Yield, ?Await, ~Default} /
+    ClassDeclaration{?Yield, ?Await, ~Defualt} /
+    LexicalDeclaration{+In, ?Yield, ?Await};
+
+HoistableDeclaration{Yield, Await, Default} <-
+    FunctionDeclaration{?Yield, ?Await, ?Default} /
+    GeneratorDeclaration{?Yield, ?Await, ?Default} /
+    AsyncFunctionDeclaration{?Yield, ?Await, ?Default} /
+    AsyncGeneratorDeclaration{?Yield, ?Await, ?Default};
+
+BreakableStatement{Yield, Await, Return} <-
+    IterationStatement{?Yield, ?Await, ?Return} /
+    SwitchStatement{?Yield, ?Await, ?Return};
+
+BlockStatement{Yield, Await, Return} <-
+    body:Block{?Yield, ?Await, ?Return}
+    -> (statement:block location body);
+
+Block{Yield, Await, Return} <-
+    ~'{' _ (StatementList{?Yield, ?Await, ?Return} _)? ~'}';
+
+StatementList{Yield, Await, Return} <-
+    StatementListItem{?Yield, ?Await, ?Return} (_ StatementListItem{?Yield, ?Await, ?Return})*;
+
+StatementListItem{Yield, Await, Return} <-
+    Statement{?Yield, ?Await, ?Return} /
+    Declaration{?Yield, ?Await};
+
+LexicalDeclaration{In, Yield, Await} <-
+    ('let' / 'const') _ BindingList{?In, ?Yield, ?Await} SEMICOLON;
+
+BindingList{In, Yield, Await} <-
+    LexicalBinding{?In, ?Yield, ?Await} (_ ',' _ LexicalBinding{?In, ?Yield, ?Await})*;
+
+LexicalBinding{In, Yield, Await} <-
+    BindingIdentifier{?Yield, ?Await} (_ Initializer{?In, ?Yield, ?Await})? /
+    BindingPattern{?Yield, ?Await} _ Initializer{?In, ?Yield, ?Await};
+
+VariableStatement{Yield, Await} <-
+    'var' _ decls:VariableDeclarationList{+In, ?Yield, ?Await} SEMICOLON
+    -> (declaration:var location decls);
+
+VariableDeclarationList{In, Yield, Await} <-
+    VariableDeclaration{?In, ?Yield, ?Await} (_ ~',' _ VariableDeclaration{?In, ?Yield, ?Await})*;
+
+VariableDeclaration{In, Yield, Await} <-
+    binding:BindingIdentifier{?Yield, ?Await} (_ init:Initializer{?In, ?Yield, ?Await})? /
+    binding:BindingPattern{?Yield, ?Await} _ init:Initializer{?In, ?Yield, ?Await}
+    -> (variable-declaration location binding init);
+
+BindingPattern{Yield, Await} <-
+    ObjectBindingPattern{?Yield, ?Await} /
+    ArrayBindingPattern{?Yield, ?Await};
+
+ObjectBindingPattern{Yield, Await} <-
+    '{' _ (BindingRestProperty{?Yield, ?Await} _)? '}' /
+    '{' _ BindingPropertyList{?Yield, ?Await} _ (',' _ (BindingRestProperty{?Yield, ?Await} _)?)? '}';
+
+ArrayBindingPattern{Yield, Await} <-
+    '[' _ Elision? (BindingRestElement{?Yield, ?Await} _)? ']' /
+    '[' _ BindingElementList{?Yield, ?Await} _ (',' _ (Elision _)? (BindingRestElement{?Yield, ?Await} _)?)? ']';
+
+BindingRestProperty{Yield, Await} <-
+    '...' _ BindingIdentifier{?Yield, ?Await};
+
+BindingPropertyList{Yield, Await} <-
+    BindingProperty{?Yield, ?Await} (_ ',' _ BindingProperty{?Yield, ?Await})*;
+
+BindingElementList{Yield, Await} <-
+    BindingElisionElement{?Yield, ?Await} (_ ',' _ BindingElisionElement{?Yield, ?Await})*;
+
+BindingElisionElement{Yield, Await} <-
+    (Elision _)? BindingElement{?Yield, ?Await};
+
+BindingProperty{Yield, Await} <-
+    SingleNameBinding{?Yield, ?Await} /
+    PropertyName{?Yield, ?Await} _ ':' _ BindingElement{?Yield, ?Await};
+
+BindingElement{Yield, Await} <-
+    SingleNameBinding{?Yield, ?Await} /
+    BindingPattern{?Yield, ?Await} (_ Initializer{+In, ?Yield, ?Await})?;
+
+SingleNameBinding{Yield, Await} <-
+    BindingIdentifier{?Yield, ?Await} (_ Initializer{+In, ?Yield, ?Await})?;
+
+BindingRestElement{Yield, Await} <-
+    '...' _ (BindingIdentifier{?Yield, ?Await} / BindingPattern{?Yield, ?Await});
+
+EmptyStatement <- ';' -> (statement:empty location);
+
+ExpressionStatement{Yield, Await} <-
+    !('{' / ('async' NoLineTerminator)? 'function' / 'class' / 'let' _ '[')
+    e:Expression{+In, ?Yield, ?Await} SEMICOLON
+    -> (statement:expression location e);
+
+IfStatement{Yield, Await, Return} <-
+    'if' _ '(' _ p:Expression{+In, ?Yield, ?Await} _ ')'
+    _ c:Statement{?Yield, ?Await, ?Return}
+    (_ 'else' _ a:Statement{?Yield, ?Await, ?Return})?
+    -> (statement:if location p c a);
+
+IterationStatement{Yield, Await, Return} <-
+    DoWhileStatement{?Yield, ?Await, ?Return} /
+    WhileStatement{?Yield, ?Await, ?Return} /
+    ForStatement{?Yield, ?Await, ?Return} /
+    ForInOfStatement{?Yield, ?Await, ?Return};
+
+DoWhileStatement{Yield, Await, Return} <-
+    'do' _ b:Statement{?Yield, ?Await, ?Return}
+    _ 'while' _ '(' _ t:Expression{+In, ?Yield, ?Await} _ ')' SEMICOLON
+    -> (statement:do location b t);
+
+WhileStatement{Yield, Await, Return} <-
+    'while' _ '(' _ t:Expression{+In, ?Yield, ?Await} _ ')' _ b:Statement{?Yield, ?Await, ?Return}
+    -> (statement:while location t b);
+
+ForStatement{Yield, Await, Return} <-
+    'for' _ '(' _ ('var' _ vars:VariableDeclarationList{~In, ?Yield, ?Await} _ ';' /
+                   init:LexicalDeclaration{~In, ?Yield, ?Await} /
+                   !('let' _ '[') init:Expression{~In, ?Yield, ?Await}? _ ';')
+                _ (test:Expression{+In, ?Yield, ?Await} _)? ';'
+                _ (update:Expression{+In, ?Yield, ?Await} _)? ')'
+        _ body:Statement{?Yield, ?Await, ?Return}
+    -> (statement:for location
+                      (if vars (declaration:var #f vars) init)
+                      test
+                      update
+                      body);
+
+ForInOfStatement{Yield, Await, Return} <-
+    'for' _ '(' _ (!('let' _ '[') LeftHandSideExpression{?Yield, ?Await} _ 'in' _ Expression{+In, ?Yield, ?Await} /
+                   'var' _ ForBinding{?Yield, ?Await} _ 'in' _ Expression{+In, ?Yield, ?Await} /
+                   ForDeclaration{?Yield, ?Await} _ 'in' _ Expression{+In, ?Yield, ?Await} /
+                   !('let' / 'async' _ 'of') LeftHandSideExpression{?Yield, ?Await} _ 'of' _ AssignmentExpression{+In, ?Yield, ?Await} /
+                   'var' _ ForBinding{?Yield, ?Await} _ 'of' _ AssignmentExpression{+In, ?Yield, ?Await} /
+                   ForDeclaration{?Yield, ?Await} _ 'of' AssignmentExpression{+In, ?Yield, ?Await}) _ ')' _
+        Statement{?Yield, ?Await, ?Return} /
+    {+Await} 'for' _ 'await' _ '(' _ (!'let' LeftHandSideExpression{?Yield, ?Await} /
+                                      'var' _ ForBinding{?Yield, ?Await} /
+                                      ForDeclaration{?Yield, ?Await}) _ 'of' _
+                                   AssignmentExpression{+In, ?Yield, ?Await} _ ')' _
+        Statement{?Yield, ?Await, ?Return};
+
+ForDeclaration{Yield, Await} <-
+    ('let' / 'const') _ ForBinding{?Yield, ?Await};
+
+ForBinding{Yield, Await} <-
+    BindingIdentifier{?Yield, ?Await} /
+    BindingPattern{?Yield, ?Await};
+
+ContinueStatement{Yield, Await} <-
+    'continue' (NoLineTerminator label:LabelIdentifier{?Yield, ?Await})? SEMICOLON
+    -> (statement:continue location label);
+
+BreakStatement{Yield, Await} <-
+    'break' (NoLineTerminator label:LabelIdentifier{?Yield, ?Await})? SEMICOLON
+    -> (statement:break location label);
+
+ReturnStatement{Yield, Await} <-
+    'return' (NoLineTerminator e:Expression{+In, ?Yield, ?Await})? SEMICOLON
+    -> (statement:return location e);
+
+WithStatement{Yield, Await, Return} <-
+    'with' _ '(' _ e:Expression{+In, ?Yield, ?Await} _ ')' _ body:Statement{?Yield, ?Await, ?Return}
+    -> (statement:with location e body);
+
+SwitchStatement{Yield, Await, Return} <-
+    'switch' _ '(' _ e:Expression{+In, ?Yield, ?Await} _ ')' _ body:CaseBlock{?Yield, ?Await, ?Return}
+    -> (statement:switch location e body);
+
+CaseBlock{Yield, Await, Return} <-
+    ~'{' _ CaseClauses{?Yield, ?Await, ?Return}?
+    (DefaultClause{?Yield, ?Await, ?Return} _
+    (CaseClauses{?Yield, ?Await, ?Return} _)?)? ~'}';
+
+CaseClauses{Yield, Await, Return} <- CaseClause{?Yield, ?Await, ?Return}+;
+
+CaseClause{Yield, Await, Return} <-
+    'case' _ e:Expression{+In, ?Yield, ?Await} _ ':' _ body:StatementList{?Yield, ?Await, ?Return}?
+    -> (case-clause location e body);
+
+DefaultClause{Yield, Await, Return} <-
+    'default' _ ':' _ body:StatementList{?Yield, ?Await, ?Return}?
+    -> (default-clause location body);
+
+LabelledStatement{Yield, Await, Return} <-
+    label:LabelIdentifier{?Yield, ?Await} _ ':' _ item:LabelledItem{?Yield, ?Await, ?Return}
+    -> (statement:label location label item);
+
+LabelledItem{Yield, Await, Return} <-
+    Statement{?Yield, ?Await, ?Return} /
+    FunctionDeclaration{?Yield, ?Await, ~Default};
+
+ThrowStatement{Yield, Await} <-
+    'throw' NoLineTerminator e:Expression{+In, ?Yield, ?Await} SEMICOLON
+    -> (statement:throw location e);
+
+TryStatement{Yield, Await, Return} <-
+    'try' _ body:Block{?Yield, ?Await, ?Return}
+    (_ 'catch' _ ('(' _ catch-id:CatchParameter{?Yield, ?Await} _ ')' _)?
+     catch-body:Block{?Yield, ?Await, ?Return}
+     _ (finally:Finally{?Yield, ?Await, ?Return})? /
+     _ finally:Finally{?Yield, ?Await, ?Return})
+    -> (statement:try location body catch-id catch-body finally);
+
+Finally{Yield, Await, Return} <- ~'finally' _ body:Block{?Yield, ?Await, ?Return};
+
+CatchParameter{Yield, Await} <-
+    BindingIdentifier{?Yield, ?Await} /
+    BindingPattern{?Yield, ?Await};
+
+DebuggerStatement <- 'debugger' SEMICOLON -> (statement:debugger location);
+
+//
+// Functions and Classes
+//
+
+UniqueFormalParameters{Yield, Await} <- FormalParameters{?Yield, ?Await};
+
+FormalParameters{Yield, Await} <-
+    FormalParameterList{?Yield, ?Await} (_ ~',' (_ FunctionRestParameter{?Yield, ?Await})?)? /
+    FunctionRestParameter{?Yield, ?Await}?;
+
+FormalParameterList{Yield, Await} <-
+    FormalParameter{?Yield, ?Await} (_ ~',' _ FormalParameter{?Yield, ?Await})*;
+
+FunctionRestParameter{Yield, Await} <- BindingRestElement{?Yield, ?Await};
+
+FormalParameter{Yield, Await} <- BindingElement{?Yield, ?Await};
+
+FunctionDeclaration{Yield, Await, Default} <-
+    'function' _ name:BindingIdentifier{?Yield, ?Await} _
+    '(' _ params:FormalParameters{~Yield, ~Await} _ ')' _
+    '{' _ body:FunctionBody{~Yield, ~Await} _ '}' /
+    {+Default} 'function' _ '(' _ params:FormalParameters{~Yield, ~Await} _ ')' _
+               '{' _ body:FunctionBody{~Yield, ~Await} _ '}'
+    -> (declaration:function location (function location name params body));
+
+FunctionExpression <- f:FunctionDeclaration{~Yield, ~Await, +Default}
+    -> (expression:function location f);
+
+FunctionBody{Yield, Await} <- FunctionStatementList{?Yield, ?Await};
+
+FunctionStatementList{Yield, Await} <- StatementList{?Yield, ?Await, +Return}?;
+
+ArrowFunction{In, Yield, Await} <-
+    params:ArrowParameters{?Yield, ?Await} NoLineTerminator '=>' _ body:ConciseBody{?In}
+    -> (function location #f params body);
+
+ArrowParameters{Yield, Await} <-
+    BindingIdentifier{?Yield, ?Await} /
+    ArrowFormalParameters{?Yield, ?Await};
+
+ArrowFormalParameters{Yield, Await} <- ~'(' _ UniqueFormalParameters{?Yield, ?Await} _ ~')';
+
+ConciseBody{In} <-
+    !'{' ExpressionBody{?In, ~Await} /
+    ~'{' _ FunctionBody{~Yield, ~Await} _ ~'}';
+
+ExpressionBody{In, Await} <- AssignmentExpression{?In, ~Yield, ?Await};
+
+AsyncArrowFunction{In, Yield, Await} <-
+    'async' NoLineTerminator AsyncArrowBindingIdentifier{?Yield} NoLineTerminator '=>' _ AsyncConciseBody{?In} /
+    AsyncArrowHead NoLineTerminator '=>' _ AsyncConciseBody{?In};
+
+AsyncConciseBody{In} <-
+    !'{' ExpressionBody{?In, +Await} /
+    '{' _ AsyncFunctionBody _ '}';
+
+AsyncArrowBindingIdentifier{Yield} <- BindingIdentifier{?Yield, +Await};
+
+AsyncArrowHead <- 'async' NoLineTerminator ArrowFormalParameters{~Yield, +Await};
+
+MethodDefinition{Yield, Await} <-
+    ClassElementName{?Yield, ?Await} _ '(' _ UniqueFormalParameters{~Yield, ~Await} _ ')' _ '{' _ FunctionBody{~Yield, ~Await} _ '}' /
+    GeneratorMethod{?Yield, ?Await} /
+    AsyncMethod{?Yield, ?Await} /
+    AsyncGeneratorMethod{?Yield, ?Await} /
+    'get' _ ClassElementName{?Yield, ?Await} _ '(' _ ')' _ '{' _ FunctionBody{~Yield, ~Await} _ '}' /
+    'set' _ ClassElementName{?Yield, ?Await} _ '(' _ PropertySetParameterList _ ')' _ '{' _ FunctionBody{~Yield, ~Await} _ '}';
+
+PropertySetParameterList <- FormalParameter{~Yield, ~Await};
+
+GeneratorDeclaration{Yield, Await, Default} <-
+    'function' _ '*' _ BindingIdentifier{?Yield, ?Await} _ '(' _ FormalParameters{+Yield, ~Await} _ ')' _ '{' _ GeneratorBody _ '}' /
+    {+Default} 'function' _ '*' _ '(' _ FormalParameters{+Yield, ~Await} _ ')' _ '{' _ GeneratorBody _ '}';
+
+GeneratorExpression <-
+    'function' _ '*' _ (BindingIdentifier{+Yield, ~Await} _)? '(' _ FormalParameters{+Yield, ~Await} _ ')' _ '{' _ GeneratorBody _ '}';
+
+GeneratorMethod{Yield, Await} <-
+    '*' _ ClassElementName{?Yield, ?Await} _ '(' _ UniqueFormalParameters{+Yield, ~Await} _ ')' _ '{' _ GeneratorBody _ '}';
+
+GeneratorBody <- FunctionBody{+Yield, ~Await};
+
+YieldExpression{In, Await} <-
+    'yield' (NoLineTerminator ('*' _)? AssignmentExpression{?In, +Yield, ?Await})?;
+
+AsyncGeneratorDeclaration{Yield, Await, Default} <-
+    'async' NoLineTerminator 'function' _ '*' _ BindingIdentifier{?Yield, ?Await} _ '(' _ FormalParameters{+Yield, +Await} _ ')' _ '{' _ AsyncGeneratorBody _ '}' /
+    {+Default} 'async' NoLineTerminator 'function' _ '*' _ '(' _ FormalParameters{+Yield, +Await} _ ')' _ '{' _ AsyncGeneratorBody _ '}';
+
+AsyncGeneratorExpression <-
+    'async' NoLineTerminator 'function' _ '*' _ (BindingIdentifier{+Yield, +Await} _)? '(' _ FormalParameters{+Yield, +Await} _ ')' _ '{' _ AsyncGeneratorBody _ '}';
+
+AsyncGeneratorMethod{Yield, Await} <-
+    'async' NoLineTerminator '*' _ ClassElementName{?Yield, ?Await} _ '(' _ UniqueFormalParameters{+Yield, +Await} _ ')' _ '{' _ AsyncGeneratorBody _ '}';
+
+AsyncGeneratorBody <- FunctionBody{+Yield, +Await};
+
+AsyncFunctionDeclaration{Yield, Await, Default} <-
+    'async' NoLineTerminator 'function' _ BindingIdentifier{?Yield, ?Await} _ '(' _ FormalParameters{~Yield, +Await} _ ')' _ '{' _ AsyncFunctionBody _ '}' /
+    {+Default} 'async' NoLineTerminator 'function' _ '(' FormalParameters{~Yield, ~Await} _ ')' _ '{' _ AsyncFunctionBody _ '}';
+
+AsyncFunctionExpression <-
+    'async' NoLineTerminator 'function' _ (BindingIdentifier{~Yield, +Await} _)? '(' _ FormalParameters{~Yield, +Await} _ ')' _ '{' _ AsyncFunctionBody _ '}';
+
+AsyncMethod{Yield, Await} <-
+    'async' NoLineTerminator ClassElementName{?Yield, ?Await} _ '(' _ UniqueFormalParameters{~Yield, +Await} _ ')' _ '{' _ AsyncFunctionBody _ '}';
+
+AsyncFunctionBody <- FunctionBody{~Yield, +Await};
+
+AwaitExpression{Yield} <- 'await' _ (UpdateExpression{?Yield, +Await} / UnaryExpression{?Yield, +Await});
+
+ClassDeclaration{Yield, Await, Default} <-
+    'class' _ BindingIdentifier{?Yield, ?Await} _ ClassTail{?Yield, ?Await} /
+    {+Default} 'class' _ ClassTail{?Yield, ?Await};
+
+ClassExpression{Yield, Await} <-
+    'class' _ (BindingIdentifier{?Yield, ?Await} _)? ClassTail{?Yield, ?Await};
+
+ClassTail{Yield, Await} <-
+    (ClassHeritage{?Yield, ?Await} _)? '{' _ (ClassBody{?Yield, ?Await} _)? '}';
+
+ClassHeritage{Yield, Await} <-
+    'extends' _ LeftHandSideExpression{?Yield, ?Await};
+
+ClassBody{Yield, Await} <- ClassElementList{?Yield, ?Await};
+
+ClassElementList{Yield, Await} <-
+    ClassElement{?Yield, ?Await} (_ ClassElement{?Yield, ?Await})*;
+
+ClassElement{Yield, Await} <-
+    ('static' _)? (MethodDefinition{?Yield, ?Await} / FieldDefinition{?Yield, ?Await} SEMICOLON) /
+    ClassStaticBlock /
+    SEMICOLON;
+
+FieldDefinition{Yield, Await} <-
+    ClassElementName{?Yield, ?Await} (_ Initializer{+In, ?Yield, ?Await})?;
+
+ClassElementName{Yield, Await} <-
+    PropertyName{?Yield, ?Await} /
+    PrivateIdentifier;
+
+ClassStaticBlock <- 'static' _ '{' _ ClassStaticBlockBody _ '}';
+
+ClassStaticBlockBody <- ClassStaticBlockStatementList;
+
+ClassStaticBlockStatementList <- StatementList{~Yield, +Await, ~Return}?;
+
+//
+// Scripts and Modules
+//
+
+Script <- _ ScriptBody? _;
+
+ScriptBody <- StatementList{~Yield, ~Await, ~Return};
+
+Module <- _ ModuleBody? _;
+
+ModuleBody <- ModuleItemList;
+
+ModuleItemList <- ModuleItem (_ ModuleItem)*;
+
+ModuleItem <-
+    ImportDeclaration /
+    ExportDeclaration /
+    StatementListItem{~Yield, +Await, ~Return};
+
+ImportDeclaration <-
+    'import' _ (ImportClause _ FromClause / ModuleSpecifier) _ SEMICOLON;
+
+ImportClause <-
+    ImportedDefaultBinding /
+    NameSpaceImport /
+    NamedImports /
+    ImportedDefaultBinding _ ',' _ (NameSpaceImport / NamedImports);
+
+ImportedDefaultBinding <- ImportedBinding;
+
+NameSpaceImport <- '*' _ 'as' _ ImportedBinding;
+
+NamedImports <- '{' _ (ImportsList _ (',' _)?)? '}';
+
+FromClause <- 'from' _ ModuleSpecifier;
+
+ImportsList <- ImportSpecifier (_ ',' _ ImportSpecifier)*;
+
+ImportSpecifier <- (IdentifierName _ 'as' _ )? ImportedBinding;
+
+ModuleSpecifier <- StringLiteral;
+
+ImportedBinding <- BindingIdentifier{~Yield, +Await};
+
+ExportDeclaration <-
+    'export' _ (ExportFromClause _ FromClause SEMICOLON /
+                NamedExports SEMICOLON /
+                VariableStatement{~Yield, +Await} /
+                Declaration{~Yield, +Await} /
+                'default' _ (HoistableDeclaration{~Yield, +Await, +Default} /
+                             ClassDeclaration{~Yield, +Await, +Default} /
+                             !('function' / 'async' NoLineTerminator 'function' / 'class')
+                             AssignmentExpression{+In, ~Yield, +Await} SEMICOLON));
+
+ExportFromClause <-
+    '*' (_ 'as' _ IdentifierName)? /
+    NamedExports;
+
+NamedExports <- '{' _ (ExportsList _ (',' _)?)? '}';
+
+ExportsList <-
+    ExportSpecifier (_ ',' _ ExportSpecifier)*;
+
+ExportSpecifier <-
+    IdentifierName (_ 'as' _ IdentifierName)?;

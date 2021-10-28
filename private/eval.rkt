@@ -32,15 +32,12 @@
          (force es-eval-namespace)))))
 
 (define-namespace-anchor here)
-(define-runtime-module-path-index main-module "../lang/main.rkt")
 
 (define es-eval-namespace
   (lazy
-   (parameterize
-       ([current-namespace
-         (namespace-anchor->empty-namespace here)])
-     (namespace-require main-module)
-     (current-namespace))))
+   (let ([ns (namespace-anchor->empty-namespace here)])
+     (namespace-require 'ecmascript/lang/main ns)
+     ns)))
 
 (define (eval-read-interaction src in)
   (let ([line (read-line in)])

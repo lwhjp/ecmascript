@@ -6,7 +6,13 @@
 
 (struct case-clause syntax-element (expression body) #:transparent)
 
+(struct declaration syntax-element () #:transparent)
+(struct declaration:function declaration (definition) #:transparent)
+(struct declaration:var declaration (decls) #:transparent)
+
 (struct default-clause syntax-element (body) #:transparent)
+
+(struct elision syntax-element (length) #:transparent)
 
 (struct expression syntax-element () #:transparent)
 (struct expression:binary expression (left operator right) #:transparent)
@@ -17,8 +23,11 @@
 (struct expression:literal expression (value) #:transparent)
 (struct expression:member-reference expression (base property) #:transparent)
 (struct expression:new expression (constructor arguments) #:transparent)
+(struct expression:optional expression (expression) #:transparent)
 (struct expression:postfix expression (operand operator) #:transparent)
 (struct expression:reference expression (identifier) #:transparent)
+(struct expression:super-call expression (arguments) #:transparent)
+(struct expression:super-reference expression (property) #:transparent)
 (struct expression:this expression () #:transparent)
 (struct expression:unary expression (operator operand) #:transparent)
 
@@ -42,6 +51,8 @@
 (struct property-initializer:get property-initializer (function) #:transparent)
 (struct property-initializer:set property-initializer (function) #:transparent)
 
+(struct spread syntax-element (element) #:transparent)
+
 (struct statement syntax-element () #:transparent)
 (struct statement:block statement (body) #:transparent)
 (struct statement:break statement (label) #:transparent)
@@ -58,8 +69,7 @@
 (struct statement:switch statement (expression body) #:transparent)
 (struct statement:throw statement (expression) #:transparent)
 (struct statement:try statement (body catch-id catch-body finally-body) #:transparent)
-(struct statement:var statement (declarations) #:transparent)
 (struct statement:while statement (test body) #:transparent)
 (struct statement:with statement (expression body) #:transparent)
 
-(struct variable-declaration syntax-element (name initializer) #:transparent)
+(struct variable-declaration syntax-element (binding initializer) #:transparent)

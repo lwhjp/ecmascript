@@ -22,7 +22,8 @@
  (rename-out
   [ecma:call call]
   [ecma:new new]
-  [ecma:this this]))
+  [ecma:this this]
+  [es:var var]))
 
 (define-syntax-parameter return-binding #f)
 
@@ -42,7 +43,7 @@
    [(_ (~optional name:id)
        (param:id ...)
        (~optional (~seq #:vars (var-id:id ...)))
-       (~optional (~seq body:expr ...+)))
+       (~optional (~seq body:expr ...+) #:defaults ([(body 1) (#'ecma:undefined)])))
     #`(let ([scope-env (new-declarative-environment lexical-environment)])
         (letrec
             ([f (new Function%
@@ -55,8 +56,8 @@
                             (syntax-parameterize
                                 ([return-binding (make-rename-transformer #'escape)])
                               (begin-scope local-env
-                                           #,@(if (attribute var-id) #'(#:vars (var-id ...)) #'())
-                                           #,@(or (attribute body) #'(ecma:undefined)))))))])])
+                                           (~? (~@ #:vars (var-id ...)))
+                                body ...)))))])])
           #,@(if (attribute name)
                  (with-syntax ([idstr (symbol->string (syntax-e (attribute name)))])
                    #'((send scope-env create-immutable-binding! idstr)
@@ -64,17 +65,30 @@
                  #'())
           f))]))
 
+(begin-for-syntax
+  (define-syntax-class var-decl
+    #:attributes (name init-stx)
+    (pattern name:id
+      #:attr init-stx #f)
+    (pattern [name:id init:expr]
+      #:attr init-stx #'(put-value! (es:identifier name) (get-value init)))))
+
+(define-syntax es:var
+  (syntax-parser
+    [(_ decl:var-decl ...)
+     (with-syntax ([(init ...) (filter values (attribute decl.init-stx))])
+       #'(begin init ...))]))
+
 (define-syntax (begin-scope stx)
   (syntax-parse stx
     [(_ new-env (~optional (~seq #:vars (var-id:id ...))) form ...)
-     (with-syntax ([var-ids (or (attribute var-id) '())])
-       #'(let ([new-scope new-env])
-           (syntax-parameterize
-               ([variable-environment (make-rename-transformer #'new-scope)]
-                [lexical-environment (make-rename-transformer #'new-scope)])
-             (reorder-functions () ()
-               (create-variables! variable-environment 'var-ids)
-               form ...))))]))
+     #'(let ([new-scope new-env])
+         (syntax-parameterize
+             ([variable-environment (make-rename-transformer #'new-scope)]
+              [lexical-environment (make-rename-transformer #'new-scope)])
+           (reorder-functions () ()
+             (~? (create-variables! variable-environment '(var-id ...)))
+             form ...)))]))
 
 (define (create-function! env-rec id fn)
   (let ([name (symbol->string id)])

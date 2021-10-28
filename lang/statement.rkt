@@ -174,9 +174,9 @@
 
 (define-syntax (stmt:try stx)
   (syntax-parse stx
-    [(_ body
-        (~optional (~seq #:catch cid cbody))
-        (~optional (~seq #:finally fbody)))
+    [(_ body:expr ...
+        (~optional (~seq #:catch cid cbody:expr ...))
+        (~optional (~seq #:finally fbody:expr ...)))
      (with-syntax
          ([handlers
            (if (attribute cid)
@@ -187,16 +187,12 @@
                          (send env create-mutable-binding! eid)
                          (send env set-mutable-binding! eid (exn:throw-value e) #f)
                          (begin-scope env
-                           cbody)))]))
+                           cbody ...)))]))
                #'())]
-          [post
-           (if (attribute fbody)
-               #'(λ ()
-                   fbody)
-               #'void)])
+          [post #'(~? (λ () fbody ...) void)])
        #'(dynamic-wind
           void
           (λ ()
             (with-handlers handlers
-              body))
+              body ...))
           post))]))

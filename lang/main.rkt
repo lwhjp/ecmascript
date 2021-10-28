@@ -24,6 +24,7 @@
          begin-scope
          id
          member
+         var
 
          undefined
          null

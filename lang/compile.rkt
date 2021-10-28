@@ -3,321 +3,216 @@
 (require racket/contract
          racket/list
          racket/match
-         "../private/primitive.rkt"
-         (prefix-in ast: "../ast.rkt"))
+         racket/syntax
+         syntax/strip-context
+         "../ast.rkt")
 
 (provide/contract
  [ecmascript->racket
-  (-> (listof (or/c ast:function? ast:statement?))
-      (listof syntax?))])
+  (-> (listof (or/c declaration? statement?))
+      syntax?)])
 
-(define (ecmascript->racket stx)
-  (list (compile-program stx)))
+(define (ecmascript->racket script)
+  (strip-context
+   ; TODO: check for strict mode
+   (with-syntax ([(stmt ...) (map compile-statement script)]
+                 [(var ...) (extract-var-names script)])
+     #'(begin-scope (new-object-environment (current-global-object) lexical-environment)
+         #:vars (var ...)
+         stmt ...))))
 
-(define (extract-statement-vars stmt)
-  (match stmt
-    [(ast:statement:block _ stmts)
-     (apply append (map extract-statement-vars stmts))]
-    [(ast:statement:var _ (list (ast:variable-declaration _ id _) ...))
-     id]
-    [(ast:statement:if _ _ true false)
-     (append (extract-statement-vars true)
-             (extract-statement-vars false))]
-    [(ast:statement:do _ body _)
-     (extract-statement-vars body)]
-    [(ast:statement:while _ _ body)
-     (extract-statement-vars body)]
-    [(ast:statement:for _ (list (ast:variable-declaration _ id _) ...) _ _ body)
-     (append id (extract-statement-vars body))]
-    [(ast:statement:for _ _ _ _ body)
-     (extract-statement-vars body)]
-    [(ast:statement:for-in _ (ast:variable-declaration _ i _) _ body)
-     (cons i (extract-statement-vars body))]
-    [(ast:statement:with _ _ body)
-     (extract-statement-vars body)]
-    [(ast:statement:switch _ _ cases)
-     (apply append (map extract-statement-vars cases))]
-    [(ast:statement:label _ _ stmt)
-     (extract-statement-vars stmt)]
-    [(ast:statement:try _ block _ catch finally)
-     (append (extract-statement-vars block)
-             (extract-statement-vars catch)
-             (extract-statement-vars finally))]
-    [_ '()]))
+(define (compile-statement stmt)
+  (let c ([node stmt])
+    (define stx-e
+      (match node
+        [(case-clause _ expr body)
+         `((,(c expr) ,(c body)))]
+        [(declaration:function _ body)
+         (c body)]
+        [(declaration:var _ decls)
+         `(var ,@(map c decls))]
+        [(default-clause _ body)
+         `(default ,(c body))]
+        [(expression:binary _ l op r)
+         `(,(c op) ,(c l) ,(c r))]
+        [(expression:call _ f args)
+         `(,(c f) ,@(map c args))]
+        [(expression:comma _ l r)
+         `(\, ,(c l) ,(c r))]
+        [(expression:conditional _ t e1 e2)
+         `(?: ,(c e1) ,(c e2))]
+        [(expression:function _ f)
+         (c f)]
+        [(expression:literal _ v)
+         (c v)]
+        [(expression:member-reference _ b p)
+         `(member ,(c b) ,(c p))]
+        [(expression:new _ t args)
+         `(new ,(c t) ,@(map c args))]
+        [(expression:postfix _ e op)
+         `(,(postfix (c op)) ,(c e))]
+        [(expression:reference _ id)
+         `(id ,(c id))]
+        [(expression:super-call _ args)
+         `(super ,@(map c args))]
+        [(expression:super-reference _ p)
+         `(member super ,(c p))]
+        [(expression:this _)
+         'this]
+        [(expression:unary _ op e)
+         `(,(c op) ,(c e))]
+        [(function _ name parameters body)
+         `(function ,@(if name (list (c name)) '())
+                    ,(map c parameters)
+                    #:vars ,(append* (map extract-var-names body))
+            ,@(map c body))]
+        [(identifier _ s)
+         (parse-identifier s)]
+        [(literal:array _ es)
+         `(array ,@(map c es))]
+        [(literal:boolean _ v)
+         v]
+        [(literal:null _)
+         'null]
+        [(literal:number _ v)
+         (parse-number v)]
+        ; object
+        [(literal:regexp _ pattern flags)
+         `(regexp ,pattern ,(list->string flags))]
+        [(literal:string _ v)
+         (parse-string v)]
+        [(operator _ s)
+         (string->symbol s)]
+        [(statement:block _ body)
+         `(block ,@(map c body))]
+        [(statement:break _ label)
+         `(break ,@(if label (list (c label)) '()))]
+        [(statement:continue _ label)
+         `(continue ,@(if label (list (c label)) '()))]
+        [(statement:debugger _)
+         `(debugger)]
+        [(statement:do _ body test)
+         `(do ,(c body) ,(c test))]
+        [(statement:empty _)
+         `(empty-statement)]
+        [(statement:expression _ e)
+         `(get-value ,(c e))]
+        [(statement:for _ init test update body)
+         `(for #:init ,(c init)
+               #:test ,(and test (c test))
+               #:update ,(and update (c update))
+            ,(c body))]
+        [(statement:for-in _ index expr body)
+         `(for-in ,(c index) ,(c expr) ,(c body))]
+        [(statement:if _ test e1 e2)
+         `(if ,(c test) ,(c e1) ,@(if e2 (list (c e2)) '()))]
+        [(statement:label _ l s)
+         `(label ,(c l) ,(c s))]
+        [(statement:return _ e)
+         `(return ,@(if e (list (c e)) '()))]
+        [(statement:switch _ expr body)
+         `(switch ,(c expr) ,@(map c body))]
+        [(statement:throw _ e)
+         `(throw ,(c e))]
+        [(statement:try _ body cid cb fb)
+         `(try ,@(map c body)
+               ,@(if cid `(#:catch ,(c cid) ,@(map c cb)) '())
+               ,@(if fb `(#:finally ,@(map c fb)) '()))]
+        [(statement:while _ test body)
+         `(while ,(c test) ,(c body))]
+        [(statement:with _ expr body)
+         `(with ,(c expr) ,(c body))]
+        [(variable-declaration _ id expr)
+         (if expr (list (c id) (c expr)) (c id))]))
+    (datum->syntax #f stx-e (syntax-element-location node))))
 
-(define (extract-vars elts)
-  (apply
-   append
-   (map
-    extract-statement-vars
-    elts)))
+(define (extract-var-names node)
+  (remove-duplicates
+   (let loop ([node node])
+     (match node
+       [(declaration:var _ (list (variable-declaration _ binding _) ...))
+        (append* (map extract-var-names/binding binding))]
+       [(statement:block _ stmts)
+        (append* (map loop stmts))]
+       [(statement:if _ _ true false)
+        (append (loop true)
+                (loop false))]
+       [(statement:do _ body _)
+        (loop body)]
+       [(statement:while _ _ body)
+        (loop body)]
+       [(statement:for _ (list (variable-declaration _ id _) ...) _ _ body)
+        (append (append* (map extract-var-names/binding id))
+                (loop body))]
+       [(statement:for _ _ _ _ body)
+        (loop body)]
+       [(statement:for-in _ (variable-declaration _ id _) _ body)
+        (append (extract-var-names/binding id)
+                (loop body))]
+       [(statement:with _ _ body)
+        (loop body)]
+       [(statement:switch _ _ cases)
+        (append* (map loop cases))]
+       [(statement:label _ _ stmt)
+        (loop stmt)]
+       [(statement:try _ block _ catch finally)
+        (append (loop block)
+                (loop catch)
+                (loop finally))]
+       [_ '()]))))
 
-(define (compile-identifier id)
-  (match-define (ast:identifier loc sym) id)
-  (datum->syntax #f sym loc))
+(define extract-var-names/binding
+  (match-lambda
+    [(identifier _ symbol) (list (parse-identifier symbol))]))
 
-(define (add-prefix pref sym)
+(define (parse-number s)
+  (cond
+    [(regexp-match? #rx"^0[xX]" s)
+     (string->number (substring s 2) 16)]
+    [else (string->number s)]))
+
+(define (parse-string s)
+  (define (parse-escape esc)
+    (define c (string-ref esc 1))
+    (case c
+      [(#\u #\x)
+       (string
+        (integer->char
+         (string->number
+          (substring esc 2)
+          16)))]
+      [(#\u000A #\u000D #\u2028 #\u2029) ""]
+      [else
+       (hash-ref
+        #hasheqv((#\b . "\u0008")
+                 (#\t . "\u0009")
+                 (#\n . "\u000A")
+                 (#\v . "\u000B")
+                 (#\f . "\u000C")
+                 (#\r . "\u000D"))
+        c
+        (string c))]))
+  (define escapes
+    (regexp-match-positions*
+     #px"\\\\([^ux]|x[[:xdigit:]]{2}|u[[:xdigit:]]{4})"
+     s))
+  (let loop ([begin 0]
+             [escapes escapes])
+    (if (null? escapes)
+        (substring s begin)
+        (string-append
+         (substring s begin (caar escapes))
+         (parse-escape (substring s (caar escapes) (cdar escapes)))
+         (loop (cdar escapes) (cdr escapes))))))
+
+(define (parse-identifier s)
   (string->symbol
-   (string-append (symbol->string pref)
-                  (symbol->string sym))))
+   (regexp-replace*
+    #rx"\\\\u({([^}]+)}|(....))"
+    s
+    (λ (a b c d)
+      (integer->char
+       (string->number (or c d) 16))))))
 
-(define (compile-expression stx)
-  (match stx
-    [(ast:expression:this loc)
-     (datum->syntax #f 'this loc)]
-    [(ast:expression:reference loc id)
-     (datum->syntax #f `(id ,(compile-identifier id)) loc)]
-    [(ast:expression:literal _ (ast:literal:null loc))
-     (datum->syntax #f 'null loc)]
-    [(ast:expression:literal _ (ast:literal:boolean loc v))
-     (datum->syntax #f v loc)]
-    [(ast:expression:literal _ (ast:literal:number loc v))
-     (datum->syntax #f v loc)]
-    [(ast:expression:literal _ (ast:literal:string loc v))
-     (datum->syntax #f v loc)]
-    [(ast:expression:literal _ (ast:literal:regexp loc pattern flags))
-     (datum->syntax #f `(regexp ,pattern ,flags) loc)]
-    [(ast:expression:literal _ (ast:literal:array loc elements))
-     (datum->syntax #f
-       `(array
-         ,@(map (λ (elt)
-                  (if elt
-                      (compile-expression elt)
-                      ecma:undefined))
-                elements))
-       loc)]
-    [(ast:expression:literal _ (ast:literal:object loc props))
-     (datum->syntax #f
-       `(object
-         ,@(map compile-object-property props))
-       loc)]
-    [(ast:expression:function _ fn) (compile-function fn)]
-    [(ast:expression:member-reference loc obj prop)
-     (datum->syntax #f
-       `(member ,(compile-expression obj)
-                ,(if (ast:identifier? prop)
-                     (compile-identifier prop)
-                     (compile-expression prop)))
-       loc)]
-    [(ast:expression:new loc expr args)
-     (datum->syntax #f
-       `(new ,(compile-expression expr)
-             ,@(map compile-expression args))
-       loc)]
-    [(ast:expression:call loc expr args)
-     (datum->syntax #f
-       `(call ,(compile-expression expr)
-              ,@(map compile-expression args))
-       loc)]
-    [(ast:expression:postfix loc expr op)
-     (datum->syntax #f
-       `(,(datum->syntax #f
-            (add-prefix 'post (ast:operator-symbol op))
-            (ast:syntax-element-location op))
-         ,(compile-expression expr))
-       loc)]
-    [(ast:expression:unary loc op expr)
-     (datum->syntax #f
-       `(,(datum->syntax #f
-            (ast:operator-symbol op)
-            (ast:syntax-element-location op))
-         ,(compile-expression expr))
-       loc)]
-    [(ast:expression:binary loc left op right)
-     (datum->syntax #f
-       `(,(datum->syntax #f
-            (ast:operator-symbol op)
-            (ast:syntax-element-location op))
-         ,(compile-expression left)
-         ,(compile-expression right))
-       loc)]
-    [(ast:expression:conditional loc test true false)
-     (datum->syntax #f
-       `(?: ,(compile-expression test)
-            ,(compile-expression true)
-            ,(compile-expression false))
-       loc)]
-    [(ast:expression:comma loc left right)
-     (datum->syntax #f
-       `(\, ,(compile-expression left)
-            ,(compile-expression right))
-       loc)]))
-
-(define (compile-object-property stx)
-  (define name-stx
-    (match (ast:property-initializer-name stx)
-      [(ast:identifier loc sym) (datum->syntax #f sym loc)]
-      [(ast:literal:string loc v) (datum->syntax #f v loc)]
-      [(ast:literal:number loc v) (datum->syntax #f v loc)]))
-  (match stx
-    [(ast:property-initializer:data loc _ value)
-     (datum->syntax #f
-       `[,name-stx ,(compile-expression value)]
-       loc)]
-    [(ast:property-initializer:get loc _ fn)
-     (datum->syntax #f
-       `[,name-stx #:get ,(compile-function fn)]
-       loc)]
-    [(ast:property-initializer:set loc _ fn)
-     (datum->syntax #f
-       `[,name-stx #:set ,(compile-function fn)]
-       loc)]))
-
-(define (compile-statement stx)
-  (match stx
-    [(ast:statement:block loc stmts)
-     (datum->syntax #f
-       `(block ,@(map compile-statement stmts))
-       loc)]
-    [(ast:statement:var loc decls)
-     (compile-variable-declaration-list decls loc)]
-    [(ast:statement:empty loc)
-     (datum->syntax #f
-       '(empty-statement)
-       loc)]
-    [(ast:statement:expression loc expr)
-     (datum->syntax #f
-       `(get-value ,(compile-expression expr))
-       loc)]
-    [(ast:statement:if loc test true false)
-     (datum->syntax #f
-       (if false
-           `(if ,(compile-expression test)
-                ,(compile-statement true)
-                ,(compile-statement false))
-           `(if ,(compile-expression test)
-                ,(compile-statement true)))
-       loc)]
-    [(ast:statement:while loc test body)
-     (datum->syntax #f
-       `(while ,(compile-expression test)
-          ,(compile-statement body))
-       loc)]
-    [(ast:statement:for loc (list var-decl ...) test update body)
-     (datum->syntax #f
-       `(for #:init ,(compile-variable-declaration-list var-decl loc)
-             #:test ,(and test
-                          (compile-expression test))
-             #:update ,(and update
-                            (compile-expression update))
-          ,(compile-statement body)))]
-    [(ast:statement:for loc init test update body)
-     (datum->syntax #f
-       `(for #:init ,(and init
-                          (compile-expression init))
-             #:test ,(and test
-                          (compile-expression test))
-             #:update ,(and update
-                            (compile-expression update))
-          ,(compile-statement body)))]
-    [(ast:statement:for-in loc (ast:variable-declaration _ vid vexpr) expr body)
-     (datum->syntax #f
-       `(for-in (id ,(compile-identifier vid))
-                ,(compile-expression expr)
-          ,(compile-statement body)))]
-    [(ast:statement:for-in loc lhs expr body)
-     (datum->syntax #f
-       `(for-in ,(compile-expression lhs) ,(compile-expression expr)
-          ,(compile-statement body)))]
-    [(ast:statement:continue loc label)
-     (datum->syntax #f
-       (if label
-           `(continue ,(compile-identifier label))
-           '(continue))
-       loc)]
-    [(ast:statement:break loc label)
-     (datum->syntax #f
-       (if label
-           `(break ,(compile-identifier label))
-           '(break)))]
-    [(ast:statement:return loc expr)
-     (datum->syntax #f
-       (if expr
-           `(return ,(compile-expression expr))
-           '(return))
-       loc)]
-    [(ast:statement:with loc expr body)
-     (datum->syntax #f
-       `(with ,(compile-expression expr)
-          ,(compile-statement body))
-       loc)]
-    [(ast:statement:switch loc expr body)
-     (datum->syntax #f
-       `(switch ,(compile-expression expr)
-          ,@(map
-             (match-lambda
-               [(ast:case-clause loc expr body)
-                (datum->syntax #f
-                  `(,(compile-expression expr)
-                    ,@(map compile-statement body))
-                  loc)]
-                [(ast:default-clause loc body)
-                 (datum->syntax #f
-                   `(default
-                     ,@(map compile-statement body))
-                   loc)])
-              body))
-       loc)]
-    [(ast:statement:label loc label stmt)
-     (datum->syntax #f
-       `(label ,(compile-identifier label)
-          ,(compile-statement stmt))
-       loc)]
-    [(ast:statement:throw loc expr)
-     (datum->syntax #f
-       `(throw ,(compile-expression expr))
-       loc)]
-    [(ast:statement:try loc tb cid cb fb)
-     (datum->syntax #f
-       `(try ,(compile-statement tb)
-             ,@(if cid
-                   `(#:catch ,(compile-identifier cid)
-                             ,(compile-statement cb))
-                   '())
-             ,@(if fb `(#:finally ,(compile-statement fb)) '()))
-       loc)]))
-
-(define (compile-variable-declaration-list stx loc)
-  (let ([assignments
-         (filter-map
-          (λ (decl)
-            (match-define (ast:variable-declaration loc id expr) decl)
-            (and expr
-                 (datum->syntax #f
-                   `(put-value!
-                     (id ,(compile-identifier id))
-                     (get-value ,(compile-expression expr)))
-                   loc)))
-          stx)])
-    (datum->syntax #f
-      (if (null? assignments)
-          '(empty-statement)
-          `(block ,@assignments))
-      loc)))
-
-(define (compile-body elts)
-  (map
-   (match-lambda
-     [(? ast:statement? stmt) (compile-statement stmt)]
-     [(? ast:function? fn) (compile-function fn)])
-   elts))
-
-(define (compile-function stx)
-  (match-define (ast:function loc name params body) stx)
-  (let ([vars (extract-vars body)]
-        [compiled-body (compile-body body)])
-    (datum->syntax #f
-      (if name
-          `(function ,(compile-identifier name)
-                     ,(map compile-identifier params)
-                     #:vars ,(map compile-identifier vars)
-             ,@compiled-body)
-          `(function ,(map compile-identifier params)
-                     #:vars ,(map compile-identifier vars)
-             ,@compiled-body)))))
-
-(define (compile-program prog)
-  (datum->syntax #f
-    `(begin-scope (new-object-environment (current-global-object) lexical-environment)
-       #:vars ,(map compile-identifier (extract-vars prog))
-       ,@(compile-body prog))))
+(define (postfix s)
+  (format-id s "post~a" s))
