@@ -11,13 +11,13 @@
 
 // White Space and Comments
 
-WhiteSpace <- TAB / VT / FF / SP / NBSP / ZWNBSP / USP;
-LineTerminator <- LF / CR / LS / PS;
-LineTerminatorSequence <- LF / CR !LF / LS / PS / CR LF;
+WhiteSpace < TAB / VT / FF / SP / NBSP / ZWNBSP / USP;
+LineTerminator < LF / CR / LS / PS;
+LineTerminatorSequence < LF / CR LF? / LS / PS;
 
-Comment <- MultiLineComment / SingleLineComment;
-MultiLineComment <- ~'/*' ('*' !'/' / [^*])* ~'*/';
-SingleLineComment <- ~'//' (!LineTerminator .)*;
+Comment < MultiLineComment / SingleLineComment;
+MultiLineComment < ~'/*' ('*' !'/' / [^*])* ~'*/';
+SingleLineComment < ~'//' (!LineTerminator .)*;
 
 __ < (WhiteSpace / LineTerminatorSequence / Comment)+;
 _ < __?;
