@@ -1,8 +1,9 @@
 #lang racket/base
 
-(require (only-in racket/class get-field new)
+(require (only-in racket/class get-field new send)
          racket/match
          racket/math
+         racket/promise
          racket/runtime-path
          net/uri-codec
          "environment.rkt"
@@ -17,20 +18,23 @@
 
 (provide make-realm)
 
-(define (make-realm)
-  (define global-object
-    (new ecma-object%
-         [class-name 'global]
-         [prototype #f]))
-  (define global-environment
-    (new-object-environment global-object ecma:null))
-  (parameterize
-      ([current-realm
-        (new realm%
-             [global-object global-object]
-             [global-environment global-environment])])
-    (set-default-global-bindings!)
-    (current-realm)))
+(define make-realm
+  (let ([prototype
+         (lazy
+          (define global-object
+            (new ecma-object%
+                 [class-name 'global]
+                 [prototype #f]))
+          (define global-environment
+            (new-object-environment global-object ecma:null))
+          (parameterize
+              ([current-realm
+                (new realm%
+                     [global-object global-object]
+                     [global-environment global-environment])])
+            (set-default-global-bindings!)
+            (current-realm)))])
+    (λ () (send (force prototype) clone))))
 
 (define-runtime-module-path lib:array "../lib/array.rkt")
 (define-runtime-module-path lib:boolean "../lib/boolean.rkt")

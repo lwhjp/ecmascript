@@ -32,6 +32,12 @@
                 [properties (make-hash)]
                 [extensible? #t])
     (super-new)
+    (define/public (clone)
+      (new ecma-object%
+           [class-name class-name]
+           [prototype (if (object? prototype) (send prototype clone) prototype)]
+           [properties (hash-copy properties)]
+           [extensible? extensible?]))
     (define/public (get-own-property name)
       (hash-ref properties name #f))
     (define/public (get-property name)

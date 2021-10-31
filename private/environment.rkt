@@ -156,6 +156,12 @@
     (init-field binding-object
                 [provide-this? #f])
     (super-new)
+    (inherit-field outer)
+    (define/public (clone)
+      (new object-environment-record%
+        [outer (if (object? outer) (send outer clone) outer)]
+        [binding-object (if (object? binding-object) (send binding-object clone) binding-object)]
+        [provide-this? provide-this?]))
     (define/override (has-binding? n)
       (has-property? binding-object n))
     (define/override (create-mutable-binding! n d)

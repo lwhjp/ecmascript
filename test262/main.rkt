@@ -17,25 +17,33 @@
          => (compose1 string->yaml bytes->string/utf-8 second)]
         [else (hash)]))))
 
+(define (include/harness name [realm (current-realm)])
+  (es-eval (build-path test262-home "harness" name) realm))
+
+(define make-test-realm
+  (let ([prototype
+         (lazy
+          (let ([realm (make-realm)])
+            (for ([name (in-list '("assert.js" "sta.js"))])
+              (include/harness name realm))
+            realm))])
+    (λ () (send (force prototype) clone))))
+
 (define (run-test262-file path)
   (define base-name
     (let-values ([(base name must-be-dir?) (split-path path)])
       (path->string (path-replace-extension name ""))))
   (define meta (load-test-file-metadata path))
   (define flags (hash-ref meta "flags" '()))
-  (define includes
-    (append
-     '("assert.js" "sta.js")
-     (hash-ref meta "includes" '())))
+  (define includes (hash-ref meta "includes" '()))
   (define negative (hash-ref meta "negative" #f))
   (define (do-test strict?)
     ; TODO: strict mode, CanBlock, locale
     (define name (if strict? (string-append base-name " (Strict Mode)") base-name))
     (define run
       (thunk
-       (parameterize ([current-realm (make-realm)])
-         (for ([include (in-list includes)])
-           (es-eval (build-path test262-home "harness" include)))
+       (parameterize ([current-realm (make-test-realm)])
+         (for-each include/harness includes)
          ; TODO: host-defined functions
          (es-eval path))))
     (if negative

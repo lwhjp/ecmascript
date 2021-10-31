@@ -8,7 +8,11 @@
   (class object%
     (init-field global-object
                 global-environment)
-    (super-new)))
+    (super-new)
+    (define/public (clone)
+      (make-object realm%
+        (send global-object clone)
+        (send global-environment clone)))))
 
 (define current-realm (make-parameter #f))
 
