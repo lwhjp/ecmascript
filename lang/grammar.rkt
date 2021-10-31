@@ -425,12 +425,11 @@ ConditionalExpression{In, Yield, Await} <-
     -> (if c (expression:conditional location e c a) e);
 
 AssignmentExpression{In, Yield, Await} <-
+    l:ArrowFunction{?In, ?Yield, ?Await} /
+    l:ConditionalExpression{?In, ?Yield, ?Await} (_ op:AssignmentOperator _ r:AssignmentExpression{?In, ?Yield, ?Await})? /
     {+Yield} e:YieldExpression{?In, ?Await} /
-    e:ArrowFunction{?In, ?Yield, ?Await} /
-    e:AsyncArrowFunction{?In, ?Yield, ?Await} /
-    l:LeftHandSideExpression{?Yield, ?Await} _ op:AssignmentOperator _ r:AssignmentExpression{?In, ?Yield, ?Await} /
-    e:ConditionalExpression{?In, ?Yield, ?Await}
-    -> (or e (expression:binary location l op r));
+    l:AsyncArrowFunction{?In, ?Yield, ?Await}
+    -> (if r (expression:binary location l op r) l);
 
 AssignmentOperator <-
     op:('=' / '*=' / '/=' / '%=' / '+=' / '-=' /
