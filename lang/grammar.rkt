@@ -409,14 +409,14 @@ LogicalORExpression{In, Yield, Await} <-
 LogicalOROperator <- op:'||' -> (operator location op);
 
 CoalesceExpression{In, Yield, Await} <-
-    e:(BitwiseORExpression{?In, ?Yield, ?Await}
-       (_ CoalesceOperator _ BitwiseORExpression{?In, ?Yield, ?Await})+)
+    e:(LogicalORExpression{?In, ?Yield, ?Await}
+       (_ CoalesceOperator _ BitwiseORExpression{?In, ?Yield, ?Await})*)
     -> (associate-left e);
 
 CoalesceOperator <- op:'??' -> (operator location op);
 
 ShortCircuitExpression{In, Yield, Await} <-
-    CoalesceExpression{?In, ?Yield, ?Await} / LogicalORExpression{?In, ?Yield, ?Await};
+    CoalesceExpression{?In, ?Yield, ?Await};
 
 ConditionalExpression{In, Yield, Await} <-
     e:ShortCircuitExpression{?In, ?Yield, ?Await}
