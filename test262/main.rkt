@@ -64,10 +64,22 @@
      #;(unless (member "noStrict" flags)
        (do-test #t))]))
 
+(define (directory->tests path)
+  (filter-map
+   (λ (e)
+     (define e-path (build-path path e))
+     (cond
+       [(regexp-match #rx"^(.*?)\\.js$" e)
+        => (λ (m)
+             (make-test-case (second m) (thunk (run-test262-file e-path))))]
+       [(directory-exists? e-path)
+        (make-test-suite
+         (path->string e)
+         (directory->tests e-path))]
+       [else #f]))
+   (directory-list path)))
+
 (define test262-all
-  (let ([test-files (find-files (λ (path) (regexp-match? #rx"\\.js" path))
-                                (build-path test262-home "test"))])
-    (test-suite
-     "Test262"
-     (for ([path (in-list test-files)])
-       (run-test262-file path)))))
+  (make-test-suite
+   "Test262"
+   (directory->tests (build-path test262-home "test"))))
