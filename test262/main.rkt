@@ -49,7 +49,7 @@
     (if negative
         (test-exn
          name
-         exn:fail? ; TODO: check phase, type
+         exn? ; TODO: check phase, type
          run)
         (test-not-exn
          name
@@ -71,7 +71,7 @@
      (cond
        [(regexp-match #rx"^(.*?)\\.js$" e)
         => (λ (m)
-             (make-test-case (second m) (thunk (run-test262-file e-path))))]
+             (test-suite (second m) (run-test262-file e-path)))]
        [(directory-exists? e-path)
         (make-test-suite
          (path->string e)
