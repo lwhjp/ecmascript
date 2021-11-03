@@ -1,6 +1,7 @@
 #lang racket
 
-(require rackunit
+(require racket/sandbox
+         rackunit
          yaml
          ecmascript/eval)
 
@@ -29,6 +30,8 @@
             realm))])
     (λ () (send (force prototype) clone))))
 
+(define test-timeout-seconds 30)
+
 (define (run-test262-file path)
   (define base-name
     (let-values ([(base name must-be-dir?) (split-path path)])
@@ -40,12 +43,15 @@
   (define (do-test strict?)
     ; TODO: strict mode, CanBlock, locale
     (define name (if strict? (string-append base-name " (Strict Mode)") base-name))
-    (define run
-      (thunk
-       (parameterize ([current-realm (make-test-realm)])
-         (for-each include/harness includes)
-         ; TODO: host-defined functions
-         (es-eval path))))
+    (define (run)
+      (with-handlers ([exn:fail:resource?
+                       (λ (e)
+                         (fail-check "timeout"))])
+        (with-limits test-timeout-seconds #f
+          (parameterize ([current-realm (make-test-realm)])
+            (for-each include/harness includes)
+            ; TODO: host-defined functions
+            (es-eval path)))))
     (if negative
         (test-exn
          name
