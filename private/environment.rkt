@@ -10,13 +10,21 @@
 (lazy-require
  ["../convert.rkt" (to-object)])
 
-(provide get-value
+(provide expression
+         get-value
          put-value!
          environment-record%
          new-declarative-environment
          new-object-environment
          get-identifier-reference
          create-variables!)
+
+(define-syntax-rule (expression e)
+  (call-with-values
+   (λ () e)
+   (case-lambda
+     [(v) (get-value v)]
+     [() (void)])))
 
 (define (get-value v)
   (if (reference? v)

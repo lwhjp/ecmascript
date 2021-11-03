@@ -96,7 +96,7 @@
         [(statement:empty _)
          `(empty-statement)]
         [(statement:expression _ e)
-         `(get-value ,(c e))]
+         `(expression ,(c e))]
         [(statement:for _ init test update body)
          `(for #:init ,(c init)
                #:test ,(and test (c test))

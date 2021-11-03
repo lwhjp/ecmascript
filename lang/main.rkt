@@ -22,6 +22,7 @@
          get-value
          put-value!
          begin-scope
+         expression
          id
          member
          var
