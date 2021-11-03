@@ -16,7 +16,7 @@
   (strip-context
    ; TODO: check for strict mode
    (with-syntax ([(stmt ...) (map compile-statement script)]
-                 [(var ...) (extract-var-names script)])
+                 [(var ...) (extract-var-names* script)])
      #'(begin-scope (new-object-environment (current-global-object) lexical-environment)
          #:vars (var ...)
          stmt ...))))
@@ -64,7 +64,7 @@
         [(function _ name parameters body)
          `(function ,@(if name (list (c name)) '())
                     ,(map c parameters)
-                    #:vars ,(append* (map extract-var-names body))
+                    #:vars ,(extract-var-names* body)
             ,@(map c body))]
         [(identifier _ s)
          (parse-identifier s)]
@@ -125,6 +125,11 @@
         [(variable-declaration _ id expr)
          (if expr (list (c id) (c expr)) (c id))]))
     (datum->syntax #f stx-e (syntax-element-location node))))
+
+(define (extract-var-names* nodes)
+  (remove-duplicates
+   (append*
+    (map extract-var-names nodes))))
 
 (define (extract-var-names node)
   (remove-duplicates
