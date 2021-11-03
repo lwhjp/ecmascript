@@ -7,7 +7,9 @@
 (struct case-clause syntax-element (expression body) #:transparent)
 
 (struct declaration syntax-element () #:transparent)
+(struct declaration:const declaration (decls) #:transparent)
 (struct declaration:function declaration (definition) #:transparent)
+(struct declaration:let declaration (decls) #:transparent)
 (struct declaration:var declaration (decls) #:transparent)
 
 (struct default-clause syntax-element (body) #:transparent)

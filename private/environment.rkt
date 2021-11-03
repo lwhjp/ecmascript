@@ -17,7 +17,8 @@
          new-declarative-environment
          new-object-environment
          get-identifier-reference
-         create-variables!)
+         create-variables!
+         initialize-lexical-var!)
 
 (define-syntax-rule (expression e)
   (call-with-values
@@ -109,6 +110,7 @@
     (abstract
      has-binding?
      create-mutable-binding!
+     initialize-binding!
      set-mutable-binding!
      get-binding-value
      delete-binding!
@@ -125,6 +127,8 @@
       (hash-has-key? bindings n))
     (define/override (create-mutable-binding! n [d #f])
       (hash-set! bindings n (mutable-binding ecma:undefined d)))
+    (define/override (initialize-binding! n v)
+      (hash-set! bindings n (mutable-binding v #f)))
     (define/override (set-mutable-binding! n v s)
       (let ([b (hash-ref bindings n)])
         (if (mutable-binding? b)
@@ -182,6 +186,8 @@
               (enumerable . #t)
               (configurable . ,d))
             #t))
+    (define/override (initialize-binding! n v)
+      (set-mutable-binding! n v #f))
     (define/override (set-mutable-binding! n v s)
       (set-property-value!
        binding-object
@@ -223,3 +229,6 @@
 (define (create-variables! env-rec ids)
   (for ([id (in-list (map symbol->string ids))])
     (send env-rec create-mutable-binding! id #f)))
+
+(define (initialize-lexical-var! ref v)
+  (send (reference-base ref) initialize-binding! (reference-name ref) v))

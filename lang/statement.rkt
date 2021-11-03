@@ -56,9 +56,27 @@
            #'(continue-binding return-value)))])))
 
 (define-syntax stmt:block
-  (syntax-rules ()
-    [(_) (void)]
-    [(_ stmt ...) (begin stmt ...)]))
+  (syntax-parser
+    [(_ (~optional (~seq #:vars (var-id:id ...)))
+        (~optional (~seq stmt ...+)))
+     #'(let ([new-scope (new-declarative-environment lexical-environment)])
+         (syntax-parameterize ([lexical-environment (make-rename-transformer #'new-scope)])
+           (~? (create-variables! lexical-environment '(var-id ...)))
+           (~? (~@ stmt ...) (void))))]))
+
+(begin-for-syntax
+  (define-syntax-class lexical-binding
+    (pattern [id:id (~optional init:expr #:defaults ([init #'ecma:undefined]))])))
+
+(define-syntax-rule (stmt:const binding ...)
+  (stmt:let binding ...))
+
+(define-syntax stmt:let
+  (syntax-parser
+    [(_ binding:lexical-binding ...)
+     #'(begin
+         (initialize-lexical-var! binding.id (get-value binding.init))
+         ...)]))
 
 (define-syntax-rule (var [var-id init] ...)
   (begin

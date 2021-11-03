@@ -27,8 +27,12 @@
       (match node
         [(case-clause _ expr body)
          `((,(c expr) ,(c body)))]
+        [(declaration:const _ decls)
+         `(const ,@(map c decls))]
         [(declaration:function _ body)
          (c body)]
+        [(declaration:let _ decls)
+         `(let ,@(map c decls))]
         [(declaration:var _ decls)
          `(var ,@(map c decls))]
         [(default-clause _ body)
@@ -84,7 +88,8 @@
         [(operator _ s)
          (string->symbol s)]
         [(statement:block _ body)
-         `(block ,@(map c body))]
+         `(block #:vars ,(append* (map extract-lexical-var-names body))
+            ,@(map c body))]
         [(statement:break _ label)
          `(break ,@(if label (list (c label)) '()))]
         [(statement:continue _ label)
@@ -129,7 +134,17 @@
 (define (extract-var-names* nodes)
   (remove-duplicates
    (append*
-    (map extract-var-names nodes))))
+    (append
+     (map extract-lexical-var-names nodes)
+     (map extract-var-names nodes)))))
+
+(define (extract-lexical-var-names node)
+  (match node
+    [(declaration:const _ (list (variable-declaration _ binding _) ...))
+     (append* (map extract-var-names/binding binding))]
+    [(declaration:let _ (list (variable-declaration _ binding _) ...))
+     (append* (map extract-var-names/binding binding))]
+    [_ '()]))
 
 (define (extract-var-names node)
   (remove-duplicates

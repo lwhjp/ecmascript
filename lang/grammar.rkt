@@ -529,14 +529,18 @@ StatementListItem{Yield, Await, Return} <-
     Declaration{?Yield, ?Await};
 
 LexicalDeclaration{In, Yield, Await} <-
-    ('let' / 'const') _ BindingList{?In, ?Yield, ?Await} SEMICOLON;
+    t:('let' / 'const') _ bindings:BindingList{?In, ?Yield, ?Await} SEMICOLON
+    -> ((if (equal? "let" t) declaration:let declaration:const)
+        location
+        bindings);
 
 BindingList{In, Yield, Await} <-
-    LexicalBinding{?In, ?Yield, ?Await} (_ ',' _ LexicalBinding{?In, ?Yield, ?Await})*;
+    LexicalBinding{?In, ?Yield, ?Await} (_ ~',' _ LexicalBinding{?In, ?Yield, ?Await})*;
 
 LexicalBinding{In, Yield, Await} <-
-    BindingIdentifier{?Yield, ?Await} (_ Initializer{?In, ?Yield, ?Await})? /
-    BindingPattern{?Yield, ?Await} _ Initializer{?In, ?Yield, ?Await};
+    binding:BindingIdentifier{?Yield, ?Await} (_ init:Initializer{?In, ?Yield, ?Await})? /
+    binding:BindingPattern{?Yield, ?Await} _ init:Initializer{?In, ?Yield, ?Await}
+    -> (variable-declaration location binding init);
 
 VariableStatement{Yield, Await} <-
     'var' _ decls:VariableDeclarationList{+In, ?Yield, ?Await} SEMICOLON
