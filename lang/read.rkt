@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require ragg/support
-         "../private/error.rkt"
+(require "../private/error.rkt"
          "../parse.rkt"
          "compile.rkt")
 
@@ -17,9 +16,7 @@
          [src (object-name (current-input-port))]
          [in (current-input-port)])
   (with-handlers
-      ([(λ (e)
-          (or (exn:fail:read? e)
-              (exn:fail:parsing? e)))
+      ([exn:fail:read?
         (λ (e)
           (raise-native-error 'syntax (exn-message e)))])
     (let ([ast (read-program src in)])
