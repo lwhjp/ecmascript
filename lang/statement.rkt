@@ -92,6 +92,11 @@
     [(_ test true false)
      #'(if test true false)]))
 
+(define-syntax-rule (stmt:do body test)
+  (stmt:for
+    body
+    (stmt:if (ecma:! test) (stmt:break))))
+
 (define-syntax-rule (stmt:while test body ...)
   (stmt:for #:test test
     body ...))
