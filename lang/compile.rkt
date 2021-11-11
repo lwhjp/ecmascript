@@ -70,21 +70,15 @@
                     ,(map c parameters)
                     #:vars ,(extract-var-names* body)
             ,@(map c body))]
-        [(identifier _ s)
-         (parse-identifier s)]
-        [(literal:array _ es)
-         `(array ,@(map c es))]
-        [(literal:boolean _ v)
-         v]
-        [(literal:null _)
-         'null]
-        [(literal:number _ v)
-         (parse-number v)]
+        [(identifier _ s) s]
+        [(literal:array _ es) `(array ,@(map c es))]
+        [(literal:boolean _ v) v]
+        [(literal:null _) 'null]
+        [(literal:number _ v) v]
         ; object
         [(literal:regexp _ pattern flags)
          `(regexp ,pattern ,(list->string flags))]
-        [(literal:string _ v)
-         (parse-string v)]
+        [(literal:string _ v) v]
         [(operator _ s)
          (string->symbol s)]
         [(statement:block _ body)
@@ -183,56 +177,7 @@
 
 (define extract-var-names/binding
   (match-lambda
-    [(identifier _ symbol) (list (parse-identifier symbol))]))
-
-(define (parse-number s)
-  (cond
-    [(regexp-match? #rx"^0[xX]" s)
-     (string->number (substring s 2) 16)]
-    [else (string->number s)]))
-
-(define (parse-string s)
-  (define (parse-escape esc)
-    (define c (string-ref esc 1))
-    (case c
-      [(#\u #\x)
-       (string
-        (integer->char
-         (string->number
-          (substring esc 2)
-          16)))]
-      [(#\u000A #\u000D #\u2028 #\u2029) ""]
-      [else
-       (hash-ref
-        #hasheqv((#\b . "\u0008")
-                 (#\t . "\u0009")
-                 (#\n . "\u000A")
-                 (#\v . "\u000B")
-                 (#\f . "\u000C")
-                 (#\r . "\u000D"))
-        c
-        (string c))]))
-  (define escapes
-    (regexp-match-positions*
-     #px"\\\\([^ux]|x[[:xdigit:]]{2}|u[[:xdigit:]]{4})"
-     s))
-  (let loop ([begin 0]
-             [escapes escapes])
-    (if (null? escapes)
-        (substring s begin)
-        (string-append
-         (substring s begin (caar escapes))
-         (parse-escape (substring s (caar escapes) (cdar escapes)))
-         (loop (cdar escapes) (cdr escapes))))))
-
-(define (parse-identifier s)
-  (string->symbol
-   (regexp-replace*
-    #rx"\\\\u({([^}]+)}|(....))"
-    s
-    (λ (a b c d)
-      (integer->char
-       (string->number (or c d) 16))))))
+    [(identifier _ symbol) (list symbol)]))
 
 (define (postfix s)
   (format-id s "post~a" s))

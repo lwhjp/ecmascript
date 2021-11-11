@@ -31,8 +31,8 @@ SEMICOLON <
 
 PrivateIdentifier <- '#' IdentifierName;
 IdentifierName <- IdentifierStart IdentifierPart*;
-IdentifierStart <- IdentifierStartChar / '\\' UnicodeEscapeSequence;
-IdentifierPart <- IdentifierPartChar / '\\' UnicodeEscapeSequence;
+IdentifierStart <- IdentifierStartChar / ~'\\' UnicodeEscapeSequence;
+IdentifierPart <- IdentifierPartChar / ~'\\' UnicodeEscapeSequence;
 IdentifierStartChar <- UnicodeIDStart / '$' / '_';
 IdentifierPartChar <- UnicodeIDContinue / '$' / ZWNJ / ZWJ;
 ReservedWord <-
@@ -62,21 +62,24 @@ NullLiteral <- 'null' -> (literal:null location);
 
 BooleanLiteral <- t:'true' / 'false' -> (literal:boolean location (if t #t #f));
 
-NumericLiteralSeparator <- '_';
+NumericLiteralSeparator < '_';
 NumericLiteral <-
-    s:(NonDecimalIntegerLiteral{+Sep} BigIntLiteralSuffix? /
-       LegacyOctalIntegerLiteral /
-       DecimalBigIntegerLiteral / DecimalLiteral)
-    -> (literal:number location s);
+    n:NonDecimalIntegerLiteral{+Sep} BigIntLiteralSuffix? /
+    n:LegacyOctalIntegerLiteral /
+    n:DecimalBigIntegerLiteral /
+    n:DecimalLiteral
+    -> (literal:number location n);
 DecimalBigIntegerLiteral <-
-    '0' BigIntLiteralSuffix /
-    NonZeroDigit DecimalDigits{+Sep}? BigIntLiteralSuffix /
-    NonZeroDigit NumericLiteralSeparator DecimalDigits{+Sep} BigIntLiteralSuffix;
+    n:('0' BigIntLiteralSuffix /
+       NonZeroDigit DecimalDigits{+Sep}? BigIntLiteralSuffix /
+       NonZeroDigit NumericLiteralSeparator DecimalDigits{+Sep} BigIntLiteralSuffix)
+    -> (string->number n 10);
 NonDecimalIntegerLiteral{Sep} <- BinaryIntegerLiteral{?Sep} / OctalIntegerLiteral{?Sep} / HexIntegerLiteral{?Sep};
-BigIntLiteralSuffix <- 'n';
+BigIntLiteralSuffix < 'n';
 DecimalLiteral <-
-    DecimalIntegerLiteral ('.' DecimalDigits{+Sep}?)? ExponentPart{+Sep}? /
-    '.' DecimalDigits{+Sep} ExponentPart{+Sep}?;
+    n:(DecimalIntegerLiteral ('.' DecimalDigits{+Sep}?)? ExponentPart{+Sep}? /
+       '.' DecimalDigits{+Sep} ExponentPart{+Sep}?)
+    -> (string->number n 10);
 DecimalIntegerLiteral <-
     NonZeroDigit NumericLiteralSeparator? DecimalDigits{+Sep}? /
     NonOctalDecimalIntegerLiteral /
@@ -89,20 +92,20 @@ NonZeroDigit <- [1-9];
 ExponentPart{Sep} <- ExponentIndicator SignedInteger{?Sep};
 ExponentIndicator <- [eE];
 SignedInteger{Sep} <- [+\-]? DecimalDigits{?Sep};
-BinaryIntegerLiteral{Sep} <- ('0b' / '0B') BinaryDigits{?Sep};
+BinaryIntegerLiteral{Sep} <- ('0b' / '0B') n:BinaryDigits{?Sep} -> (string->number n 2);
 BinaryDigits{Sep} <-
     {~Sep} BinaryDigit+ /
     {+Sep} BinaryDigit+ (NumericLiteralSeparator BinaryDigit+)*;
 BinaryDigit <- [01];
-OctalIntegerLiteral{Sep} <- ('0o' / '0O') OctalDigits{?Sep};
+OctalIntegerLiteral{Sep} <- ('0o' / '0O') n:OctalDigits{?Sep} -> (string->number n 8);
 OctalDigits{Sep} <-
     {~Sep} OctalDigit+ /
     {+Sep} OctalDigit+ (NumericLiteralSeparator OctalDigit+)*;
-LegacyOctalIntegerLiteral <- '0' OctalDigit+ !NonOctalDigit;
-NonOctalDecimalIntegerLiteral <- '0' OctalDigit* NonOctalDigit DecimalDigit*;
+LegacyOctalIntegerLiteral <- '0' n:OctalDigit+ !NonOctalDigit -> (string->number n 8);
+NonOctalDecimalIntegerLiteral <- n:('0' OctalDigit* NonOctalDigit DecimalDigit*) -> (string->number n 10);
 OctalDigit <- [0-7];
 NonOctalDigit <- [89];
-HexIntegerLiteral{Sep} <- ('0x' / '0X') HexDigits{?Sep};
+HexIntegerLiteral{Sep} <- ('0x' / '0X') n:HexDigits{?Sep} -> (string->number n 16);
 HexDigits{Sep} <-
     {~Sep} HexDigit+ /
     {+Sep} HexDigit+ (NumericLiteralSeparator HexDigit+)*;
@@ -111,20 +114,36 @@ HexDigit <- [0-9a-fA-F];
 StringLiteral <-
     '"' s:DoubleStringCharacter* '"' /
     '\'' s:SingleStringCharacter* '\''
-    -> (literal:string location (if (string? s) s (string)));
-DoubleStringCharacter <- !('"' / '\\' / LineTerminator) . / LS / PS / '\\' EscapeSequence / LineContinuation;
-SingleStringCharacter <- !('\'' / '\\' / LineTerminator) . / LS / PS / '\\' EscapeSequence / LineContinuation;
-LineContinuation <- ~'\\' LineTerminatorSequence;
+    -> (literal:string location (if (string? s) s (apply string-append s)));
+DoubleStringCharacter <- !('"' / '\\' / LineTerminator) . / LS / PS / LineContinuation / ~'\\' EscapeSequence;
+SingleStringCharacter <- !('\'' / '\\' / LineTerminator) . / LS / PS / LineContinuation / ~'\\' EscapeSequence;
+LineContinuation < '\\' LineTerminatorSequence;
 EscapeSequence <- CharacterEscapeSequence / '0' !DecimalDigit / LegacyOctalEscapeSequence /
     NonOctalDecimalEscapeSequence / HexEscapeSequence / UnicodeEscapeSequence;
 CharacterEscapeSequence <- SingleEscapeCharacter / NonEscapeCharacter;
-SingleEscapeCharacter <- ["'\\bfnrtv];
+SingleEscapeCharacter <- c:["'\\bfnrtv]
+    -> (case c
+         [("b") "\u0008"]
+         [("t") "\u0009"]
+         [("n") "\u000A"]
+         [("v") "\u000B"]
+         [("f") "\u000C"]
+         [("r") "\u000D"]
+         [else c]);
 NonEscapeCharacter <- !(EscapeCharacter / LineTerminator) .;
 EscapeCharacter <- SingleEscapeCharacter / DecimalDigit / 'x' / 'u';
-LegacyOctalEscapeSequence <- '0' ![89] / [1-7] ![0-8] / [0-3] [0-7] ![0-7] / [4-7] [0-7] / [0-3] [0-7] [0-7];
+LegacyOctalEscapeSequence <-
+    code:('0' ![89] /
+          [1-7] ![0-8] /
+          [0-3] [0-7] ![0-7] /
+          [4-7] [0-7] /
+          [0-3] [0-7] [0-7])
+    -> (string (integer->char (string->number code 8)));
 NonOctalDecimalEscapeSequence <- [89];
-HexEscapeSequence <- 'x' HexDigit HexDigit;
-UnicodeEscapeSequence <- ~'u' code:Hex4Digits / ~'u{' code:HexDigit+ ~'}';
+HexEscapeSequence <- 'x' code:(HexDigit HexDigit)
+    -> (string (integer->char (string->number code 16)));
+UnicodeEscapeSequence <- 'u' code:Hex4Digits / 'u{' code:HexDigit+ '}'
+    -> (string (integer->char (string->number code 16)));
 Hex4Digits <- HexDigit HexDigit HexDigit HexDigit;
 
 // Regular Expressions
@@ -161,7 +180,7 @@ Identifier{Yield, Await} <-
     !ReservedWord name:IdentifierName /
     {~Yield} name:'yield' /
     {~Await} name:'await'
-    -> (identifier location name);
+    -> (identifier location (string->symbol name));
 
 // TODO: TemplateLiteral
 
