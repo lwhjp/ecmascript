@@ -1,7 +1,6 @@
 #lang racket/base
 
 (require racket/contract/base
-         racket/port
          peg/peg
          "ast.rkt"
          "lang/grammar.rkt"
@@ -20,6 +19,6 @@
 (define (read-script [source-name (object-name (current-input-port))]
                      [in (current-input-port)])
   (parameterize ([current-source-name source-name])
-    (peg (and Script (! (any-char))) (port->string in))))
+    (peg (and Script (! (any-char))) in)))
 
 (define read-program read-script)

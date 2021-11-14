@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require (only-in racket/list range)
-         peg)
+(require peg)
 
 (provide (except-out (all-defined-out)
                      define-chars

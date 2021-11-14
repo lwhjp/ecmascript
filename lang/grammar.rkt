@@ -150,7 +150,7 @@ Hex4Digits <- HexDigit HexDigit HexDigit HexDigit;
 
 RegularExpressionLiteral <- '/' pattern:RegularExpressionBody '/' flags:RegularExpressionFlags
     -> (literal:regexp location
-                       (if (string? pattern) pattern (string))
+                       (if (string? pattern) pattern "")
                        (if (string? flags) (string->list flags) '()));
 RegularExpressionBody <- RegularExpressionFirstChar RegularExpressionChar*;
 RegularExpressionFirstChar <- ![*\\/\[] RegularExpressionNonTerminator /
