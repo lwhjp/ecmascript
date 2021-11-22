@@ -5,8 +5,11 @@
          racket/promise
          racket/runtime-path
          racket/contract/base
+         "environment.rkt"
          "realm.rkt"
          "../lang/compile.rkt"
+         "../lang/environment.rkt"
+         (only-in "../lang/function.rkt" begin-scope)
          "../lang/read.rkt"
          "../parse.rkt")
 
@@ -27,9 +30,9 @@
   (if (eof-object? stx)
       (void)
       (parameterize ([current-realm realm])
-        (eval
-         #`(begin #,@stx)
-         (force es-eval-namespace)))))
+        (eval-syntax
+         #`(begin-scope (new-declarative-environment lexical-environment)
+             #,@(namespace-syntax-introduce stx (force es-eval-namespace)))))))
 
 (define-namespace-anchor here)
 

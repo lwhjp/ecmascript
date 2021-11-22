@@ -17,9 +17,8 @@
    ; TODO: check for strict mode
    (with-syntax ([(stmt ...) (map compile-statement script)]
                  [(var ...) (extract-var-names* script)])
-     #'(begin-scope (new-object-environment (current-global-object) lexical-environment)
-         #:vars (var ...)
-         stmt ...))))
+     #'(#:vars (var ...)
+        stmt ...))))
 
 (define (compile-statement stmt)
   (let c ([node stmt])

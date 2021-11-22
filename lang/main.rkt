@@ -9,18 +9,11 @@
          "operator.rkt"
          "reference.rkt"
          "statement.rkt"
-         "../convert.rkt"
-         "../function.rkt"
          "../types.rkt")
 
 (provide (all-from-out "literal.rkt"
                        "operator.rkt"
                        "statement.rkt")
-         ; TODO: several of these should be removed
-         current-global-object
-         new-object-environment
-         lexical-environment
-         begin-scope
          identifier
          member
          var
@@ -34,16 +27,31 @@
          new
 
          (rename-out
-          [ecma:top-interaction #%top-interaction]
-          [ecma:top #%top])
+          [es-module-begin #%module-begin]
+          [es-top-interaction #%top-interaction]
+          [es-top #%top])
 
-         #%module-begin
          #%app
          #%datum)
 
-(define-syntax-rule (ecma:top-interaction . form)
-  form)
+(define current-module-environment (make-parameter #f))
 
-(define-syntax (ecma:top stx)
+(define-syntax (es-module-begin stx)
+  (syntax-case stx ()
+    [(_ #:vars (var ...) stmt ...)
+     #'(#%plain-module-begin
+        (current-module-environment (new-object-environment (current-global-object) lexical-environment))
+        (begin-scope (current-module-environment)
+          #:vars (var ...)
+          stmt ...))]))
+
+(define-syntax (es-top-interaction stx)
+  (syntax-case stx (begin)
+    [(_ . (begin #:vars (var ...) form ...))
+     #'(begin-scope (current-module-environment)
+          #:vars (var ...)
+          form ...)]))
+
+(define-syntax (es-top stx)
   (syntax-case stx ()
     [(_ . v) #'(identifier v)]))

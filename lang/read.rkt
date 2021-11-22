@@ -22,4 +22,4 @@
     (let ([ast (read-program src in)])
       (if (eof-object? ast)
           '()
-          (list (ecmascript->racket ast))))))
+          (ecmascript->racket ast)))))
