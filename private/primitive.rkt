@@ -4,8 +4,7 @@
  ecma:undefined
  ecma:undefined?
  ecma:null
- ecma:null?
- (struct-out reference))
+ ecma:null?)
 
 (struct opaque-primitive (name))
 
@@ -16,5 +15,3 @@
 (define ecma:null (opaque-primitive 'null))
 
 (define (ecma:null? v) (eq? ecma:null v))
-
-(struct reference (base name strict?) #:transparent)

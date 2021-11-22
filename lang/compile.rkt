@@ -56,7 +56,7 @@
         [(expression:postfix _ e op)
          `(,(postfix (c op)) ,(c e))]
         [(expression:reference _ id)
-         `(id ,(c id))]
+         `(identifier ,(c id))]
         [(expression:super-call _ args)
          `(super ,@(map c args))]
         [(expression:super-reference _ p)
@@ -94,8 +94,7 @@
          `(do ,(c body) ,(c test))]
         [(statement:empty _)
          `(empty-statement)]
-        [(statement:expression _ e)
-         `(expression ,(c e))]
+        [(statement:expression _ e) (c e)]
         [(statement:for _ init test update body)
          `(for #:init ,(c init)
                #:test ,(and test (c test))

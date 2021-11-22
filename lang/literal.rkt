@@ -4,13 +4,12 @@
                      syntax/parse
                      syntax/stx)
          racket/class
-         "../private/environment.rkt"
          "../private/object.rkt"
          (only-in "../lib/array.rkt" make-array)
          (only-in "../lib/object.rkt" Object%)
          "../convert.rkt"
-         "environment.rkt"
-         (prefix-in ecma: "function.rkt"))
+         (prefix-in ecma: "function.rkt")
+         "reference.rkt")
 
 (provide
  (all-defined-out)
@@ -26,7 +25,7 @@
     (syntax-parser
       [(expr)
        #'`(data
-           (value . ,(get-value expr))
+           (value . ,expr)
            (writable . #t)
            (enumerable . #t)
            (configurable . #t))]
@@ -53,4 +52,4 @@
            obj))]))
 
 (define (regexp pattern flags)
-  (ecma:new (id RegExp) pattern flags))
+  (ecma:new (identifier RegExp) pattern flags))

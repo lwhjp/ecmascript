@@ -7,20 +7,17 @@
          "../private/environment.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
-         "../private/object.rkt"
          "../private/primitive.rkt"
-         "../private/realm.rkt"
          "../private/this.rkt"
          "../lib/function.rkt"
-         "../convert.rkt"
-         "environment.rkt")
+         "environment.rkt"
+         "reference.rkt")
 
 (provide
  return
  function
  begin-scope
  (rename-out
-  [ecma:call call]
   [ecma:new new]
   [ecma:this this]
   [es:var var]))
@@ -36,7 +33,7 @@
        stx))
     (syntax-case stx ()
       [(_) #'(return-binding)]
-      [(_ v) #'(return-binding (get-value v))])))
+      [(_ v) #'(return-binding v)])))
 
 (define-syntax function
   (syntax-parser
@@ -71,7 +68,7 @@
     (pattern name:id
       #:attr init-stx #f)
     (pattern [name:id init:expr]
-      #:attr init-stx #'(put-value! (id name) (get-value init)))))
+      #:attr init-stx #'(set-reference! (identifier name) init))))
 
 (define-syntax es:var
   (syntax-parser
@@ -115,31 +112,7 @@
                          (collected-form ... form)
         rest ...)]))
 
-(define (ecma:call ref . args)
-  (let ([func (get-value ref)])
-    (unless (Function? func)
-      (raise-native-error 'type "not a function"))
-    (let ([this-value
-           (if (reference? ref)
-               (let ([base (reference-base ref)])
-                 (cond
-                   [(Object? base) base]
-                   [(is-a? base environment-record%)
-                    (send base implicit-this-value)]))
-               ecma:undefined)])
-      (let ([argvs (map get-value args)])
-        (send func call
-              (cond
-                [(or (ecma:null? this-value)
-                     (ecma:undefined? this-value))
-                 (current-global-object)]
-                [(Object? this-value) this-value]
-                [else (to-object this-value)])
-              argvs)))))
-
-(define (ecma:new ref . args)
-  (let ([constructor (get-value ref)])
-    (unless (Function? constructor)
-      (raise-native-error 'type "not a constructor"))
-    (let ([argvs (map get-value args)])
-      (send constructor construct argvs))))
+(define (ecma:new constructor . args)
+  (unless (Function? constructor)
+    (raise-native-error 'type "not a constructor"))
+  (send constructor construct args))

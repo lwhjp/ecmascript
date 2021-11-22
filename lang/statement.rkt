@@ -75,12 +75,13 @@
   (syntax-parser
     [(_ binding:lexical-binding ...)
      #'(begin
-         (initialize-lexical-var! binding.id (get-value binding.init))
+         (initialize-lexical-var! binding.id binding.init)
          ...)]))
 
 (define-syntax-rule (var [var-id init] ...)
   (begin
-    (put-value! (id var-id) (get-value init)) ...))
+    (set-reference! (identifier var-id) init)
+    ...))
 
 (define (stmt:empty-statement)
   (void))
@@ -124,8 +125,7 @@
                                               (syntax-parameter-value #'continue-bindings))]
                           [return-value (make-rename-transformer #'rv)])
                        (if #,(if (attribute test)
-                                 #'(to-boolean
-                                    (get-value test))
+                                 #'(to-boolean test)
                                  #t)
                            (stmt:block
                             body ...)
@@ -134,11 +134,11 @@
               new-rv))))]))
 
 (define-syntax-rule (stmt:for-in lhs expr body)
-  (let ([exper-value (get-value expr)])
-    (if (or (ecma:null? exper-value)
-            (ecma:undefined? exper-value))
+  (let ([v expr])
+    (if (or (ecma:null? v)
+            (ecma:undefined? v))
         (void)
-        (let ([obj (to-object exper-value)])
+        (let ([obj (to-object v)])
           (for/fold ([v (void)])
                     ([(name prop) (in-hash (get-field properties obj))]
                      #:when (property-enumerable? prop))
@@ -146,7 +146,7 @@
             body)))))
 
 (define-syntax-rule (stmt:with expr body0 body ...)
-  (begin-scope (new-object-environment (get-value expr) lexical-environment)
+  (begin-scope (new-object-environment expr lexical-environment)
     body0 body ...))
 
 (define-syntax (stmt:switch stx)
@@ -188,12 +188,11 @@
        (raise-syntax-error #f 'syntax "invalid label" stx #'label))
      (syntax-property #'stmt 'label (syntax-e #'label))]))
 
-(define (stmt:throw expr)
-  (let ([v (get-value expr)])
-    (raise
-     (exn:throw (to-string v)
-                (current-continuation-marks)
-                v))))
+(define (stmt:throw v)
+  (raise
+   (exn:throw (to-string v)
+              (current-continuation-marks)
+              v)))
 
 (define-syntax (stmt:try stx)
   (syntax-parse stx

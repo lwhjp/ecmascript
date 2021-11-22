@@ -7,6 +7,7 @@
          "function.rkt"
          "literal.rkt"
          "operator.rkt"
+         "reference.rkt"
          "statement.rkt"
          "../convert.rkt"
          "../function.rkt"
@@ -19,15 +20,11 @@
          current-global-object
          new-object-environment
          lexical-environment
-         get-value
-         put-value!
          begin-scope
-         expression
-         id
+         identifier
          member
          var
 
-         undefined
          null
 
          function
@@ -45,8 +42,8 @@
          #%datum)
 
 (define-syntax-rule (ecma:top-interaction . form)
-  (get-value form))
+  form)
 
 (define-syntax (ecma:top stx)
   (syntax-case stx ()
-    [(_ . v) #'(id v)]))
+    [(_ . v) #'(identifier v)]))

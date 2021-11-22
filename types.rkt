@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require "private/primitive.rkt")
+(require "private/environment.rkt"
+         "private/primitive.rkt")
 
 (provide (all-defined-out)
          boolean?

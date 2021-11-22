@@ -1,102 +1,54 @@
 #lang racket/base
 
 (require (for-syntax racket/base)
-         racket/class
          racket/math
          racket/provide
-         "../private/environment.rkt"
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
          "../private/primitive.rkt"
-         "../convert.rkt")
+         "../convert.rkt"
+         "reference.rkt")
 
 (provide (filtered-out
           (λ (name)
             (substring name 3))
           (all-defined-out)))
 
-(define (op:post++ v)
-  (define r (to-number (get-value v)))
-  (put-value! v (op:+ r 1))
-  r)
+(define-syntax-rule (op:post++ v)
+  (post-update-reference! v (λ (x) (op:+ x 1))))
 
-(define (op:post-- v)
-  (define r (to-number (get-value v)))
-  (put-value! v (op:- r 1))
-  r)
-
-(define (op:delete ref)
-  (cond
-    [(not (reference? ref)) #t]
-    [(ecma:undefined? (reference-base ref))
-     (if (reference-strict? ref)
-         (raise-native-error 'syntax)
-         #t)]
-    [(is-a? (reference-base ref) environment-record%)
-     (if (reference-strict? ref)
-         (raise-native-error 'syntax)
-         (send (reference-base ref)
-               delete-binding!
-               (reference-name ref)))]
-    [else
-     (delete-property!
-      (to-object (reference-base ref))
-      (reference-name ref)
-      (reference-strict? ref))]))
+(define-syntax-rule (op:post-- v)
+  (post-update-reference! v (λ (x) (op:- x 1))))
 
 (define (op:void v)
-  (get-value v)
   ecma:undefined)
 
-(define (op:typeof v)
-  (if (and (reference? v)
-           (ecma:undefined? (reference-base v)))
-      "undefined"
-      (let ([v (get-value v)])
-        (cond
-          [(ecma:undefined? v) "undefined"]
-          [(ecma:null? v) "object"]
-          [(boolean? v) "boolean"]
-          [(number? v) "number"]
-          [(string? v) "string"]
-          [(Function? v) "function"]
-          [(Object? v) "object"]))))
-
 (define (op:instanceof a b)
-  (define lval (get-value a))
-  (define rval (get-value b))
-  (unless (Function? rval)
+  (unless (Function? b)
     (raise-native-error 'type "not a function"))
-  (has-instance? rval lval))
+  (has-instance? b a))
 
-(define (op:++ v)
-  (define r
-    (op:+ (to-number (get-value v)) 1))
-  (put-value! v r)
-  r)
+(define-syntax-rule (op:++ v)
+  (update-reference! v (λ (x) (op:+ x 1))))
 
-(define (op:-- v)
-  (define r
-    (op:- (to-number (get-value v)) 1))
-  (put-value! v r)
-  r)
+(define-syntax-rule (op:-- v)
+  (update-reference! v (λ (x) (op:- x 1))))
 
 (define (op:~ v)
   (to-int32
    (bitwise-not
-    (to-int32
-     (get-value v)))))
+    (to-int32 v))))
 
 (define (op:! v)
-  (not (to-boolean (get-value v))))
+  (not (to-boolean v)))
 
 (define op:+
   (case-lambda
-    [(x) (to-number (get-value x))]
+    [(x) (to-number x)]
     [(a b)
-     (let ([l (to-primitive (get-value a))]
-           [r (to-primitive (get-value b))])
+     (let ([l (to-primitive a)]
+           [r (to-primitive b)])
        (if (or (string? l) (string? r))
            (string-append (to-string l) (to-string r))
            (+ (to-number l) (to-number r))))]))
@@ -105,13 +57,8 @@
   (apply
    values
    (map (λ (op)
-          (λ args
-            (apply
-             op
-             (map (λ (v)
-                    (to-number
-                     (get-value v)))
-                  args))))
+          (λ (a b)
+            (op (to-number a) (to-number b))))
         (list - * / modulo))))
 
 (define-values (op:<< op:>> op:>>>)
@@ -119,16 +66,11 @@
    values
    (map (λ (op)
           (λ (n m)
-            (op (to-int32 (get-value n))
-                (bitwise-and
-                 #x1F
-                 (to-uint32 (get-value m))))))
-        (list (λ (n m)
-                (arithmetic-shift n m))
-              (λ (n m)
-                (arithmetic-shift n (- m)))
-              (λ (n m)
-                (arithmetic-shift n (- m)))))))
+            (op (to-int32 n)
+                (bitwise-and #x1F (to-uint32 m)))))
+        (list (λ (n m) (arithmetic-shift n m))
+              (λ (n m) (arithmetic-shift n (- m)))
+              (λ (n m) (arithmetic-shift n (- m)))))))
 
 (define-values (op:< op:> op:<= op:>=)
   (let ([compare
@@ -144,16 +86,10 @@
                      [(nan? yn) undef]
                      [else (< xn yn)])))))])
     (values
-     (λ (a b)
-       (compare (get-value a) (get-value b) #f))
-     (λ (a b)
-       (compare (get-value b) (get-value a) #f))
-     (λ (a b)
-       (not
-        (compare (get-value b) (get-value a) #t)))
-     (λ (a b)
-       (not
-        (compare (get-value a) (get-value b) #t))))))
+     (λ (a b) (compare a b #f))
+     (λ (a b) (compare b a #f))
+     (λ (a b) (not (compare b a #t)))
+     (λ (a b) (not (compare a b #t))))))
 
 (define-values (op:== op:!=)
   (let ([compare
@@ -188,12 +124,8 @@
                 [(or (string? b) (number? b)) (op:== (to-primitive a) b)]
                 [else #f])]))])
     (values
-     (λ (a b)
-       (compare (get-value a)
-                (get-value b)))
-     (λ (a b)
-       (not (compare (get-value a)
-                     (get-value b)))))))
+     (λ (a b) (compare a b))
+     (λ (a b) (not (compare a b))))))
 
 (define-values (op:=== op:!==)
   (let ([compare
@@ -207,58 +139,50 @@
                    (string=? a b))]
              [else (eq? a b)]))])
     (values
-     (λ (a b)
-       (compare (get-value a)
-                (get-value b)))
-     (λ (a b)
-       (not (compare (get-value a)
-                     (get-value b)))))))
+     (λ (a b) (compare a b))
+     (λ (a b) (not (compare a b))))))
 
 (define-values (op:& op:^ op:\|)
   (apply
    values
    (map (λ (op)
           (λ (a b)
-            (op (to-int32 (get-value a))
-                (to-int32 (get-value b)))))
+            (op (to-int32 a) (to-int32 b))))
         (list bitwise-and bitwise-xor bitwise-ior))))
 
 (define-syntax-rule (op:&& a b)
-  (let ([lval (get-value a)])
+  (let ([lval a])
     (if (to-boolean lval)
-        (get-value b)
+        b
         lval)))
 
 (define-syntax-rule (op:\|\| a b)
-  (let ([lval (get-value a)])
+  (let ([lval a])
     (if (to-boolean lval)
         lval
-        (get-value b))))
+        b)))
 
 (define-syntax-rule (op:?: test true false)
-  (if (to-boolean (get-value test))
-      (get-value true)
-      (get-value false)))
+  (if (to-boolean test)
+      true
+      false))
 
 (define (op:= a b)
-  (define v (get-value b))
-  (put-value! a v)
-  v)
+  (let ([v b])
+    (set! a v)
+    v))
 
-(define-values (op:+= op:-= op:*= op:/= op:%= op:<<= op:>>=
-                op:>>>= op:&= op:^= op:\|=)
+(define-syntaxes (op:+= op:-= op:*= op:/= op:%= op:<<= op:>>=
+                  op:>>>= op:&= op:^= op:\|=)
   (apply
    values
    (map (λ (op)
-          (λ (a b)
-            (define v
-              (op (get-value a)
-                  (get-value b)))
-            (put-value! a v)
-            v))
-        (list op:+ op:- op:* op:/ op:% op:<< op:>> op:>>> op:& op:^ op:\|))))
+          (λ (stx)
+            (syntax-case stx ()
+              [(_ a b)
+               (with-syntax ([op op])
+                 #'(update-reference! a (λ (x) (op x b))))])))
+        (list #'op:+ #'op:- #'op:* #'op:/ #'op:% #'op:<< #'op:>> #'op:>>> #'op:& #'op:^ #'op:\|))))
 
-(define (op:\, left right)
-  (begin
-    (get-value left)
-    (get-value right)))
+(define-syntax-rule (op:\, left right)
+  (begin left right))

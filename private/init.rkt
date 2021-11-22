@@ -68,8 +68,9 @@
   (parameterize
       ([current-ecma:this global-object])
     (define-object-properties global-object
-      ["NaN" +nan.0]
       ["Infinity" +inf.0]
+      ["NaN" +nan.0]
+      ["undefined" ecma:undefined]
       ["eval"
        (native-method (x)
          (if (string? x)
@@ -113,7 +114,6 @@
                     lib:string))
 
     (define prelude "
-undefined=[][0];
 Array.prototype.pop=(function(){
                                 if(this.length===0){
                                                     return undefined;

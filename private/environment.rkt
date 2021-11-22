@@ -10,7 +10,7 @@
 (lazy-require
  ["../convert.rkt" (to-object)])
 
-(provide expression
+(provide (struct-out reference)
          get-value
          put-value!
          environment-record%
@@ -20,12 +20,7 @@
          create-variables!
          initialize-lexical-var!)
 
-(define-syntax-rule (expression e)
-  (call-with-values
-   (λ () e)
-   (case-lambda
-     [(v) (get-value v)]
-     [() (void)])))
+(struct reference (base name strict?) #:transparent)
 
 (define (get-value v)
   (if (reference? v)
