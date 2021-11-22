@@ -74,12 +74,15 @@
         [(literal:boolean _ v) v]
         [(literal:null _) 'null]
         [(literal:number _ v) v]
-        ; object
+        [(literal:object _ props) `(object ,@(map c props))]
         [(literal:regexp _ pattern flags)
          `(regexp ,pattern ,(list->string flags))]
         [(literal:string _ v) v]
         [(operator _ s)
          (string->symbol s)]
+        [(property-initializer:data _ n e) `[,n ,(c e)]]
+        [(property-initializer:get _ n f) `[,n #:get ,(c f)]]
+        [(property-initializer:set _ n f) `[,n #:set ,(c f)]]
         [(statement:block _ body)
          `(block #:vars ,(append* (map extract-lexical-var-names body))
             ,@(map c body))]

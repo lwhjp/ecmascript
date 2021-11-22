@@ -222,11 +222,16 @@ PropertyDefinitionList{Yield, Await} <-
     PropertyDefinition{?Yield, ?Await} (_ ~',' _ PropertyDefinition{?Yield, ?Await})*;
 
 PropertyDefinition{Yield, Await} <-
-    PropertyName{?Yield, ?Await} _ ':' _ AssignmentExpression{+In, ?Yield, ?Await} /
     MethodDefinition{?Yield, ?Await} /
-    CoverInitializedName{?Yield, ?Await} /
-    IdentifierReference{?Yield, ?Await} /
+    DataPropertyDefinition{?Yield, ?Await} /
     '...' _ AssignmentExpression{+In, ?Yield, ?Wait};
+
+DataPropertyDefinition{Yield, Await} <-
+    name:PropertyName{?Yield, ?Await} _ ':' _ value:AssignmentExpression{+In, ?Yield, ?Await} /
+    ref:IdentifierReference{?Yield, ?Await}
+    -> (if ref
+           (property-initializer:data location (symbol->string (identifier-symbol (expression:reference-identifier ref))) ref)
+           (property-initializer:data location name value));
 
 PropertyName{Yield, Await} <-
     LiteralPropertyName /
@@ -235,8 +240,6 @@ PropertyName{Yield, Await} <-
 LiteralPropertyName <- IdentifierName / StringLiteral / NumericLiteral;
 
 ComputedPropertyName{Yield, Await} <- '[' _ AssignmentExpression{+In, ?Yield, ?Await} _ ']';
-
-CoverInitializedName{Yield, Await} <- IdentifierReference{?Yield, ?Await} _ Initializer{+In, ?Yield, ?Await};
 
 Initializer{In, Yield, Await} <- ~'=' _ e:AssignmentExpression{?In, ?Yield, ?Await} -> e;
 

@@ -16,40 +16,39 @@
  (rename-out [make-array array]))
 
 (define-syntax (object stx)
-  (define parse-name
-    (syntax-parser
-      [v:id (symbol->string (syntax-e #'v))]
-      [v:str #'v]
-      [v:number #'(to-string v)]))
-  (define parse-def
-    (syntax-parser
-      [(expr)
-       #'`(data
-           (value . ,expr)
-           (writable . #t)
-           (enumerable . #t)
-           (configurable . #t))]
-      [(#:get fn)
-       #'`(accessor
-           (get . ,fn)
-           (enumerable . #t)
-           (configurable . #t))]
-      [(#:set fn)
-       #'`(accessor
-           (set . ,fn)
-           (enumerable . #t)
-           (configurable . #t))]))
-  (syntax-case stx ()
-    [(_ [name . def] ...)
-     (with-syntax
-         ([(pname ...) (stx-map parse-name #'(name ...))]
-          [(pdesc ...) (stx-map parse-def #'(def ...))])
-       #`(let ([obj (new Object%)])
-           (define-own-property obj
-                 pname
-                 pdesc
-                 #f) ...
-           obj))]))
+  (define-syntax-class property-name
+    #:attributes (name)
+    (pattern v:str
+      #:attr name (datum->syntax #'v (syntax-e #'v)))
+    (pattern v:number
+      #:attr name (datum->syntax #'v (number->string (syntax-e #'v)))))
+  (define-splicing-syntax-class property-initializer
+    #:attributes (desc)
+    (pattern (~seq expr)
+      #:attr desc #'`(data
+                      (value . ,expr)
+                      (writable . #t)
+                      (enumerable . #t)
+                      (configurable . #t)))
+    (pattern (~seq #:get fn)
+      #:attr desc #'`(accessor
+                      (get . ,fn)
+                      (enumerable . #t)
+                      (configurable . #t)))
+    (pattern (~seq #:set fn)
+      #:attr desc #'`(accessor
+                      (set . ,fn)
+                      (enumerable . #t)
+                      (configurable . #t))))
+  (syntax-parse stx
+    [(_ [name:property-name def:property-initializer] ...)
+     #'(let ([obj (new Object%)])
+         (define-own-property obj
+           name.name
+           def.desc
+           #f)
+         ...
+         obj)]))
 
 (define (regexp pattern flags)
   (ecma:new (identifier RegExp) pattern flags))
