@@ -16,6 +16,8 @@
                        "statement.rkt")
          identifier
          member
+         delete
+         typeof
          var
 
          null
