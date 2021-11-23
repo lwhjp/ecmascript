@@ -851,17 +851,20 @@ AsyncFunctionBody <- FunctionBody{~Yield, +Await};
 AwaitExpression{Yield} <- 'await' _ (UpdateExpression{?Yield, +Await} / UnaryExpression{?Yield, +Await});
 
 ClassDeclaration{Yield, Await, Default} <-
-    'class' _ BindingIdentifier{?Yield, ?Await} _ ClassTail{?Yield, ?Await} /
-    {+Default} 'class' _ ClassTail{?Yield, ?Await};
+    'class' _ name:BindingIdentifier{?Yield, ?Await} _ body:ClassTail{?Yield, ?Await} /
+    {+Default} 'class' _ body:ClassTail{?Yield, ?Await}
+    -> (declaration:class location name body);
 
 ClassExpression{Yield, Await} <-
-    'class' _ (BindingIdentifier{?Yield, ?Await} _)? ClassTail{?Yield, ?Await};
+    'class' _ (name:BindingIdentifier{?Yield, ?Await} _)? body:ClassTail{?Yield, ?Await}
+    -> (expression:class location name body);
 
 ClassTail{Yield, Await} <-
-    (ClassHeritage{?Yield, ?Await} _)? '{' _ (ClassBody{?Yield, ?Await} _)? '}';
+    (heritage:ClassHeritage{?Yield, ?Await} _)? '{' _ (body:ClassBody{?Yield, ?Await} _)? '}'
+    -> (class-definition location heritage body);
 
 ClassHeritage{Yield, Await} <-
-    'extends' _ LeftHandSideExpression{?Yield, ?Await};
+    ~'extends' _ LeftHandSideExpression{?Yield, ?Await};
 
 ClassBody{Yield, Await} <- ClassElementList{?Yield, ?Await};
 
@@ -869,18 +872,29 @@ ClassElementList{Yield, Await} <-
     ClassElement{?Yield, ?Await} (_ ClassElement{?Yield, ?Await})*;
 
 ClassElement{Yield, Await} <-
-    ('static' _)? (MethodDefinition{?Yield, ?Await} / FieldDefinition{?Yield, ?Await} SEMICOLON) /
+    ClassMethodDefinition{?Yield, ?Await} /
+    ClassFieldDefinition{?Yield, ?Await} /
     ClassStaticBlock /
-    SEMICOLON;
+    ~';';
+
+ClassMethodDefinition{Yield, Await} <-
+    (s:'static' _)? d:MethodDefinition{?Yield, ?Await}
+    -> (class:method location (and s #t) d);
+
+ClassFieldDefinition{Yield, Await} <-
+    (s:'static' _)? d:FieldDefinition{?Yield, ?Await} SEMICOLON
+    -> (class:field location (and s #t) d);
 
 FieldDefinition{Yield, Await} <-
-    ClassElementName{?Yield, ?Await} (_ Initializer{+In, ?Yield, ?Await})?;
+    n:ClassElementName{?Yield, ?Await} (_ v:Initializer{+In, ?Yield, ?Await})?
+    -> (property-initializer:data location n v);
 
 ClassElementName{Yield, Await} <-
     PropertyName{?Yield, ?Await} /
     PrivateIdentifier;
 
-ClassStaticBlock <- 'static' _ '{' _ ClassStaticBlockBody _ '}';
+ClassStaticBlock <- 'static' _ '{' _ body:ClassStaticBlockBody _ '}'
+    -> (class:static-block location body);
 
 ClassStaticBlockBody <- ClassStaticBlockStatementList;
 

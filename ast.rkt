@@ -6,7 +6,14 @@
 
 (struct case-clause syntax-element (expression body) #:transparent)
 
+(struct class-definition syntax-element (heritage body) #:transparent)
+(struct class-element syntax-element () #:transparent)
+(struct class:field class-element (static? definition) #:transparent)
+(struct class:method class-element (static? definition) #:transparent)
+(struct class:static-block class-element (body) #:transparent)
+
 (struct declaration syntax-element () #:transparent)
+(struct declaration:class declaration (name body) #:transparent)
 (struct declaration:const declaration (decls) #:transparent)
 (struct declaration:function declaration (definition) #:transparent)
 (struct declaration:let declaration (decls) #:transparent)
@@ -19,6 +26,7 @@
 (struct expression syntax-element () #:transparent)
 (struct expression:binary expression (left operator right) #:transparent)
 (struct expression:call expression (function arguments) #:transparent)
+(struct expression:class expression (name body) #:transparent)
 (struct expression:comma expression (left right) #:transparent)
 (struct expression:conditional expression (test true false) #:transparent)
 (struct expression:function expression (definition) #:transparent)
