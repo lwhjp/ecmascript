@@ -156,7 +156,7 @@
         (loop body)]
        [(statement:while _ _ body)
         (loop body)]
-       [(statement:for _ (list (variable-declaration _ id _) ...) _ _ body)
+       [(statement:for _ (declaration:var _ (list (variable-declaration _ id _) ...)) _ _ body)
         (append (append* (map extract-var-names/binding id))
                 (loop body))]
        [(statement:for _ _ _ _ body)
