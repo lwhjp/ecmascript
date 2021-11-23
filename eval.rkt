@@ -14,7 +14,7 @@
   [realm? predicate/c]
   [current-realm (parameter/c realm?)]
   [make-realm (-> realm?)]
-  [es-eval (->* ((or/c string? input-port? path?)) (realm?) any/c)]))
+  [es-eval (->* ((or/c string? input-port? path?)) (realm?) any)]))
 
 (define (realm? v) (is-a? v realm%))
 
