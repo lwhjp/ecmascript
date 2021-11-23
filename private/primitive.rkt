@@ -6,7 +6,13 @@
  ecma:null
  ecma:null?)
 
-(struct opaque-primitive (name))
+(struct opaque-primitive (name)
+  #:methods gen:custom-write
+  [(define (write-proc obj port mode)
+     (define name (opaque-primitive-name obj))
+     (case mode
+       [(#f) (write name port)]
+       [else (write-string (format "#<~a>" name) port)]))])
 
 (define ecma:undefined (opaque-primitive 'undefined))
 
