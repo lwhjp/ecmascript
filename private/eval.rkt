@@ -31,7 +31,7 @@
       (void)
       (parameterize ([current-realm realm])
         (eval-syntax
-         #`(begin-scope (new-declarative-environment lexical-environment)
+         #`(begin-scope (new-object-environment (current-global-object) lexical-environment)
              #,@(namespace-syntax-introduce stx (force es-eval-namespace)))))))
 
 (define-namespace-anchor here)
