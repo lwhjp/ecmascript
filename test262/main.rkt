@@ -77,7 +77,12 @@
      (cond
        [(regexp-match #rx"^(.*?)\\.js$" e)
         => (λ (m)
-             (test-suite (second m) (run-test262-file e-path)))]
+             (define test-custodian #f)
+             (test-suite (second m)
+               #:before (thunk (set! test-custodian (make-custodian)))
+               #:after (thunk (custodian-shutdown-all test-custodian))
+               (parameterize ([current-custodian test-custodian])
+                 (run-test262-file e-path))))]
        [(directory-exists? e-path)
         (make-test-suite
          (path->string e)
