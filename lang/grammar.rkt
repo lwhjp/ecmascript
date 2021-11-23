@@ -645,7 +645,7 @@ WhileStatement{Yield, Await, Return} <-
 ForStatement{Yield, Await, Return} <-
     'for' _ '(' _ ('var' _ vars:VariableDeclarationList{~In, ?Yield, ?Await} _ ';' /
                    init:LexicalDeclaration{~In, ?Yield, ?Await} /
-                   !('let' _ '[') init:Expression{~In, ?Yield, ?Await}? _ ';')
+                   !('let' _ '[') (init:Expression{~In, ?Yield, ?Await})? _ ';')
                 _ (test:Expression{+In, ?Yield, ?Await} _)? ';'
                 _ (update:Expression{+In, ?Yield, ?Await} _)? ')'
         _ body:Statement{?Yield, ?Await, ?Return}
