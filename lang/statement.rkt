@@ -11,7 +11,8 @@
          "../convert.rkt"
          (only-in "environment.rkt" lexical-environment)
          (only-in "function.rkt" begin-scope)
-         (prefix-in ecma: "operator.rkt"))
+         (prefix-in ecma: "operator.rkt")
+         "reference.rkt")
 
 (provide (filtered-out
           (λ (name)
@@ -75,7 +76,7 @@
   (syntax-parser
     [(_ binding:lexical-binding ...)
      #'(begin
-         (initialize-lexical-var! binding.id binding.init)
+         (initialize-lexical-var! (identifier-reference binding.id) binding.init)
          ...)]))
 
 (define-syntax-rule (var [var-id init] ...)
@@ -104,6 +105,10 @@
 
 (define-syntax (stmt:for stx)
   (syntax-parse stx
+    [(_ #:init ((~literal stmt:let) [var init] ...) . rest)
+     #'(begin-scope (new-declarative-environment lexical-environment)
+         #:vars (var ...)
+         (stmt:for #:init (begin (initialize-lexical-var! (identifier-reference var) init) ...) . rest))]
     [(_ (~optional (~seq #:init init))
         (~optional (~seq #:test test))
         (~optional (~seq #:update update))

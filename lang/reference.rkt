@@ -12,6 +12,7 @@
          "environment.rkt")
 
 (provide
+ identifier-reference
  set-reference!
  update-reference!
  post-update-reference!
@@ -29,6 +30,12 @@
   (syntax-case (local-expand stx 'expression (list #'#%ref)) (#%ref)
     [(#%ref v) #'v]
     [v #'v]))
+
+(define-syntax (identifier-reference stx)
+  (syntax-case stx ()
+    [(_ id)
+     (identifier? #'id)
+     (preserve-reference #'(identifier id))]))
 
 (define-syntax (set-reference! stx)
   (syntax-case stx ()
