@@ -39,9 +39,9 @@
 (define (to-number v)
   (cond
     [(ecma:undefined? v) +nan.0]
-    [(ecma:null? v) 0]
-    [(boolean? v) (if v 1 0)]
-    [(number? v) v]
+    [(ecma:null? v) 0.0]
+    [(boolean? v) (if v 1.0 0.0)]
+    [(number? v) (exact->inexact v)]
     [(string? v) (or (string->number (string-trim v)) +nan.0)]
     [(Object? v) (to-number (to-primitive v 'number))]))
 

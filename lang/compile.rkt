@@ -73,7 +73,7 @@
         [(literal:array _ es) `(array ,@(map c es))]
         [(literal:boolean _ v) v]
         [(literal:null _) 'null]
-        [(literal:number _ v) v]
+        [(literal:number _ v) (exact->inexact v)]
         [(literal:object _ props) `(object ,@(map c props))]
         [(literal:regexp _ pattern flags)
          `(regexp ,pattern ,(list->string flags))]
