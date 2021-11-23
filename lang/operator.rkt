@@ -167,9 +167,9 @@
       true
       false))
 
-(define (op:= a b)
+(define-syntax-rule (op:= a b)
   (let ([v b])
-    (set! a v)
+    (set-reference! a v)
     v))
 
 (define-syntaxes (op:+= op:-= op:*= op:/= op:%= op:<<= op:>>=
