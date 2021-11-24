@@ -96,7 +96,6 @@
           (values (string-join (map to-string ps) ",")
                   (to-string body))]))
      (let ([def (format "function(~a){~a};" params body)])
-       (displayln def)
        (eval def)))))
 
 (define (check-is-function o)
