@@ -1,11 +1,28 @@
 #lang racket/base
 
-(require "primitive.rkt")
+(require racket/lazy-require
+         "primitive.rkt")
+
+(lazy-require
+ ["../convert.rkt" (to-string)])
 
 (provide (all-defined-out))
 
-(define native-error-handler
-  (make-parameter #f))
+(struct es-exn (value) #:transparent)
+
+(struct ecmascript-exception exn:fail:user (value) #:transparent)
+
+;; TODO: error constructors should be intrinsics
+(define native-error-constructor (make-parameter #f))
 
 (define (raise-native-error type [message ecma:undefined])
-  ((native-error-handler) type message))
+  (raise (es-exn ((native-error-constructor) type message))))
+
+(define-syntax-rule
+  (with-es-exceptions form ...)
+  (with-handlers ([es-exn? (λ (e)
+                             (raise (ecmascript-exception
+                                     (to-string (es-exn-value e))
+                                     (current-continuation-marks)
+                                     e)))])
+    form ...))

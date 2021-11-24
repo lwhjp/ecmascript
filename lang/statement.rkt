@@ -6,6 +6,7 @@
          racket/provide
          racket/stxparam
          "../private/environment.rkt"
+         "../private/error.rkt"
          "../private/object.rkt"
          "../private/primitive.rkt"
          "../convert.rkt"
@@ -19,8 +20,6 @@
             (and (regexp-match? #rx"^stmt:" name)
                  (substring name 5)))
           (all-defined-out)))
-
-(struct exn:throw exn (value) #:transparent)
 
 (define-syntax-parameter break-bindings '())
 
@@ -194,10 +193,7 @@
      (syntax-property #'stmt 'label (syntax-e #'label))]))
 
 (define (stmt:throw v)
-  (raise
-   (exn:throw (to-string v)
-              (current-continuation-marks)
-              v)))
+  (raise (es-exn v)))
 
 (define-syntax (stmt:try stx)
   (syntax-parse stx
@@ -208,11 +204,11 @@
          ([handlers
            (if (attribute cid)
                (with-syntax ([eid (symbol->string (syntax-e (attribute cid)))])
-                 #'([exn:throw?
+                 #'([es-exn?
                      (λ (e)
                        (let ([env (new-declarative-environment lexical-environment)])
                          (send env create-mutable-binding! eid)
-                         (send env set-mutable-binding! eid (exn:throw-value e) #f)
+                         (send env set-mutable-binding! eid (es-exn-value e) #f)
                          (begin-scope env
                            cbody ...)))]))
                #'())]

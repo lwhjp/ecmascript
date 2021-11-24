@@ -66,8 +66,8 @@
        (with-syntax
          ([proto-id (format-id stx "~a:prototype" base-name)]
           [cons-id (format-id stx "~a-constructor" base-name)]
-          [throw-id (format-id stx "throw-~a" base-name)])
-         #'(define-values (proto-id cons-id throw-id)
+          [make-id (format-id stx "make-~a" base-name)])
+         #'(define-values (proto-id cons-id make-id)
              (let-values
                  ([(proto cons)
                    (make-error-prototype+constructor
@@ -75,9 +75,7 @@
                     error:prototype)])
                (values proto
                        cons
-                       (λ (msg)
-                         (throw
-                          (send cons-id construct (list msg)))))))))]))
+                       (λ (msg) (send cons-id construct (list msg))))))))]))
 
 (define-native-error "Eval")
 (define-native-error "Range")
@@ -107,14 +105,14 @@
         [(string=? "" msg) name]
         [else (string-append name ": " msg)])))])
 
-(native-error-handler
+(native-error-constructor
  (λ (type message)
    (case type
-     [(range) (throw-range-error message)]
-     [(reference) (throw-reference-error message)]
-     [(syntax) (throw-syntax-error message)]
-     [(type) (throw-type-error message)]
-     [(uri) (throw-uri-error message)]
+     [(range) (make-range-error message)]
+     [(reference) (make-reference-error message)]
+     [(syntax) (make-syntax-error message)]
+     [(type) (make-type-error message)]
+     [(uri) (make-uri-error message)]
      [else
       (error 'native-error-handler
              "unknown error type: ~a"

@@ -6,6 +6,7 @@
          (rename-in "private/eval.rkt"
                     [eval do-eval])
          "private/default-environment.rkt"
+         "private/error.rkt"
          "private/init.rkt"
          "private/realm.rkt")
 
@@ -20,9 +21,10 @@
 
 (define (es-eval src
                  [realm (current-realm)])
-  (if (path? src)
-      (call-with-input-file src
-        (λ (in)
-          (port-count-lines! in)
-          (do-eval in realm)))
-      (do-eval src realm)))
+  (with-es-exceptions
+    (if (path? src)
+        (call-with-input-file src
+          (λ (in)
+            (port-count-lines! in)
+            (do-eval in realm)))
+        (do-eval src realm))))

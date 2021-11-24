@@ -6,6 +6,7 @@
          racket/runtime-path
          racket/contract/base
          "environment.rkt"
+         "error.rkt"
          "realm.rkt"
          "../lang/compile.rkt"
          "../lang/environment.rkt"
@@ -30,9 +31,11 @@
   (if (eof-object? stx)
       (void)
       (parameterize ([current-realm realm])
-        (eval-syntax
-         #`(begin-scope (new-object-environment (current-global-object) lexical-environment)
-             #,@(namespace-syntax-introduce stx (force es-eval-namespace)))))))
+        (with-handlers ([exn:fail:read? (λ (e) (raise-native-error 'syntax (exn-message e)))]
+                        [exn:fail:syntax? (λ (e) (raise-native-error 'syntax (exn-message e)))])
+          (eval-syntax
+           #`(begin-scope (new-object-environment (current-global-object) lexical-environment)
+               #,@(namespace-syntax-introduce stx (force es-eval-namespace))))))))
 
 (define-namespace-anchor here)
 
