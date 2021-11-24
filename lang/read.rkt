@@ -15,11 +15,7 @@
 (define (ecma:read-syntax
          [src (object-name (current-input-port))]
          [in (current-input-port)])
-  (with-handlers
-      ([exn:fail:read?
-        (λ (e)
-          (raise-native-error 'syntax (exn-message e)))])
-    (let ([ast (read-program src in)])
-      (if (eof-object? ast)
-          '()
-          (ecmascript->racket ast)))))
+  (let ([ast (read-program src in)])
+    (if (eof-object? ast)
+        '()
+        (ecmascript->racket ast))))
