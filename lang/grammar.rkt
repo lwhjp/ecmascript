@@ -64,11 +64,11 @@ BooleanLiteral <- t:'true' / 'false' -> (literal:boolean location (if t #t #f));
 
 NumericLiteralSeparator < '_';
 NumericLiteral <-
-    n:NonDecimalIntegerLiteral{+Sep} BigIntLiteralSuffix? /
+    n:NonDecimalIntegerLiteral{+Sep} (big:BigIntLiteralSuffix)? /
     n:LegacyOctalIntegerLiteral /
-    n:DecimalBigIntegerLiteral /
+    n:DecimalBigIntegerLiteral big:''/
     n:DecimalLiteral
-    -> (literal:number location n);
+    -> ((if big literal:bigint literal:number) location n);
 DecimalBigIntegerLiteral <-
     n:('0' BigIntLiteralSuffix /
        NonZeroDigit DecimalDigits{+Sep}? BigIntLiteralSuffix /

@@ -47,6 +47,7 @@
 
 (struct literal syntax-element () #:transparent)
 (struct literal:array literal (elements) #:transparent)
+(struct literal:bigint literal (value) #:transparent)
 (struct literal:boolean literal (value) #:transparent)
 (struct literal:null literal () #:transparent)
 (struct literal:number literal (value) #:transparent)

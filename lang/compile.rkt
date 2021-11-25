@@ -71,6 +71,7 @@
             ,@(map c body))]
         [(identifier _ s) s]
         [(literal:array _ es) `(array ,@(map c es))]
+        [(literal:bigint _ v) v]
         [(literal:boolean _ v) v]
         [(literal:null _) 'null]
         [(literal:number _ v) (exact->inexact v)]
