@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/provide)
+(require racket/provide
+         "string.rkt")
 
 (provide (matching-identifiers-out #rx"^es-" (all-defined-out)))
 
@@ -34,8 +35,6 @@
 (define es-big-int? exact-integer?)
 
 (define es-symbol? symbol?)
-
-(define es-string? string?) ; TODO: UTF-16
 
 (define (es-primitive? v)
   (or (es-undefined? v)

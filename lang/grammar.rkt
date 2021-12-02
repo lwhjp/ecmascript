@@ -114,36 +114,25 @@ HexDigit <- [0-9a-fA-F];
 StringLiteral <-
     '"' s:DoubleStringCharacter* '"' /
     '\'' s:SingleStringCharacter* '\''
-    -> (literal:string location (if (string? s) s (apply string-append s)));
-DoubleStringCharacter <- !('"' / '\\' / LineTerminator) . / LS / PS / LineContinuation / ~'\\' EscapeSequence;
-SingleStringCharacter <- !('\'' / '\\' / LineTerminator) . / LS / PS / LineContinuation / ~'\\' EscapeSequence;
-LineContinuation < '\\' LineTerminatorSequence;
+    -> (literal:string location (if (string? s) s ""));
+DoubleStringCharacter <- !('"' / '\\' / LineTerminator) . / LS / PS / LineContinuation / '\\' EscapeSequence;
+SingleStringCharacter <- !('\'' / '\\' / LineTerminator) . / LS / PS / LineContinuation / '\\' EscapeSequence;
+LineContinuation <- '\\' LineTerminatorSequence;
 EscapeSequence <- CharacterEscapeSequence / '0' !DecimalDigit / LegacyOctalEscapeSequence /
     NonOctalDecimalEscapeSequence / HexEscapeSequence / UnicodeEscapeSequence;
 CharacterEscapeSequence <- SingleEscapeCharacter / NonEscapeCharacter;
-SingleEscapeCharacter <- c:["'\\bfnrtv]
-    -> (case c
-         [("b") "\u0008"]
-         [("t") "\u0009"]
-         [("n") "\u000A"]
-         [("v") "\u000B"]
-         [("f") "\u000C"]
-         [("r") "\u000D"]
-         [else c]);
+SingleEscapeCharacter <- ["'\\bfnrtv];
 NonEscapeCharacter <- !(EscapeCharacter / LineTerminator) .;
 EscapeCharacter <- SingleEscapeCharacter / DecimalDigit / 'x' / 'u';
 LegacyOctalEscapeSequence <-
-    code:('0' ![89] /
-          [1-7] ![0-8] /
-          [0-3] [0-7] ![0-7] /
-          [4-7] [0-7] /
-          [0-3] [0-7] [0-7])
-    -> (string (integer->char (string->number code 8)));
+    '0' ![89] /
+    [1-7] ![0-8] /
+    [0-3] [0-7] ![0-7] /
+    [4-7] [0-7] /
+    [0-3] [0-7] [0-7];
 NonOctalDecimalEscapeSequence <- [89];
-HexEscapeSequence <- 'x' code:(HexDigit HexDigit)
-    -> (string (integer->char (string->number code 16)));
-UnicodeEscapeSequence <- 'u' code:Hex4Digits / 'u{' code:HexDigit+ '}'
-    -> (string (integer->char (string->number code 16)));
+HexEscapeSequence <- 'x' HexDigit HexDigit;
+UnicodeEscapeSequence <- 'u' Hex4Digits / 'u{' HexDigit+ '}';
 Hex4Digits <- HexDigit HexDigit HexDigit HexDigit;
 
 // Regular Expressions
@@ -180,7 +169,7 @@ Identifier{Yield, Await} <-
     !ReservedWord name:IdentifierName /
     {~Yield} name:'yield' /
     {~Await} name:'await'
-    -> (identifier location (string->symbol name));
+    -> (identifier location name);
 
 // TODO: TemplateLiteral
 
@@ -230,7 +219,7 @@ DataPropertyDefinition{Yield, Await} <-
     name:PropertyName{?Yield, ?Await} _ ':' _ value:AssignmentExpression{+In, ?Yield, ?Await} /
     ref:IdentifierReference{?Yield, ?Await}
     -> (if ref
-           (property-initializer:data location (symbol->string (identifier-symbol (expression:reference-identifier ref))) ref)
+           (property-initializer:data location (identifier-source (expression:reference-identifier ref)) ref)
            (property-initializer:data location name value));
 
 PropertyName{Yield, Await} <-

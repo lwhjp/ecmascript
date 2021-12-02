@@ -7,6 +7,7 @@
          "../private/function.rkt"
          "../private/object.rkt"
          "../private/primitive.rkt"
+         "../private/string.rkt"
          "../convert.rkt"
          "reference.rkt")
 
@@ -50,7 +51,7 @@
      (let ([l (to-primitive a)]
            [r (to-primitive b)])
        (if (or (string? l) (string? r))
-           (string-append (to-string l) (to-string r))
+           (es-string-append (to-string l) (to-string r))
            (+ (to-number l) (to-number r))))]))
 
 (define-values (op:- op:* op:/ op:%)
@@ -77,8 +78,8 @@
          (λ (x y undef)
            (let ([xp (to-primitive x)]
                  [yp (to-primitive y)])
-             (if (and (string? xp) (string? yp))
-                 (string<? xp yp)
+             (if (and (es-string? xp) (es-string? yp))
+                 (es-string<? xp yp)
                  (let ([xn (to-number x)]
                        [yn (to-number y)])
                    (cond
@@ -109,19 +110,19 @@
              [(number? a)
               (cond
                 [(number? b) (= a b)]
-                [(string? b) (op:== a (to-number b))]
+                [(es-string? b) (op:== a (to-number b))]
                 [(Object? b) (op:== a (to-primitive b))]
                 [else #f])]
              [(string? a)
               (cond
-                [(string? b) (string=? a b)]
+                [(es-string? b) (es-string=? a b)]
                 [(number? b) (op:== (to-number a) b)]
                 [(Object? b) (op:== a (to-primitive b))]
                 [else #f])]
              [(Object? a)
               (cond
                 [(Object? b) (eq? a b)]
-                [(or (string? b) (number? b)) (op:== (to-primitive a) b)]
+                [(or (es-string? b) (number? b)) (op:== (to-primitive a) b)]
                 [else #f])]))])
     (values
      (λ (a b) (compare a b))
@@ -134,9 +135,9 @@
              [(number? a)
               (and (number? b)
                    (= a b))]
-             [(string? a)
-              (and (string? b)
-                   (string=? a b))]
+             [(es-string? a)
+              (and (es-string? b)
+                   (es-string=? a b))]
              [else (eq? a b)]))])
     (values
      (λ (a b) (compare a b))

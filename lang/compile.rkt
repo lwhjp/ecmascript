@@ -69,7 +69,7 @@
                     ,(map c parameters)
                     #:vars ,(extract-var-names* body)
             ,@(map c body))]
-        [(identifier _ s) s]
+        [(identifier _ src) (string->symbol src)] ; TODO: identifier escapes
         [(literal:array _ es) `(array ,@(map c es))]
         [(literal:bigint _ v) v]
         [(literal:boolean _ v) v]
@@ -78,7 +78,7 @@
         [(literal:object _ props) `(object ,@(map c props))]
         [(literal:regexp _ pattern flags)
          `(regexp ,pattern ,(list->string flags))]
-        [(literal:string _ v) v]
+        [(literal:string _ src) `(es-string-literal ,src)]
         [(operator _ s)
          (string->symbol s)]
         [(property-initializer:data _ n e) `[,n ,(c e)]]
@@ -179,7 +179,7 @@
 
 (define extract-var-names/binding
   (match-lambda
-    [(identifier _ symbol) (list symbol)]))
+    [(identifier _ source) (list (string->symbol source))]))
 
 (define (postfix s)
   (format-id s "post~a" s))

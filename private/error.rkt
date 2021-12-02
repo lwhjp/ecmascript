@@ -1,7 +1,8 @@
 #lang racket/base
 
 (require racket/lazy-require
-         "primitive.rkt")
+         "primitive.rkt"
+         "string.rkt")
 
 (lazy-require
  ["../convert.rkt" (to-string)])
@@ -22,7 +23,7 @@
   (with-es-exceptions form ...)
   (with-handlers ([es-exn? (λ (e)
                              (raise (ecmascript-exception
-                                     (to-string (es-exn-value e))
+                                     (es-string->string (to-string (es-exn-value e)))
                                      (current-continuation-marks)
                                      e)))])
     form ...))

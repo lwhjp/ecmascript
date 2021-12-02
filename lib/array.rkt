@@ -8,6 +8,7 @@
          "../private/function.rkt"
          "../private/object.rkt"
          "../private/primitive.rkt"
+         "../private/string.rkt"
          "../private/this.rkt"
          (only-in "object.rkt" Object:prototype)
          "util.rkt")
@@ -36,7 +37,7 @@
           [elt (in-list elements)]
           #:unless (ecma:undefined? elt))
       (define-own-property obj
-            (to-string i)
+            (es-string->string (to-string i))
             `(data
               (value . ,elt)
               (writable . #t)

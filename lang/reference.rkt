@@ -9,6 +9,7 @@
          "../private/object.rkt"
          "../private/primitive.rkt"
          "../private/realm.rkt"
+         "../private/string.rkt"
          "environment.rkt")
 
 (provide
@@ -77,7 +78,7 @@
     [(_ base prop)
      (with-syntax ([prop-name (if (identifier? #'prop)
                                   (symbol->string (syntax-e #'prop))
-                                  #'(to-string prop))])
+                                  #'(es-string->string (to-string prop)))])
        #'(#%ref (reference (to-object base) prop-name #f)))]))
 
 (define (delete/ref ref)

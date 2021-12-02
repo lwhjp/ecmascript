@@ -3,10 +3,12 @@
 (require racket/class
          racket/math
          racket/string
+         "lang/helpers.rkt"
          "private/error.rkt"
          "private/function.rkt"
          "private/object.rkt"
          "private/primitive.rkt"
+         "private/string.rkt"
          (only-in "lib/boolean.rkt" make-Boolean)
          (only-in "lib/number.rkt" make-Number)
          (only-in "lib/string.rkt" make-String))
@@ -33,7 +35,7 @@
     [(ecma:null? v) #f]
     [(boolean? v) v]
     [(number? v) (not (or (zero? v) (nan? v)))]
-    [(string? v) (not (string=? v ""))]
+    [(es-string? v) (not (es-string=? "" v))]
     [(Object? v) #t]))
 
 (define (to-number v)
@@ -42,7 +44,7 @@
     [(ecma:null? v) 0.0]
     [(boolean? v) (if v 1.0 0.0)]
     [(number? v) (exact->inexact v)]
-    [(string? v) (or (string->number (string-trim v)) +nan.0)]
+    [(es-string? v) (or (string->number (string-trim (es-string->string v))) +nan.0)]
     [(Object? v) (to-number (to-primitive v 'number))]))
 
 (define (to-integer v)
@@ -73,15 +75,16 @@
 
 (define (to-string v)
   (cond
-    [(ecma:undefined? v) "undefined"]
-    [(ecma:null? v) "null"]
-    [(boolean? v) (if v "true" "false")]
+    [(ecma:undefined? v) (es-string-literal "undefined")]
+    [(ecma:null? v) (es-string-literal "null")]
+    [(boolean? v) (if v (es-string-literal "true") (es-string-literal "false"))]
     [(number? v)
      (cond
-       [(nan? v) "NaN"]
-       [(infinite? v) "Infinity"]
-       [else (number->string v)])]
-    [(string? v) v]
+       [(nan? v) (es-string-literal "NaN")]
+       [(infinite? v) (es-string-literal "Infinity")]
+       [(integer? v) (string->es-string (number->string (inexact->exact v)))]
+       [else (string->es-string (number->string v))])]
+    [(es-string? v) v]
     [(Object? v) (to-string (to-primitive v 'string))]))
 
 (define (to-object v)
@@ -90,5 +93,5 @@
     [(ecma:null? v) (raise-native-error 'type "null")]
     [(boolean? v) (make-Boolean v)]
     [(number? v) (make-Number v)]
-    [(string? v) (make-String v)]
+    [(es-string? v) (make-String v)]
     [(Object? v) v]))

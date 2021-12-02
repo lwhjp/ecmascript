@@ -1,65 +1,43 @@
 #lang racket/base
 
-(require (for-syntax racket/base
-                     syntax/parse))
+(require (for-syntax racket/base)
+         "../private/string.rkt")
 
-(provide extend-object)
+(provide (all-defined-out))
 
-(begin-for-syntax
-  (define-syntax-class property-name
-    #:attributes (str)
-    [pattern str:str]
-    [pattern
-     name:id
-     #:attr str (datum->syntax
-                 #f
-                 (symbol->string #'name)
-                 #'name)]
-    [pattern
-     name:number
-     #:attr str (datum->syntax
-                 #f
-                 (number->string #'name)
-                 #'name)])
-  (define-syntax-class property-clause
-    #:attributes (name.str constructor)
-    [pattern
-     [name:property-name
-      value:expr
-      (~or (~optional (~seq #:configurable configurable?:boolean)
-                      #:defaults ([configurable? #'#t]))
-           (~optional (~seq #:enumerable enumerable?:boolean)
-                      #:defaults ([enumerable? #'#f]))
-           (~optional (~seq #:writable writable?:boolean)
-                      #:defaults ([writable? #'#t]))) ...]
-     #:attr constructor #'(data-property
-                           configurable?
-                           enumerable?
-                           writable?
-                           value)]
-    [pattern
-     [name:property-name
-      (~or (~optional (~seq #:get getter:expr)
-                      #:defaults ([getter #'#f]))
-           (~optional (~seq #:set setter:expr)
-                      #:defaults ([setter #'#f]))
-           (~optional (~seq #:configurable configurable?:boolean)
-                      #:defaults ([configurable? #'#t]))
-           (~optional (~seq #:enumerable enumerable?:boolean)
-                      #:defaults ([enumerable? #'#f]))) ...]
-     #:attr constructor #'(accessor-property
-                           configurable?
-                           enumerable?
-                           setter
-                           getter)]))
-
-(define-syntax extend-object
-  (syntax-parser
-   [(_ obj prop:property-clause ...)
-    #`(hash-set*!
-       (Object-properties obj)
-       #,@(foldr
-           list*
-           '()
-           (attribute prop.name.str)
-           (attribute prop.constructor)))]))
+(define-syntax (es-string-literal stx)
+  (syntax-case stx ()
+    [(_ lit)
+     (string? (syntax-e #'lit))
+     (let* ([str (syntax-e #'lit)]
+            [end (string-length str)])
+       (define cps
+         (let loop ([pos 0])
+           (cond
+             [(= end pos) '()]
+             [(regexp-match #px"^\\\\([0-3][0-7]{0,2}|[4-7][0-7]?)" str pos)
+              => (λ (m) (cons (string->number (cadr m) 8)
+                              (loop (+ pos (string-length (car m))))))]
+             [(regexp-match #px"^\\\\x([0-9A-Fa-f]{2})" str pos)
+              => (λ (m) (cons (string->number (cadr m) 16)
+                              (loop (+ pos 4))))]
+             [(regexp-match #px"^\\\\u([0-9A-Fa-f]{4})" str pos)
+              => (λ (m) (cons (string->number (cadr m) 16)
+                              (loop (+ pos 6))))]
+             [(regexp-match #px"^\\\\u\\{([0-9]+)\\}" str pos)
+              => (λ (m) (cons (string->number (cadr m))
+                              (loop (+ pos (string-length (car m))))))]
+             [(regexp-match #px"^\\\\(\r\n?|.)" str pos)
+              => (λ (m) (append (let ([e (cadr m)])
+                                  (case e
+                                    [("b") '(#x0008)]
+                                    [("t") '(#x0009)]
+                                    [("n") '(#x000A)]
+                                    [("v") '(#x000B)]
+                                    [("f") '(#x000C)]
+                                    [("r") '(#x000D)]
+                                    [else (map char->integer (string->list (cadr m)))]))
+                                (loop (+ pos (string-length (car m))))))]
+             [else (cons (char->integer (string-ref str pos))
+                         (loop (add1 pos)))])))
+       #`(codepoints->es-string '#,cps))]))

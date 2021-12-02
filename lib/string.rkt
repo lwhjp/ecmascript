@@ -13,7 +13,7 @@
          "util.rkt")
 
 (lazy-require
- ["../convert.rkt" (to-integer to-string)])
+ ["../convert.rkt" (to-integer to-number to-string)])
 
 (provide get-properties
  make-String)
@@ -48,7 +48,7 @@
   ["fromCharCode"
    (native-method args
      (list->string
-      (map integer->char args)))])
+      (map (λ (v) (integer->char (inexact->exact (to-number v)))) args)))])
 
 (define-object-properties String:prototype
   ["constructor" string-constructor]

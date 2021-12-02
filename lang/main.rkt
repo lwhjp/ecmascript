@@ -6,13 +6,15 @@
          "../private/realm.rkt"
          "environment.rkt"
          "function.rkt"
+         "helpers.rkt"
          "literal.rkt"
          "operator.rkt"
          "reference.rkt"
          "statement.rkt"
          "../types.rkt")
 
-(provide (all-from-out "literal.rkt"
+(provide (all-from-out "helpers.rkt"
+                       "literal.rkt"
                        "operator.rkt"
                        "statement.rkt")
          identifier

@@ -11,6 +11,7 @@
          "object.rkt"
          "primitive.rkt"
          "realm.rkt"
+         "string.rkt"
          "this.rkt"
          (only-in "../lib/util.rkt" native-method)
          "../convert.rkt"
@@ -73,8 +74,8 @@
       ["undefined" ecma:undefined]
       ["eval"
        (native-method (x)
-         (if (string? x)
-             (ecma:eval x)
+         (if (es-string? x)
+             (ecma:eval (es-string->string x))
              x))]
       ["parseInt"
        (native-method (string radix)

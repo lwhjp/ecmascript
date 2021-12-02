@@ -4,9 +4,11 @@
                      racket/syntax)
          racket/class
          racket/lazy-require
+         "../lang/helpers.rkt"
          "../private/error.rkt"
          "../private/object.rkt"
          "../private/primitive.rkt"
+         "../private/string.rkt"
          "../private/this.rkt"
          (only-in "object.rkt" Object:prototype)
          "util.rkt")
@@ -93,17 +95,17 @@
       (define name
         (let ([name (get-property-value ecma:this "name")])
           (if (ecma:undefined? name)
-              "Error"
+              (es-string-literal "Error")
               (to-string name))))
       (define msg
         (let ([msg (get-property-value ecma:this "message")])
           (if (ecma:undefined? msg)
-              ""
+              (es-string-literal "")
               (to-string msg))))
       (cond
-        [(string=? "" name) msg]
-        [(string=? "" msg) name]
-        [else (string-append name ": " msg)])))])
+        [(es-string=? es-empty-string name) msg]
+        [(es-string=? es-empty-string msg) name]
+        [else (es-string-append name (es-string-literal ": ") msg)])))])
 
 (native-error-constructor
  (λ (type message)

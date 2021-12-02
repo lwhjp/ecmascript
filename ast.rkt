@@ -43,7 +43,7 @@
 
 (struct function syntax-element (name parameters body) #:transparent)
 
-(struct identifier syntax-element (symbol) #:transparent)
+(struct identifier syntax-element (source) #:transparent)
 
 (struct literal syntax-element () #:transparent)
 (struct literal:array literal (elements) #:transparent)
@@ -53,7 +53,7 @@
 (struct literal:number literal (value) #:transparent)
 (struct literal:object literal (properties) #:transparent)
 (struct literal:regexp literal (pattern flags) #:transparent)
-(struct literal:string literal (value) #:transparent)
+(struct literal:string literal (source) #:transparent)
 
 (struct operator syntax-element (symbol) #:transparent)
 
