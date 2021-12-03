@@ -1,9 +1,10 @@
-#lang racket/base
+#lang typed/racket/base
 
 (require racket/provide
          "string.rkt")
 
-(provide (matching-identifiers-out #rx"^es-" (all-defined-out)))
+(provide (except-out (all-defined-out)
+                     (struct-out opaque-primitive)))
 
 ; TODO: refactor and remove
 (provide (rename-out
@@ -12,35 +13,49 @@
           [es-null ecma:null]
           [es-null? ecma:null?]))
 
-(struct opaque-primitive (name)
-  #:methods gen:custom-write
-  [(define (write-proc obj port mode)
-     (define name (opaque-primitive-name obj))
-     (case mode
-       [(#f) (write name port)]
-       [else (write-string (format "#<~a>" name) port)]))])
+(struct (N) opaque-primitive ([name : (∩ Symbol N)])
+  #:property prop:custom-write
+  (λ (obj port mode)
+    (define name (opaque-primitive-name obj))
+    (case mode
+      [(#f) (write name port)]
+      [else (write-string (format "#<~a>" name) port)])))
+
+(define-type ESUndefined (opaque-primitive 'undefined))
 
 (define es-undefined (opaque-primitive 'undefined))
 
-(define (es-undefined? v) (eq? es-undefined v))
+(define-predicate es-undefined? ESUndefined)
+
+(define-type ESNull (opaque-primitive 'null))
 
 (define es-null (opaque-primitive 'null))
 
-(define (es-null? v) (eq? es-null v))
+(define-predicate es-null? ESNull)
 
-(define es-boolean? boolean?)
+(define-type ESBoolean Boolean)
 
-(define es-number? flonum?)
+(define-predicate es-boolean? ESBoolean)
 
-(define es-big-int? exact-integer?)
+(define-type ESNumber Flonum)
 
-(define es-symbol? symbol?)
+(define-predicate es-number? ESNumber)
 
-(define (es-primitive? v)
-  (or (es-undefined? v)
-      (es-null? v)
-      (es-boolean? v)
-      (es-number? v)
-      (es-big-int? v)
-      (es-symbol? v)
-      (es-string? v)))
+(define-type ESBigInt Integer)
+
+(define-predicate es-big-int? ESBigInt)
+
+(define-type ESSymbol Symbol)
+
+(define-predicate es-symbol? ESSymbol)
+
+(define-type ESPrimitive
+  (U ESUndefined
+     ESNull
+     ESBoolean
+     ESNumber
+     ESBigInt
+     ESString
+     ESSymbol))
+
+(define-predicate es-primitive? ESPrimitive)

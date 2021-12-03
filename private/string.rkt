@@ -1,10 +1,21 @@
-#lang racket/base
+#lang typed/racket/base
 
 (require racket/port)
 
 (provide (all-defined-out))
 
-(struct es-string (bytes) #:transparent)
+(struct es-string
+  ([bytes : Bytes])
+  #:transparent
+  #:type-name ESString)
+
+(: string->es-string (-> String ESString))
+(: es-string->string (-> ESString String))
+(: codepoints->es-string (-> (Listof Integer) ESString))
+(: es-string->codepoints (-> ESString (Listof Integer)))
+(: es-string=? (-> ESString ESString Boolean))
+(: es-string<? (-> ESString ESString Boolean))
+(: es-string-append (-> ESString * ESString))
 
 (define es-empty-string (es-string #""))
 
@@ -19,11 +30,11 @@
 (define (codepoints->es-string cps)
   (es-string
    (call-with-output-bytes
-    (λ (out)
-      (define (write-cu x)
+    (λ ([out : Output-Port])
+      (define (write-cu [x : Integer])
         (write-byte (bitwise-and x #xFF) out)
         (write-byte (arithmetic-shift x -8) out))
-      (let loop ([cps cps])
+      (let loop ([cps : (Listof Integer) cps])
         (unless (null? cps)
           (define cp (car cps))
           (cond
@@ -37,15 +48,15 @@
 (define (es-string->codepoints str)
   (call-with-input-bytes
    (es-string-bytes str)
-   (λ (in)
+   (λ ([in : Input-Port])
      (define (read-cu)
        (define lo (read-byte in))
        (if (eof-object? lo)
            #f
            (bitwise-ior
             lo
-            (arithmetic-shift (read-byte in) 8))))
-     (let loop ([lead #f])
+            (arithmetic-shift (cast (read-byte in) Byte) 8))))
+     (let loop : (Listof Integer) ([lead : (Option Integer) #f])
        (define cu (read-cu))
        (cond
          [(not cu)
