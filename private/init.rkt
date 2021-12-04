@@ -25,7 +25,7 @@
           (define global-object
             (new ecma-object%
                  [class-name 'global]
-                 [prototype #f]))
+                 [prototype es-null]))
           (define global-environment
             (new-object-environment global-object ecma:null))
           (parameterize
@@ -55,14 +55,10 @@
   (for ([prop (in-list imported-properties)])
     (match-define (cons name value) prop)
     (hash-set! global-property-map
-               name
+               (string->es-string name)
                (if (property? value)
                    value
-                   (make-data-property
-                    value
-                    #:writable #t
-                    #:enumerable #f
-                    #:configurable #f)))))
+                   (es-data-property #f #f value #t)))))
 
 (define (set-default-global-bindings!)
   (define global-object (current-global-object))

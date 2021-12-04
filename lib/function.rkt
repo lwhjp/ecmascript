@@ -27,7 +27,7 @@
   (class ecma-function%
     (init [prototype Function:prototype])
     (super-new [prototype prototype])
-    (inherit call get)
+    (inherit call)
     (define/override (create-arguments-object args env)
       (new arguments%
            [prototype Object:prototype]
@@ -35,7 +35,7 @@
            [args args]
            [env env]))
     (define/override (construct args)
-      (let* ([prot (get "prototype")]
+      (let* ([prot (get-property-value this "prototype")]
              [prot (if (Object? prot) prot Object:prototype)]
              [obj (new Object% [prototype prot])]
              [result (call obj args)])
@@ -43,7 +43,8 @@
             result
             obj)))
     (let ([proto (new Object%)])
-      (send proto define-own-property
+      (define-own-property
+        proto
         "constructor"
         `(data
           (value . ,this)
@@ -51,7 +52,8 @@
           (enumerable . #f)
           (configurable . #t))
         #f)
-      (send this define-own-property
+      (define-own-property
+        this
         "prototype"
         `(data
           (value . ,proto)

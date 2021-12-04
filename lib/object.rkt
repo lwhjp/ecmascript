@@ -27,7 +27,7 @@
                [prototype prototype])))
 
 (define Object:prototype
-  (new Object% [prototype #f]))
+  (new Object% [prototype es-null]))
 
 (define object-constructor
   (make-native-function

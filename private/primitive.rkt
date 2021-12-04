@@ -4,7 +4,9 @@
          "string.rkt")
 
 (provide (except-out (all-defined-out)
-                     (struct-out opaque-primitive)))
+                     (struct-out opaque-primitive))
+         ESString
+         es-string?)
 
 ; TODO: refactor and remove
 (provide (rename-out

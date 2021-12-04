@@ -44,8 +44,7 @@
                 [properties (make-hash
                              (if (ecma:undefined? message)
                                  '()
-                                 `(("message" . ,(make-data-property
-                                                  (to-string message))))))])))])
+                                 `(("message" . ,(es-data-property #f #f (to-string message) #f)))))])))])
     (define-object-properties prototype
       ["constructor" constructor]
       ["name" name]

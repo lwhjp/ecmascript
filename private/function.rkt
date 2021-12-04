@@ -12,7 +12,6 @@
   (class ecma-object%
     (init-field formal-parameters proc)
     (super-new [class-name 'Function])
-    (inherit define-own-property)
     (define/public (bind-arguments args env)
       (for ([arg-name (in-list (map symbol->string formal-parameters))]
             [v (in-sequences (in-list args)
@@ -30,6 +29,7 @@
     (abstract construct)
     (abstract create-arguments-object)
     (define-own-property
+      this
       "length"
       `(data
         (value . ,(length formal-parameters))
@@ -57,7 +57,6 @@
   (class ecma-object%
     (init func args env)
     (super-new [class-name 'Arguments])
-    (inherit define-own-property)
     (let ([formal-parameters (get-field formal-parameters func)])
       (for ([arg-name (in-sequences (in-list (map symbol->string formal-parameters))
                                     (in-cycle (list #f)))]
@@ -66,6 +65,7 @@
             [index (in-range (max (length formal-parameters)
                                   (length args)))])
         (define-own-property
+          this
           (number->string index)
           `(data (value . ,arg-v)
                  (writable . #t)
@@ -74,12 +74,14 @@
           #f)
         (when arg-name
           (define-own-property
+            this
             arg-name
             `(accessor (get . ,(λ () (send env get-binding-value arg-name #t)))
                        (set . ,(λ (v) (send env set-mutable-binding! arg-name v #t)))
                        (configurable . #t))
             #f))))
     (define-own-property
+          this
           "length"
           `(data (value . ,(length args))
                  (writable . #t)
@@ -87,6 +89,7 @@
                  (configurable . #t))
           #f)
     (define-own-property
+          this
           "callee"
           `(data (value . ,func)
                  (writable . #t)
