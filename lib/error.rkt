@@ -54,7 +54,7 @@
     (values prototype constructor)))
 
 (define-values (error:prototype error-constructor)
-  (make-error-prototype+constructor "Error" Object:prototype))
+  (make-error-prototype+constructor (string->es-string "Error") Object:prototype))
 
 (define-syntax (define-native-error stx)
   (syntax-case stx ()
@@ -72,7 +72,7 @@
              (let-values
                  ([(proto cons)
                    (make-error-prototype+constructor
-                    (string-append base-str "Error")
+                    (string->es-string (string-append base-str "Error"))
                     error:prototype)])
                (values proto
                        cons

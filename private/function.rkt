@@ -40,6 +40,11 @@
 
 (define (Function? v) (is-a? v ecma-function%))
 
+(define (es-function? v) (Function? v))
+
+(define (call/function f this-arg . args)
+  (send f call this-arg args))
+
 (define (has-instance? f v)
   (and
    (Object? v)
