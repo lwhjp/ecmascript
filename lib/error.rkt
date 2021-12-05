@@ -39,12 +39,11 @@
        [constructor
         (make-native-function
          (λ ([message ecma:undefined])
-           (new Error%
-                [prototype prototype]
-                [properties (make-hash
-                             (if (ecma:undefined? message)
-                                 '()
-                                 `(("message" . ,(es-data-property #f #f (to-string message) #f)))))])))])
+           (let ([e (new Error% [prototype prototype])])
+             (unless (es-undefined? message)
+               (define-object-properties e
+                 ["message" message]))
+             e)))])
     (define-object-properties prototype
       ["constructor" constructor]
       ["name" name]
