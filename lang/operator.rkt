@@ -13,14 +13,26 @@
 
 (provide (filtered-out
           (λ (name)
-            (substring name 3))
+            (and (regexp-match? #rx"^op:" name)
+                 (substring name 3)))
           (all-defined-out)))
 
+(define (->unit n)
+  (if (exact-integer? n) 1 1.0))
+
+(define (increment v)
+  (let ([n (to-numeric v)])
+    (+ n (->unit n))))
+
+(define (decrement v)
+  (let ([n (to-numeric v)])
+    (- n (->unit n))))
+
 (define-syntax-rule (op:post++ v)
-  (post-update-reference! v (λ (x) (op:+ x 1))))
+  (post-update-reference! v increment))
 
 (define-syntax-rule (op:post-- v)
-  (post-update-reference! v (λ (x) (op:- x 1))))
+  (post-update-reference! v decrement))
 
 (define (op:void v)
   ecma:undefined)
@@ -31,10 +43,10 @@
   (has-instance? b a))
 
 (define-syntax-rule (op:++ v)
-  (update-reference! v (λ (x) (op:+ x 1))))
+  (update-reference! v increment))
 
 (define-syntax-rule (op:-- v)
-  (update-reference! v (λ (x) (op:- x 1))))
+  (update-reference! v decrement))
 
 (define (op:~ v)
   (to-int32
@@ -44,6 +56,13 @@
 (define (op:! v)
   (not (to-boolean v)))
 
+(define (apply-numeric-operator op l r)
+  (let ([l (to-numeric l)]
+        [r (to-numeric r)])
+    (unless (eqv? (es-number? l) (es-number? r))
+      (raise-native-error 'type))
+    (+ l r)))
+
 (define op:+
   (case-lambda
     [(x) (to-number x)]
@@ -52,14 +71,14 @@
            [r (to-primitive b)])
        (if (or (string? l) (string? r))
            (es-string-append (to-string l) (to-string r))
-           (+ (to-number l) (to-number r))))]))
+           (apply-numeric-operator + l r)))]))
 
 (define-values (op:- op:* op:/ op:%)
   (apply
    values
    (map (λ (op)
           (λ (a b)
-            (op (to-number a) (to-number b))))
+            (apply-numeric-operator op a b)))
         (list - * / modulo))))
 
 (define-values (op:<< op:>> op:>>>)
