@@ -9,21 +9,23 @@
 
 (provide (all-defined-out))
 
-(struct es-exn (value) #:transparent)
-
-(struct ecmascript-exception exn:fail:user (value) #:transparent)
+(struct es-exn exn:fail (value) #:transparent)
 
 ;; TODO: error constructors should be intrinsics
 (define native-error-constructor (make-parameter #f))
 
 (define (raise-native-error type [message ecma:undefined])
-  (raise (es-exn ((native-error-constructor) type message))))
+  (raise-es-exn ((native-error-constructor) type message)))
+
+(define (raise-es-exn v)
+  (define message
+    (es-string->string
+     (with-handlers ([exn:fail? (λ (e)
+                                  "(invalid)")])
+       (to-string v))))
+  (raise (es-exn message (current-continuation-marks) v)))
 
 (define-syntax-rule
   (with-es-exceptions form ...)
-  (with-handlers ([es-exn? (λ (e)
-                             (raise (ecmascript-exception
-                                     (es-string->string (to-string (es-exn-value e)))
-                                     (current-continuation-marks)
-                                     e)))])
+  (with-handlers ()
     form ...))

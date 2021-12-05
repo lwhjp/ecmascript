@@ -193,7 +193,7 @@
      (syntax-property #'stmt 'label (syntax-e #'label))]))
 
 (define (stmt:throw v)
-  (raise (es-exn v)))
+  (raise-es-exn v))
 
 (define-syntax (stmt:try stx)
   (syntax-parse stx
