@@ -1,7 +1,6 @@
 #lang typed/racket/base
 
-(require racket/class
-         racket/math
+(require racket/math
          racket/string
          "lang/helpers.rkt"
          "private/object.rkt"
