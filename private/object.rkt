@@ -13,14 +13,14 @@
   #:mutable
   #:transparent)
 
-(struct es-data-property es-property
+(struct data-property es-property
   ([value : (U Void ESValue)]
    [writable? : (U Void Boolean)])
   #:type-name ESDataProperty
   #:mutable
   #:transparent)
 
-(struct es-accessor-property es-property
+(struct accessor-property es-property
   ([get : (U Void ESUndefined (-> ESValue ESValue))]
    [set : (U Void ESUndefined (-> ESValue ESValue Void))])
   #:type-name ESAccessorProperty
@@ -34,7 +34,7 @@
                      [prototype (U ESObject ESNull)]
                      [extensible? Boolean #:optional]
                      [properties (Mutable-HashTable ESPropertyKey (U ESDataProperty ESAccessorProperty)) #:optional])
-         [clone (-> Any)]
+         [clone (-> ESObject)]
          [get-prototype (-> (U ESObject ESNull))]
          [set-prototype! (-> (U ESObject ESNull) Boolean)]
          [is-extensible? (-> Boolean)]
@@ -93,7 +93,7 @@
     (define/public (get-own-property p)
       (hash-ref properties p (λ () es-undefined)))
     (define/public (define-own-property! p desc)
-      (validate-and-apply-property-descriptor! this p extensible? desc (get-own-property p)))        
+      (validate-and-apply-property-descriptor! this p extensible? desc (get-own-property p)))
     (define/public (has-property? p)
       (or (not (es-null? (get-own-property p)))
           (let ([parent (get-prototype)])
@@ -107,12 +107,12 @@
              (if (es-null? parent)
                  es-undefined
                  (send parent get-property p receiver)))]
-          [(es-data-property? desc)
-           (let ([value (es-data-property-value desc)])
+          [(data-property? desc)
+           (let ([value (data-property-value desc)])
              (assert (not (void? value)))
              value)]
           [else
-           (let ([getter (es-accessor-property-get desc)])
+           (let ([getter (accessor-property-get desc)])
              (assert (not (void? getter)))
              (if (es-undefined? getter)
                  es-undefined
@@ -123,20 +123,20 @@
           [(es-undefined? desc)
            (let ([parent (get-prototype)])
              (if (es-null? parent)
-                 (loop (es-data-property #t #t es-undefined #t))
+                 (loop (data-property #t #t es-undefined #t))
                  (send parent set-property! p v receiver)))]
-          [(es-data-property? desc)
-           (and (es-data-property-writable? desc)
+          [(data-property? desc)
+           (and (data-property-writable? desc)
                 (is-a? receiver es-object%)
                 (let* ([receiver (cast receiver ESObject)]
                        [existing (send receiver get-own-property p)])
                   (if (es-undefined? existing)
-                      (send receiver define-own-property! p (es-data-property #t #t v #t))
-                      (and (not (es-accessor-property? existing))
-                           (es-data-property-writable? existing)
-                           (send receiver define-own-property! p (es-data-property (void) (void) v (void)))))))]
+                      (send receiver define-own-property! p (data-property #t #t v #t))
+                      (and (not (accessor-property? existing))
+                           (data-property-writable? existing)
+                           (send receiver define-own-property! p (data-property (void) (void) v (void)))))))]
           [else
-           (let ([setter (es-accessor-property-set desc)])
+           (let ([setter (accessor-property-set desc)])
              (assert (not (void? setter)))
              (if (es-undefined? setter)
                  #f
@@ -168,16 +168,16 @@
           (unless (void? it) (set-es-property-enumerable?! x it)))
         (let ([it (es-property-configurable? desc)])
           (unless (void? it) (set-es-property-configurable?! x it)))
-        (when (and (es-data-property? x) (es-data-property? desc))
-          (let ([it (es-data-property-value desc)])
-            (unless (void? it) (set-es-data-property-value! x it)))
-          (let ([it (es-data-property-writable? desc)])
-            (unless (void? it) (set-es-data-property-writable?! x it))))
-        (when (and (es-accessor-property? x) (es-accessor-property? desc))
-          (let ([it (es-accessor-property-get desc)])
-            (unless (void? it) (set-es-accessor-property-get! x it)))
-          (let ([it (es-accessor-property-set desc)])
-            (unless (void? it) (set-es-accessor-property-set! x it))))))
+        (when (and (data-property? x) (data-property? desc))
+          (let ([it (data-property-value desc)])
+            (unless (void? it) (set-data-property-value! x it)))
+          (let ([it (data-property-writable? desc)])
+            (unless (void? it) (set-data-property-writable?! x it))))
+        (when (and (accessor-property? x) (accessor-property? desc))
+          (let ([it (accessor-property-get desc)])
+            (unless (void? it) (set-accessor-property-get! x it)))
+          (let ([it (accessor-property-set desc)])
+            (unless (void? it) (set-accessor-property-set! x it))))))
     #t)
   (cond
     [(es-undefined? current)
@@ -189,18 +189,18 @@
                 [configurable? (coalesce (es-property-configurable? desc) #f)])
             (hash-set! (get-field properties o)
                        p
-                       (if (es-accessor-property? desc)
-                           (es-accessor-property
+                       (if (accessor-property? desc)
+                           (accessor-property
                             enumerable?
                             configurable?
-                            (coalesce (es-accessor-property-get desc) es-undefined)
-                            (coalesce (es-accessor-property-set desc) es-undefined))
+                            (coalesce (accessor-property-get desc) es-undefined)
+                            (coalesce (accessor-property-set desc) es-undefined))
                            (let-values ([(value writable?)
-                                         (if (es-data-property? desc)
-                                             (values (coalesce (es-data-property-value desc) es-undefined)
-                                                     (coalesce (es-data-property-writable? desc) #f))
+                                         (if (data-property? desc)
+                                             (values (coalesce (data-property-value desc) es-undefined)
+                                                     (coalesce (data-property-writable? desc) #f))
                                              (values es-undefined #f))])
-                             (es-data-property
+                             (data-property
                               enumerable?
                               configurable?
                               value
@@ -212,40 +212,40 @@
               (not (equal? (es-property-enumerable? desc)
                            (es-property-enumerable? current)))))
      #f]
-    [(and (not (es-data-property? desc)) (not (es-accessor-property? desc)))
+    [(and (not (data-property? desc)) (not (accessor-property? desc)))
      (update-property!)]
-    [(not (eq? (es-data-property? current) (es-data-property? desc)))
+    [(not (eq? (data-property? current) (data-property? desc)))
      (and (es-property-configurable? current)
           (begin
             (unless (es-undefined? o)
               (hash-set! (get-field properties o)
                          p
-                         (if (es-data-property? current)
-                             (es-accessor-property (es-property-enumerable? current)
-                                                   (es-property-configurable? current)
-                                                   es-undefined
-                                                   es-undefined)
-                             (es-data-property (es-property-enumerable? current)
-                                               (es-property-configurable? current)
-                                               es-undefined
-                                               #f))))
+                         (if (data-property? current)
+                             (accessor-property (es-property-enumerable? current)
+                                                (es-property-configurable? current)
+                                                es-undefined
+                                                es-undefined)
+                             (data-property (es-property-enumerable? current)
+                                            (es-property-configurable? current)
+                                            es-undefined
+                                            #f))))
             (update-property!)))]
-    [(and (es-data-property? current) (es-data-property? desc))
+    [(and (data-property? current) (data-property? desc))
      (if (or (es-property-configurable? current)
-             (es-data-property-writable? current))
+             (data-property-writable? current))
          (update-property!)
-         (and (not (eq? #t (es-data-property-writable? current)))
-              (equal? (es-data-property-value desc)
-                      (es-data-property-value current))))]
+         (and (not (eq? #t (data-property-writable? current)))
+              (equal? (data-property-value desc)
+                      (data-property-value current))))]
     [else
-     (assert (es-accessor-property? current))
-     (assert (es-accessor-property? desc))
+     (assert (accessor-property? current))
+     (assert (accessor-property? desc))
      (if (es-property-configurable? current)
          (update-property!)
-         (and (equal? (es-accessor-property-set desc)
-                      (es-accessor-property-set current))
-              (equal? (es-accessor-property-get desc)
-                      (es-accessor-property-get current))))]))
+         (and (equal? (accessor-property-set desc)
+                      (accessor-property-set current))
+              (equal? (accessor-property-get desc)
+                      (accessor-property-get current))))]))
 )
 
 (module predicate racket/base
@@ -265,8 +265,6 @@
          es-object?
          (all-defined-out))
 
-; TODO: update (and remove compat stuff)
-
 (require typed/racket/class
          "primitive.rkt"
          "string.rkt")
@@ -274,7 +272,36 @@
 (require/typed "error.rkt" ; TODO
  [raise-native-error (->* (Symbol) (String) Nothing)])
 
-(define (get-property [o : ESObject] [p : String])
+(: es-value? (-> Any Boolean : ESValue))
+(define (es-value? v)
+  (or (es-primitive? v)
+      (es-object? v)))
+
+(define (extensible? [o : ESObject])
+  (get-field extensible? o))
+
+(define (get-property [o : ESObject] [p : ESPropertyKey])
+  (send o get-property p o))
+
+(define (set-property! [o : ESObject] [p : ESPropertyKey] [v : ESValue] [throw? : Boolean])
+  (or (send o set-property! p v o)
+      (begin
+        (when throw? (raise-native-error 'type))
+        #f)))
+
+(define (define-property-or-throw! [o : ESObject] [p : ESPropertyKey] [desc : ESProperty])
+  (or (send o define-own-property! p desc)
+      (raise-native-error 'type)))
+
+(define (has-property? [o : ESObject] [p : ESPropertyKey])
+  (send o has-property? p))
+
+(define (has-own-property? [o : ESObject] [p : ESPropertyKey])
+  (not (es-undefined? (send o get-own-property p))))
+
+; TODO: update (and remove compat stuff)
+
+(define (get-property-descriptor [o : ESObject] [p : String])
   (define receiver o)
   (let loop : (U ESUndefined ESDataProperty ESAccessorProperty)
             ([o : ESObject o])
@@ -295,8 +322,8 @@
 (define (can-set-property? [o : ESObject] [p : String])
   (define (property-settable? desc)
     (cond
-      [(es-accessor-property? desc) (not (es-undefined? (es-accessor-property-set desc)))]
-      [(es-data-property? desc) (es-data-property-writable? desc)]
+      [(accessor-property? desc) (not (es-undefined? (accessor-property-set desc)))]
+      [(data-property? desc) (data-property-writable? desc)]
       [else #f]))
   (let ([desc (get-own-property o p)]
         [prototype (send o get-prototype)])
@@ -305,7 +332,7 @@
        [(property-settable? desc)]
        [(es-null? prototype) (get-field extensible? o)]
        [else
-        (let ([desc (get-property prototype p)])
+        (let ([desc (get-property-descriptor prototype p)])
           (or (property-settable? desc)
              (get-field extensible? o)))])
      Boolean)))
@@ -315,9 +342,6 @@
     [(send o set-property! (string->es-string p) v o) (void)]
     [throw? (raise-native-error 'type (format "~a: can't set property" p))]
     [else (void)]))
-
-(define (has-property? [o : ESObject] [p : String])
-  (send o has-property? (string->es-string p)))
 
 (define (delete-property! [o : ESObject] [p : String] [throw? : Boolean #t])
   (cond
@@ -347,22 +371,22 @@
   (define x
     (case (car desc)
       [(data)
-       (let ([x (es-data-property (void) (void) (void) (void))])
+       (let ([x (data-property (void) (void) (void) (void))])
          (for ([f (cdr desc)])
            (case (car f)
              [(configurable) (set-es-property-configurable?! x (cdr f))]
              [(enumerable) (set-es-property-enumerable?! x (cdr f))]
-             [(writable) (set-es-data-property-writable?! x (cdr f))]
-             [(value) (set-es-data-property-value! x (cdr f))]))
+             [(writable) (set-data-property-writable?! x (cdr f))]
+             [(value) (set-data-property-value! x (cdr f))]))
          x)]
       [(accessor)
-       (let ([x (es-accessor-property (void) (void) (void) (void))])
+       (let ([x (accessor-property (void) (void) (void) (void))])
          (for ([f (cdr desc)])
            (case (car f)
              [(configurable) (set-es-property-configurable?! x (cdr f))]
              [(enumerable) (set-es-property-enumerable?! x (cdr f))]
-             [(get) (set-es-accessor-property-get! x (λ (receiver) ((cdr f))))]
-             [(set) (set-es-accessor-property-set! x (λ ([v : ESValue] receiver) (void ((cdr f) v))))]))
+             [(get) (set-accessor-property-get! x (λ (receiver) ((cdr f))))]
+             [(set) (set-accessor-property-set! x (λ ([v : ESValue] receiver) (void ((cdr f) v))))]))
          x)]))
   (cond
     [(send o define-own-property! (string->es-string p) x) (void)]
@@ -382,17 +406,7 @@
           [es-property-enumerable? property-enumerable?]
           [set-es-property-enumerable?! set-property-enumerable?!]
           [es-property-configurable? property-configurable?]
-          [set-es-property-configurable?! set-property-configurable?!]
-          [es-data-property? data-property?]
-          [es-data-property-value data-property-value]
-          [set-es-data-property-value! set-data-property-value!]
-          [es-data-property-writable? data-property-writable?]
-          [set-es-data-property-writable?! set-data-property-writable?!]
-          [es-accessor-property? accessor-property?]
-          [es-accessor-property-get accessor-property-get]
-          [set-es-accessor-property-get! set-accessor-property-get!]
-          [es-accessor-property-set accessor-property-set]
-          [set-es-accessor-property-set! accessor-property-set!]))
+          [set-es-property-configurable?! set-property-configurable?!]))
 
 (define (compat:->es-value v)
   (if (string? v)
@@ -403,7 +417,7 @@
   (begin
     (hash-set! (get-field properties obj)
                (string->es-string prop)
-               (es-data-property #f #t (compat:->es-value val) #t)) ...))
+               (data-property #f #t (compat:->es-value val) #t)) ...))
 )
 (require (submod "." compat-untyped))
 (provide (all-from-out (submod "." compat-untyped)))

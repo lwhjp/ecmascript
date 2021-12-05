@@ -17,10 +17,6 @@
  ["../convert.rkt" (to-object)])
 
 (provide
- ; FIXME: don't provide get/put-value
- get-value
- put-value!
- get-identifier-reference
  initialize-lexical-var!
  identifier-reference
  set-reference!
@@ -32,91 +28,13 @@
  typeof
  call)
 
-(struct reference (base name strict?) #:transparent)
-
-(define (get-value v)
-  (if (reference? v)
-      (let ([base (reference-base v)])
-        (cond
-          [(ecma:undefined? base)
-           (raise-native-error
-            'reference
-            (format
-             "~a: undefined"
-             (reference-name v)))]
-          [(is-a? base environment-record%)
-           (send base
-                 get-binding-value
-                 (reference-name v)
-                 (reference-strict? v))]
-          [(Object? base)
-           (get-property-value base (reference-name v))]
-          [else
-           (let ([o (to-object base)]
-                 [p (reference-name v)])
-             (let ([prop (get-property o p)])
-               (cond
-                 [(data-property? prop)
-                  (data-property-value prop)]
-                 [(accessor-property? prop)
-                  (let ([getter (accessor-property-get prop)])
-                    (if getter
-                        (send getter call base)
-                        ecma:undefined))]
-                 [else ecma:undefined])))]))
-      v))
-
-(define (put-value! v w)
-  (unless (reference? v)
-    (raise-native-error 'reference "not a reference"))
-  (let ([base (reference-base v)])
-    (cond
-      [(ecma:undefined? base)
-       (if (reference-strict? v)
-           (raise-native-error 'reference "not bound")
-           (set-property-value!
-            (current-global-object)
-            (reference-name v)
-            w
-            #f))]
-      [(is-a? base environment-record%)
-       (send base
-             set-mutable-binding!
-             (reference-name v)
-             w
-             (reference-strict? v))]
-      [(Object? base)
-       (set-property-value!
-        base
-        (reference-name v)
-        w
-        (reference-strict? v))]
-      [else
-       (let ([o (to-object base)]
-             [p (reference-name v)]
-             [throw? (reference-strict? v)])
-         (if (and
-              (can-set-property? o p)
-              (not (data-property?
-                    (get-own-property o p))))
-             (let ([prop (get-property o p)])
-               (if (accessor-property? prop)
-                   (send (accessor-property-set prop)
-                         call
-                         base
-                         w)
-                   (when throw?
-                     (raise-native-error 'type))))
-             (when throw?
-               (raise-native-error 'type))))])))
-
 (define (get-identifier-reference lex name strict?)
   (if (ecma:null? lex)
       (reference ecma:undefined name strict?)
       (if (send lex has-binding? name)
-          (reference lex name strict?)
+          (reference lex name strict? 'empty)
           (get-identifier-reference
-           (get-field outer lex)
+           (get-field outer-env lex)
            name
            strict?))))
 
@@ -166,7 +84,7 @@
   (syntax-case stx ()
     [(_ id)
      (identifier? #'id)
-     (with-syntax ([name (symbol->string (syntax-e #'id))])
+     (with-syntax ([name #'(string->es-string (symbol->string 'id))])
        #'(#%ref
           (get-identifier-reference
            lexical-environment
@@ -177,9 +95,9 @@
   (syntax-case stx ()
     [(_ base prop)
      (with-syntax ([prop-name (if (identifier? #'prop)
-                                  (symbol->string (syntax-e #'prop))
-                                  #'(es-string->string (to-string prop)))])
-       #'(#%ref (reference (to-object base) prop-name #f)))]))
+                                  #'(string->es-string (symbol->string 'prop))
+                                  #'(to-string prop))])
+       #'(#%ref (reference (to-object base) prop-name #f 'empty)))]))
 
 (define (delete/ref ref)
   (cond
@@ -188,7 +106,7 @@
      (if (reference-strict? ref)
          (raise-native-error 'syntax)
          #t)]
-    [(is-a? (reference-base ref) environment-record%)
+    [(environment-record? (reference-base ref))
      (if (reference-strict? ref)
          (raise-native-error 'syntax)
          (send (reference-base ref)
@@ -237,8 +155,8 @@
         (let ([base (reference-base ref)])
           (cond
             [(Object? base) base]
-            [(is-a? base environment-record%)
-             (send base implicit-this-value)]))
+            [(environment-record? base)
+             es-undefined]))
         ecma:undefined))
   (send func call
         (cond

@@ -1,9 +1,11 @@
 #lang racket/base
 
 (require racket/class
+         "../lang/helpers.rkt"
          "error.rkt"
          "object.rkt"
          "primitive.rkt"
+         "string.rkt"
          "this.rkt")
 
 (provide (all-defined-out))
@@ -13,16 +15,18 @@
     (init-field formal-parameters proc)
     (super-new [class-name 'Function])
     (define/public (bind-arguments args env)
-      (for ([arg-name (in-list (map symbol->string formal-parameters))]
+      (for ([arg-sym (in-list formal-parameters)]
             [v (in-sequences (in-list args)
                              (in-cycle (list ecma:undefined)))])
+        (define arg-name (string->es-string (symbol->string arg-sym)))
         (unless (send env has-binding? arg-name)
-          (send env create-mutable-binding! arg-name))
-        (send env set-mutable-binding! arg-name v #f))
-      (unless (send env has-binding? "arguments")
-        (send env create-immutable-binding! "arguments"))
-      (send env initialize-immutable-binding!
-            "arguments"
+          (send env create-mutable-binding! arg-name #f))
+        (send env initialize-binding! arg-name v))
+      (define arguments-name (es-string-literal "arguments"))
+      (unless (send env has-binding? arguments-name)
+        (send env create-immutable-binding! arguments-name #f))
+      (send env initialize-binding!
+            arguments-name
             (create-arguments-object args env)))
     (define/public (call this-arg args)
       (apply/this this-arg proc args))

@@ -58,7 +58,7 @@
                (string->es-string name)
                (if (property? value)
                    value
-                   (es-data-property #f #f value #t)))))
+                   (data-property #f #f value #t)))))
 
 (define (set-default-global-bindings!)
   (define global-object (current-global-object))

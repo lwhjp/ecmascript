@@ -21,3 +21,5 @@
 
 (define (current-global-environment)
   (get-field global-environment (current-realm)))
+
+(define (get-global-object) (current-global-object))

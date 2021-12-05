@@ -8,6 +8,7 @@
          "../private/error.rkt"
          "../private/function.rkt"
          "../private/primitive.rkt"
+         "../private/string.rkt"
          "../private/this.rkt"
          "../lib/function.rkt"
          "environment.rkt"
@@ -56,7 +57,7 @@
                                            (~? (~@ #:vars (var-id ...)))
                                 body ...)))))])])
           #,@(if (attribute name)
-                 (with-syntax ([idstr (symbol->string (syntax-e (attribute name)))])
+                 (with-syntax ([idstr #'(string->es-string (symbol->string 'name))])
                    #'((send scope-env create-immutable-binding! idstr)
                       (send scope-env initialize-immutable-binding! idstr f)))
                  #'())
@@ -88,7 +89,7 @@
              form ...)))]))
 
 (define (create-function! env-rec id fn)
-  (let ([name (symbol->string id)])
+  (let ([name (string->es-string (symbol->string id))])
     (void
      (send env-rec create-mutable-binding! name #f)
      (send env-rec set-mutable-binding! name fn #f))))
