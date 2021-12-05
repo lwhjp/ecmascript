@@ -3,6 +3,7 @@
 (require racket/class
          racket/lazy-require
          racket/string
+         "../lang/reference.rkt"
          "../private/array.rkt"
          "../private/environment.rkt"
          "../private/function.rkt"

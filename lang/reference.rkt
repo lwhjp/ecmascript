@@ -2,6 +2,7 @@
 
 (require (for-syntax racket/base)
          racket/class
+         racket/lazy-require
          "../convert.rkt"
          "../private/environment.rkt"
          "../private/error.rkt"
@@ -12,7 +13,15 @@
          "../private/string.rkt"
          "environment.rkt")
 
+(lazy-require
+ ["../convert.rkt" (to-object)])
+
 (provide
+ ; FIXME: don't provide get/put-value
+ get-value
+ put-value!
+ get-identifier-reference
+ initialize-lexical-var!
  identifier-reference
  set-reference!
  update-reference!
@@ -22,6 +31,97 @@
  delete
  typeof
  call)
+
+(struct reference (base name strict?) #:transparent)
+
+(define (get-value v)
+  (if (reference? v)
+      (let ([base (reference-base v)])
+        (cond
+          [(ecma:undefined? base)
+           (raise-native-error
+            'reference
+            (format
+             "~a: undefined"
+             (reference-name v)))]
+          [(is-a? base environment-record%)
+           (send base
+                 get-binding-value
+                 (reference-name v)
+                 (reference-strict? v))]
+          [(Object? base)
+           (get-property-value base (reference-name v))]
+          [else
+           (let ([o (to-object base)]
+                 [p (reference-name v)])
+             (let ([prop (get-property o p)])
+               (cond
+                 [(data-property? prop)
+                  (data-property-value prop)]
+                 [(accessor-property? prop)
+                  (let ([getter (accessor-property-get prop)])
+                    (if getter
+                        (send getter call base)
+                        ecma:undefined))]
+                 [else ecma:undefined])))]))
+      v))
+
+(define (put-value! v w)
+  (unless (reference? v)
+    (raise-native-error 'reference "not a reference"))
+  (let ([base (reference-base v)])
+    (cond
+      [(ecma:undefined? base)
+       (if (reference-strict? v)
+           (raise-native-error 'reference "not bound")
+           (set-property-value!
+            (current-global-object)
+            (reference-name v)
+            w
+            #f))]
+      [(is-a? base environment-record%)
+       (send base
+             set-mutable-binding!
+             (reference-name v)
+             w
+             (reference-strict? v))]
+      [(Object? base)
+       (set-property-value!
+        base
+        (reference-name v)
+        w
+        (reference-strict? v))]
+      [else
+       (let ([o (to-object base)]
+             [p (reference-name v)]
+             [throw? (reference-strict? v)])
+         (if (and
+              (can-set-property? o p)
+              (not (data-property?
+                    (get-own-property o p))))
+             (let ([prop (get-property o p)])
+               (if (accessor-property? prop)
+                   (send (accessor-property-set prop)
+                         call
+                         base
+                         w)
+                   (when throw?
+                     (raise-native-error 'type))))
+             (when throw?
+               (raise-native-error 'type))))])))
+
+(define (get-identifier-reference lex name strict?)
+  (if (ecma:null? lex)
+      (reference ecma:undefined name strict?)
+      (if (send lex has-binding? name)
+          (reference lex name strict?)
+          (get-identifier-reference
+           (get-field outer lex)
+           name
+           strict?))))
+
+(define (initialize-lexical-var! ref v)
+  (send (reference-base ref) initialize-binding! (reference-name ref) v))
 
 (define-syntax (#%ref stx)
   (syntax-case stx ()

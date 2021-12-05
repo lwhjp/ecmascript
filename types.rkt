@@ -1,13 +1,11 @@
 #lang racket/base
 
-(require "private/environment.rkt"
-         "private/primitive.rkt")
+(require "private/primitive.rkt")
 
 (provide (all-defined-out)
          boolean?
          number?
          string?
- (struct-out reference)
  (rename-out
   [ecma:undefined undefined]
   [ecma:null null]
