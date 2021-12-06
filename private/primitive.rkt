@@ -16,6 +16,7 @@
           [es-null? ecma:null?]))
 
 (struct (N) opaque-primitive ([name : (∩ Symbol N)])
+  #:transparent
   #:property prop:custom-write
   (λ (obj port mode)
     (define name (opaque-primitive-name obj))

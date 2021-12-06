@@ -34,7 +34,8 @@
         (with-handlers ([exn:fail:read? (λ (e) (raise-native-error 'syntax (exn-message e)))]
                         [exn:fail:syntax? (λ (e) (raise-native-error 'syntax (exn-message e)))])
           (eval-syntax
-           #`(begin-scope (new-object-environment (current-global-object) lexical-environment)
+           #`(begin-scope (let ([g (current-global-object)])
+                            (new-global-environment g g))
                #,@(namespace-syntax-introduce stx (force es-eval-namespace))))))))
 
 (define-namespace-anchor here)

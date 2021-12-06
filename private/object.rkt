@@ -306,8 +306,8 @@
         #f)))
 
 (define (define-property-or-throw! [o : ESObject] [p : ESPropertyKey] [desc : ESProperty])
-  (or (send o define-own-property! p desc)
-      (raise-native-error 'type)))
+  (unless (send o define-own-property! p desc)
+    (raise-native-error 'type)))
 
 (define (has-property? [o : ESObject] [p : ESPropertyKey])
   (send o has-property? p))

@@ -92,7 +92,7 @@
   (let ([name (string->es-string (symbol->string id))])
     (void
      (send env-rec create-mutable-binding! name #f)
-     (send env-rec set-mutable-binding! name fn #f))))
+     (send env-rec initialize-binding! name fn))))
 
 (define-syntax reorder-functions
   (syntax-parser

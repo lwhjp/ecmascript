@@ -45,7 +45,8 @@
   (syntax-case stx ()
     [(_ #:vars (var ...) stmt ...)
      #'(#%plain-module-begin
-        (current-module-environment (new-object-environment (current-global-object) lexical-environment))
+        (let-values ([(g) (current-global-object)])
+          (current-module-environment (new-global-environment g g)))
         (with-es-exceptions
           (begin-scope (current-module-environment)
             #:vars (var ...)

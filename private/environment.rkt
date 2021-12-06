@@ -11,6 +11,7 @@
 
 (require typed/racket/unsafe)
 (unsafe-require/typed racket/set
+                      [mutable-set (∀ (T) (-> T * (Setof T)))]
                       [set-add! (∀ (T) (-> (Setof T) T Void))]
                       [set-remove! (∀ (T) (-> (Setof T) T Void))])
 
@@ -22,10 +23,10 @@
 (define-type ESEnvironment<%>
   (Class (init-field [outer-env (U ESNull ESEnvironment)])
          [has-binding? (-> ESString Boolean)]
-         [create-mutable-binding! (-> ESString Boolean (U Void Boolean))]
-         [create-immutable-binding! (-> ESString Boolean (U Void Boolean))]
-         [initialize-binding! (-> ESString Any (U Void Boolean))]
-         [set-mutable-binding! (-> ESString Any Boolean (U Void Boolean))]
+         [create-mutable-binding! (-> ESString Boolean Void)]
+         [create-immutable-binding! (-> ESString Boolean Void)]
+         [initialize-binding! (-> ESString Any Void)]
+         [set-mutable-binding! (-> ESString Any Boolean Void)]
          [get-binding-value (-> ESString Boolean Any)]
          [delete-binding! (-> ESString Boolean)]
          [has-this-binding? (-> Boolean)]
@@ -126,8 +127,7 @@
 (define-type ESObjectEnvironment<%>
   (Class #:implements/inits ESEnvironment<%>
          (init-field [binding-object ESObject]
-                     [is-with-environment? Boolean])
-         [clone (-> ESObjectEnvironment)]))
+                     [is-with-environment? Boolean])))
 
 (define-type ESObjectEnvironment (Instance ESObjectEnvironment<%>))
 
@@ -138,11 +138,6 @@
                 is-with-environment?
                 outer-env)
     (super-new)
-    (define/public (clone) ; TODO: remove
-      (new object-environment%
-           [outer-env (if (es-null? outer-env) outer-env (send (cast outer-env ESObjectEnvironment) clone))]
-           [binding-object (if (es-object? binding-object) (send binding-object clone) binding-object)]
-           [is-with-environment? is-with-environment?]))
     (define/public (has-binding? name)
       ; TODO: @@unscopables
       (or (send binding-object has-property? name)
@@ -163,7 +158,8 @@
       (unless (or (has-property? binding-object name)
                   (not strict?))
         (raise-native-error 'reference))
-      (set-property! binding-object name v strict?))
+      (set-property! binding-object name v strict?)
+      (void))
     (define/public (get-binding-value name strict?)
       (cond
         [(has-property? binding-object name) (get-property binding-object name)]
@@ -222,8 +218,9 @@
   (Class #:implements/inits ESEnvironment<%>
          (init-field [object-record ESObjectEnvironment]
                      [global-this-value ESObject]
-                     [declarative-record ESDeclarativeEnvironment]
-                     [var-names (Setof ESString)])
+                     [declarative-record ESDeclarativeEnvironment])
+         (field [var-names (Setof ESString)])
+         [clone (-> ESGlobalEnvironment)]
          [get-this-binding (-> ESObject)]
          [has-var-declaration? (-> ESString Boolean)]
          [has-lexical-declaration? (-> ESString Boolean)]
@@ -241,9 +238,20 @@
     (init-field object-record
                 global-this-value
                 declarative-record
-                var-names
                 outer-env)
+    (field [var-names (mutable-set)])
     (super-new)
+    (define/public (clone) ; TODO: remove
+      (define g (send (get-field binding-object object-record) clone))
+      (new global-environment%
+           [object-record (new object-environment%
+                               [binding-object g]
+                               [is-with-environment? #f]
+                               [outer-env es-null])]
+           [global-this-value g]
+           [declarative-record (new declarative-environment%
+                                    [outer-env es-null])]
+           [outer-env es-null]))
     (define/public (has-binding? name)
       (or (send declarative-record has-binding? name)
           (send object-record has-binding? name)))
@@ -377,6 +385,41 @@
   #:type-name ESReference
   #:transparent)
 
+;; Environment operations
+
+(define (get-identifier-reference [env : (U ESNull ESEnvironment)] [name : ESString] [strict? : Boolean])
+  : ESReference
+  (cond
+    [(es-null? env)
+     (reference 'unresolvable name strict? 'empty)]
+    [(send env has-binding? name)
+     (reference env name strict? 'empty)]
+    [else
+     (get-identifier-reference (get-field outer-env env) name strict?)]))
+
+(define (new-declarative-environment [e : ESEnvironment])
+  (new declarative-environment%
+       [outer-env e]))
+
+(define (new-object-environment [o : ESObject] [with? : Boolean] [env : (U ESNull ESEnvironment)])
+  (new object-environment%
+       [binding-object o]
+       [is-with-environment? with?]
+       [outer-env env]))
+
+(define (new-function-environment f [new-target : (U ESObject ESUndefined)])
+  (error 'TODO))
+
+(define (new-global-environment [g : ESObject] [this-value : ESObject])
+  (new global-environment%
+       [object-record (new-object-environment g #f es-null)]
+       [global-this-value this-value]
+       [declarative-record (new declarative-environment%
+                                [outer-env es-null])]
+       [outer-env es-null]))
+
+;; Reference operations
+
 (define (property-reference? [v : ESReference])
   (box? (reference-base v)))
 
@@ -434,23 +477,13 @@
     (assert (environment? base))
     (send base initialize-binding! (cast (reference-name v) ESString) w)))
 
-; TODO: update
-
-(define (new-declarative-environment [e : (U ESNull ESEnvironment)])
-  (new declarative-environment%
-    [outer-env e]))
-
-(define (new-object-environment [o : ESObject] [e : (U ESNull ESEnvironment)])
-  (new object-environment%
-    [binding-object o]
-    [is-with-environment? #f]
-    [outer-env e]))
+; TODO: remove
 
 (define (create-variables! [e : ESEnvironment] [ids : (Listof Symbol)])
   (for ([id (in-list ids)])
-    (send e create-mutable-binding! (string->es-string (symbol->string id)) #f)))
-
-; TODO: remove
+    (define name (string->es-string (symbol->string id)))
+    (send e create-mutable-binding! name #f)
+    (send e initialize-binding! name es-undefined)))
 
 (define (environment-record? v) (environment? v))
 

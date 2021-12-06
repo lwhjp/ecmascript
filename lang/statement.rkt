@@ -150,7 +150,7 @@
             body)))))
 
 (define-syntax-rule (stmt:with expr body0 body ...)
-  (begin-scope (new-object-environment expr lexical-environment)
+  (begin-scope (new-object-environment expr #t lexical-environment)
     body0 body ...))
 
 (define-syntax (stmt:switch stx)

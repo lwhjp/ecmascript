@@ -27,7 +27,7 @@
                  [class-name 'global]
                  [prototype es-null]))
           (define global-environment
-            (new-object-environment global-object ecma:null))
+            (new-global-environment global-object global-object))
           (parameterize
               ([current-realm
                 (new realm%

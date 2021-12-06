@@ -28,16 +28,6 @@
  typeof
  call)
 
-(define (get-identifier-reference lex name strict?)
-  (if (ecma:null? lex)
-      (make-property-reference ecma:undefined name strict?)
-      (if (send lex has-binding? name)
-          (reference lex name strict? 'empty)
-          (get-identifier-reference
-           (get-field outer-env lex)
-           name
-           strict?))))
-
 (define (initialize-lexical-var! ref v)
   (send (reference-base ref) initialize-binding! (reference-name ref) v))
 
