@@ -13,7 +13,10 @@
     (super-new [class-name 'Array])
     (super define-own-property!
       (string->es-string "length")
-      (data-property #f #f length #t))
+      (make-data-property length
+                          #:writable? #t
+                          #:enumerable? #f
+                          #:configurable? #f))
     (inherit get-own-property delete-property!)
     (define/override (define-own-property! name desc)
       (define old-len-desc (get-own-property (string->es-string "length")))
@@ -31,6 +34,9 @@
               (super define-own-property! name desc)
               (super define-own-property!
                      (string->es-string "length")
-                     (data-property #f #f (max (add1 i) old-len) #f))
+                     (make-data-property (max (add1 i) old-len)
+                                         #:writable? #f
+                                         #:enumerable? #f
+                                         #:configurable? #f))
               #t)]
         [else (super define-own-property! name desc)]))))

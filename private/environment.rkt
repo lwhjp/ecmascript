@@ -148,7 +148,10 @@
       (define-property-or-throw!
         binding-object
         name
-        (data-property #t deletable? es-undefined #t)))
+        (make-data-property es-undefined
+                            #:writable? #t
+                            #:enumerable? #t
+                            #:configurable? deletable?)))
     (define/public (create-immutable-binding! name strict?)
       (error 'BUG))
     (define/public (initialize-binding! name v)
@@ -310,8 +313,11 @@
              [desc (let ([prop (send obj get-own-property name)])
                      (if (or (es-undefined? prop)
                              (es-property-configurable? prop))
-                         (data-property #t deletable? v #t)
-                         (data-property (void) (void) v (void))))])
+                         (make-data-property v
+                                             #:writable? #t
+                                             #:enumerable? #t
+                                             #:configurable? deletable?)
+                         (make-data-property v)))])
         (define-property-or-throw! obj name desc)
         (set-property! obj name v #f)
         (set-add! var-names name)))))

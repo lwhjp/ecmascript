@@ -20,12 +20,24 @@
   #:mutable
   #:transparent)
 
+(define (make-data-property [value : (U Void ESValue) (void)]
+                            #:writable? [writable? : (U Void Boolean) (void)]
+                            #:enumerable? [enumerable? : (U Void Boolean) (void)]
+                            #:configurable? [configurable? : (U Void Boolean) (void)])
+  (data-property enumerable? configurable? value writable?))
+
 (struct accessor-property es-property
   ([get : (U Void ESUndefined (-> ESValue ESValue))]
    [set : (U Void ESUndefined (-> ESValue ESValue Void))])
   #:type-name ESAccessorProperty
   #:mutable
   #:transparent)
+
+(define (make-accessor-property #:get [get : (U Void ESUndefined (-> ESValue ESValue)) (void)]
+                                #:set [set : (U Void ESUndefined (-> ESValue ESValue Void)) (void)]
+                                #:enumerable? [enumerable? : (U Void Boolean) (void)]
+                                #:configurable? [configurable? : (U Void Boolean) (void)])
+  (accessor-property enumerable? configurable? get set))
 
 (define-type ESPropertyKey (U ESSymbol ESString))
 
@@ -123,7 +135,10 @@
           [(es-undefined? desc)
            (let ([parent (get-prototype)])
              (if (es-null? parent)
-                 (loop (data-property #t #t es-undefined #t))
+                 (loop (make-data-property es-undefined
+                                           #:writable? #t
+                                           #:enumerable? #t
+                                           #:configurable? #t))
                  (send parent set-property! p v receiver)))]
           [(data-property? desc)
            (and (data-property-writable? desc)
@@ -131,10 +146,15 @@
                 (let* ([receiver (cast receiver ESObject)]
                        [existing (send receiver get-own-property p)])
                   (if (es-undefined? existing)
-                      (send receiver define-own-property! p (data-property #t #t v #t))
+                      (send receiver define-own-property! p
+                            (make-data-property v
+                                                #:writable? #t
+                                                #:enumerable? #t
+                                                #:configurable? #t))
                       (and (not (accessor-property? existing))
                            (data-property-writable? existing)
-                           (send receiver define-own-property! p (data-property (void) (void) v (void)))))))]
+                           (send receiver define-own-property! p
+                                 (make-data-property v))))))]
           [else
            (let ([setter (accessor-property-set desc)])
              (assert (not (void? setter)))
@@ -371,7 +391,7 @@
   (define x
     (case (car desc)
       [(data)
-       (let ([x (data-property (void) (void) (void) (void))])
+       (let ([x (make-data-property)])
          (for ([f (cdr desc)])
            (case (car f)
              [(configurable) (set-es-property-configurable?! x (cdr f))]
@@ -380,7 +400,7 @@
              [(value) (set-data-property-value! x (cdr f))]))
          x)]
       [(accessor)
-       (let ([x (accessor-property (void) (void) (void) (void))])
+       (let ([x (make-accessor-property)])
          (for ([f (cdr desc)])
            (case (car f)
              [(configurable) (set-es-property-configurable?! x (cdr f))]
@@ -417,7 +437,10 @@
   (begin
     (hash-set! (get-field properties obj)
                (string->es-string prop)
-               (data-property #f #t (compat:->es-value val) #t)) ...))
+               (make-data-property (compat:->es-value val)
+                                   #:writable? #t
+                                   #:enumerable? #f
+                                   #:configurable? #t)) ...))
 )
 (require (submod "." compat-untyped))
 (provide (all-from-out (submod "." compat-untyped)))

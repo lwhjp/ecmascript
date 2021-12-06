@@ -58,7 +58,10 @@
                (string->es-string name)
                (if (property? value)
                    value
-                   (data-property #f #f value #t)))))
+                   (make-data-property value
+                                       #:writable? #t
+                                       #:enumerable? #f
+                                       #:configurable? #f)))))
 
 (define (set-default-global-bindings!)
   (define global-object (current-global-object))
