@@ -1,25 +1,45 @@
-#lang racket/base
+#lang typed/racket/base
 
-(require racket/class)
+(require typed/racket/class
+         "environment.rkt"
+         "object.rkt"
+         "primitive.rkt")
 
 (provide (all-defined-out))
 
-(define realm%
-  (class object%
-    (init-field global-object
-                global-environment)
-    (super-new)
-    (define/public (clone)
-      (make-object realm%
-        (send global-object clone)
-        (send global-environment clone)))))
+(struct realm
+  ([intrinsics : (HashTable Symbol ESObject)]
+   [global-object : ESObject]
+   [global-env : ESGlobalEnvironment]
+   ; TODO: templates
+   [host-defined : Any])
+  #:type-name ESRealm)
 
-(define current-realm (make-parameter #f))
+(define (make-realm [intrinsics : (HashTable Symbol ESObject)]
+                    [global-object : (U ESObject ESUndefined) es-undefined]
+                    [this-value : (U ESObject ESUndefined) es-undefined])
+  (let* ([global-object (if (es-undefined? global-object)
+                            (new es-object%
+                                 [class-name 'global]
+                                 [prototype (hash-ref intrinsics '%Object.prototype%)])
+                            global-object)]
+         [this-value (if (es-undefined? this-value)
+                         global-object
+                         this-value)])
+    (realm intrinsics
+           global-object
+           (new-global-environment global-object this-value)
+           es-undefined)))
 
-(define (current-global-object)
-  (get-field global-object (current-realm)))
+(define current-realm
+  : (Parameterof (Option ESRealm))
+  (make-parameter #f))
 
-(define (current-global-environment)
-  (get-field global-environment (current-realm)))
+(define (get-global-object)
+  (realm-global-object (assert (current-realm))))
 
-(define (get-global-object) (current-global-object))
+; TODO: remove
+
+(define (clone-realm [r : ESRealm])
+  (make-realm (realm-intrinsics r)
+              (send (realm-global-object r) clone)))

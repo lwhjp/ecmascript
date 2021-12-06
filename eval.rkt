@@ -14,10 +14,8 @@
  (contract-out
   [realm? predicate/c]
   [current-realm (parameter/c realm?)]
-  [make-realm (-> realm?)]
+  [make-default-realm (-> realm?)]
   [es-eval (->* ((or/c string? input-port? path?)) (realm?) any)]))
-
-(define (realm? v) (is-a? v realm%))
 
 (define (es-eval src
                  [realm (current-realm)])

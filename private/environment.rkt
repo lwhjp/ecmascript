@@ -220,7 +220,6 @@
                      [global-this-value ESObject]
                      [declarative-record ESDeclarativeEnvironment])
          (field [var-names (Setof ESString)])
-         [clone (-> ESGlobalEnvironment)]
          [get-this-binding (-> ESObject)]
          [has-var-declaration? (-> ESString Boolean)]
          [has-lexical-declaration? (-> ESString Boolean)]
@@ -241,17 +240,6 @@
                 outer-env)
     (field [var-names (mutable-set)])
     (super-new)
-    (define/public (clone) ; TODO: remove
-      (define g (send (get-field binding-object object-record) clone))
-      (new global-environment%
-           [object-record (new object-environment%
-                               [binding-object g]
-                               [is-with-environment? #f]
-                               [outer-env es-null])]
-           [global-this-value g]
-           [declarative-record (new declarative-environment%
-                                    [outer-env es-null])]
-           [outer-env es-null]))
     (define/public (has-binding? name)
       (or (send declarative-record has-binding? name)
           (send object-record has-binding? name)))
@@ -374,8 +362,13 @@
 (require/typed "error.rkt" ; TODO
                [raise-native-error (->* (Symbol) ((U String ESString)) Nothing)])
 
-(require/typed "realm.rkt" ; TODO
-               [get-global-object (-> ESObject)])
+(module lazy racket/base
+  (require racket/lazy-require)
+  (lazy-require
+   ["realm.rkt" (get-global-object)])
+  (provide get-global-object))
+(unsafe-require/typed (submod "." lazy)
+                      [get-global-object (-> ESObject)])
 
 (struct reference
   ([base : (U (Boxof Any) ESEnvironment 'unresolvable)]

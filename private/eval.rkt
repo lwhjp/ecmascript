@@ -1,15 +1,12 @@
 #lang racket/base
 
-(require racket/class
-         racket/port
+(require racket/port
          racket/promise
-         racket/runtime-path
          racket/contract/base
          "environment.rkt"
          "error.rkt"
          "realm.rkt"
          "../lang/compile.rkt"
-         "../lang/environment.rkt"
          (only-in "../lang/function.rkt" begin-scope)
          "../lang/read.rkt"
          "../parse.rkt")
@@ -17,7 +14,7 @@
 (provide (contract-out
           (rename ecma:eval eval
                   (->* ((or/c string? input-port?))
-                       ((is-a?/c realm%))
+                       (realm?)
                        any)))
          eval-read-interaction)
 
@@ -34,8 +31,8 @@
         (with-handlers ([exn:fail:read? (λ (e) (raise-native-error 'syntax (exn-message e)))]
                         [exn:fail:syntax? (λ (e) (raise-native-error 'syntax (exn-message e)))])
           (eval-syntax
-           #`(begin-scope (let ([g (current-global-object)])
-                            (new-global-environment g g))
+           #`(begin-scope (new-declarative-environment
+                           (realm-global-env (current-realm)))
                #,@(namespace-syntax-introduce stx (force es-eval-namespace))))))))
 
 (define-namespace-anchor here)

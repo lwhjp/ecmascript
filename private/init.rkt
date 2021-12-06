@@ -6,7 +6,6 @@
          racket/promise
          racket/runtime-path
          net/uri-codec
-         "environment.rkt"
          (prefix-in ecma: "eval.rkt")
          "object.rkt"
          "primitive.rkt"
@@ -14,28 +13,22 @@
          "string.rkt"
          "this.rkt"
          (only-in "../lib/util.rkt" native-method)
-         "../convert.rkt"
-         "../types.rkt")
+         "../convert.rkt")
 
-(provide make-realm)
+(provide make-default-realm)
 
-(define make-realm
+(define make-default-realm
   (let ([prototype
          (lazy
           (define global-object
-            (new ecma-object%
+            (new es-object%
                  [class-name 'global]
                  [prototype es-null]))
-          (define global-environment
-            (new-global-environment global-object global-object))
-          (parameterize
-              ([current-realm
-                (new realm%
-                     [global-object global-object]
-                     [global-environment global-environment])])
-            (set-default-global-bindings!)
-            (current-realm)))])
-    (λ () (send (force prototype) clone))))
+          (let ([realm (make-realm (hash) global-object)])
+            (parameterize ([current-realm realm])
+              (set-default-global-bindings!))
+            realm))])
+    (λ () (clone-realm (force prototype)))))
 
 (define-runtime-module-path lib:array "../lib/array.rkt")
 (define-runtime-module-path lib:boolean "../lib/boolean.rkt")
@@ -51,7 +44,7 @@
   (define imported-properties
     ((dynamic-require mod 'get-properties)))
   (define global-property-map
-    (get-field properties (current-global-object)))
+    (get-field properties (get-global-object)))
   (for ([prop (in-list imported-properties)])
     (match-define (cons name value) prop)
     (hash-set! global-property-map
@@ -64,7 +57,7 @@
                                        #:configurable? #f)))))
 
 (define (set-default-global-bindings!)
-  (define global-object (current-global-object))
+  (define global-object (get-global-object))
   (parameterize
       ([current-ecma:this global-object])
     (define-object-properties global-object

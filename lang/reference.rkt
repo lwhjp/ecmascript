@@ -152,7 +152,7 @@
         (cond
           [(or (ecma:null? this-value)
                (ecma:undefined? this-value))
-           (current-global-object)]
+           (get-global-object)]
           [(Object? this-value) this-value]
           [else (to-object this-value)])
         args))

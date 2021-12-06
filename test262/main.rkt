@@ -3,7 +3,8 @@
 (require racket/sandbox
          rackunit
          yaml
-         ecmascript/eval)
+         ecmascript/eval
+         (only-in ecmascript/private/realm clone-realm))
 
 (define test262-home
   (bytes->path
@@ -24,11 +25,11 @@
 (define make-test-realm
   (let ([prototype
          (lazy
-          (let ([realm (make-realm)])
+          (let ([realm (make-default-realm)])
             (for ([name (in-list '("assert.js" "sta.js"))])
               (include/harness name realm))
             realm))])
-    (λ () (send (force prototype) clone))))
+    (λ () (clone-realm (force prototype)))))
 
 (define test-timeout-seconds 30)
 

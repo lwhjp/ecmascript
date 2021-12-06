@@ -8,7 +8,7 @@
 
 (define-syntax (global-environment stx)
   (syntax-case stx ()
-    [_ (identifier? stx) #'(current-global-environment)]))
+    [_ (identifier? stx) #'(realm-global-env (current-realm))]))
 
 (define-syntax-parameter variable-environment
   (make-rename-transformer #'global-environment))

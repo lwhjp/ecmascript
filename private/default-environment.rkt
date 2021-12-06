@@ -3,4 +3,4 @@
 (require "init.rkt"
          "realm.rkt")
 
-(current-realm (make-realm))
+(current-realm (make-default-realm))

@@ -10,4 +10,4 @@
   (es-eval
    (call-with-input-file file
      port->string)
-   (make-realm)))
+   (make-default-realm)))

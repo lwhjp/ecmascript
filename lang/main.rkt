@@ -1,10 +1,8 @@
 #lang racket/base
 
 (require (for-syntax racket/base)
-         "../private/environment.rkt"
          "../private/error.rkt"
          "../private/realm.rkt"
-         "environment.rkt"
          "function.rkt"
          "helpers.rkt"
          "literal.rkt"
@@ -45,8 +43,7 @@
   (syntax-case stx ()
     [(_ #:vars (var ...) stmt ...)
      #'(#%plain-module-begin
-        (let-values ([(g) (current-global-object)])
-          (current-module-environment (new-global-environment g g)))
+        (current-module-environment (realm-global-env (current-realm)))
         (with-es-exceptions
           (begin-scope (current-module-environment)
             #:vars (var ...)
