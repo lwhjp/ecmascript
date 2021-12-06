@@ -20,7 +20,7 @@
     (inherit get-own-property delete-property!)
     (define/override (define-own-property! name desc)
       (define old-len-desc (get-own-property (string->es-string "length")))
-      (define old-len (data-property-value old-len-desc))
+      (define old-len (unbox (data-property-value old-len-desc)))
       (cond
         [(es-string=? name (string->es-string "length"))
          ; TODO: delete / writable semantics
