@@ -7,5 +7,4 @@
  get-property-value
  has-property?
  set-property-value!
- can-set-property?
  delete-property!)

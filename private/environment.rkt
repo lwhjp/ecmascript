@@ -158,15 +158,15 @@
       (unless (or (has-property? binding-object name)
                   (not strict?))
         (raise-native-error 'reference))
-      (set-property! binding-object name v strict?)
+      (set!/object binding-object name v strict?)
       (void))
     (define/public (get-binding-value name strict?)
       (cond
-        [(has-property? binding-object name) (get-property binding-object name)]
+        [(has-property? binding-object name) (get/object binding-object name)]
         [strict? (raise-native-error 'reference)]
         [else es-undefined]))
     (define/public (delete-binding! name)
-      (send binding-object delete-property! name))
+      (send binding-object delete! name))
     (define/public (has-this-binding?) #f)
     (define/public (has-super-binding?) #f)
     (define/public (with-base-object)
@@ -307,10 +307,10 @@
              [prop (send obj get-own-property name)])
         (cond
           [(es-undefined? prop) (extensible? obj)]
-          [(cast (es-property-configurable? prop) Boolean)]
+          [(cast (property-configurable? prop) Boolean)]
           [(and (data-property? prop)
                 (cast (data-property-writable? prop) Boolean)
-                (cast (es-property-enumerable? prop) Boolean))]
+                (cast (property-enumerable? prop) Boolean))]
           [else #f])))
     (define/public (create-global-var-binding! name deletable?)
       (let ([obj (get-field binding-object object-record)])
@@ -323,14 +323,14 @@
       (let* ([obj (get-field binding-object object-record)]
              [desc (let ([prop (send obj get-own-property name)])
                      (if (or (es-undefined? prop)
-                             (es-property-configurable? prop))
+                             (property-configurable? prop))
                          (make-data-property v
                                              #:writable? #t
                                              #:enumerable? #t
                                              #:configurable? deletable?)
                          (make-data-property v)))])
         (define-property-or-throw! obj name desc)
-        (set-property! obj name v #f)
+        (set!/object obj name v #f)
         (set-add! var-names name)))))
 )
 
@@ -442,7 +442,7 @@
     [(property-reference? v)
      (let ([base (to-object (unbox (reference-base v)))])
        ; TODO: private reference
-       (send base get-property (reference-name v) (get-this-value v)))]
+       (send base get (reference-name v) (get-this-value v)))]
     [else
      (let ([base (reference-base v)])
        (assert base environment?)
@@ -453,11 +453,11 @@
     [(not (reference? v)) (raise-native-error 'reference)]
     [(unresolvable-reference? v)
      (when (reference-strict? v) (raise-native-error 'reference))
-     (set-property! (get-global-object) (reference-name v) w #f)]
+     (set!/object (get-global-object) (reference-name v) w #f)]
     [(property-reference? v)
      (let ([base (to-object (unbox (reference-base v)))])
        ; TODO: private reference
-       (let ([status (send base set-property! (reference-name v) w (get-this-value v))])
+       (let ([status (send base set! (reference-name v) w (get-this-value v))])
          (when (and (not status) (reference-strict? v)) (raise-native-error 'type))))]
     [else
      (let ([base (reference-base v)])

@@ -17,7 +17,7 @@
                           #:writable? #t
                           #:enumerable? #f
                           #:configurable? #f))
-    (inherit get-own-property delete-property!)
+    (inherit get-own-property delete!)
     (define/override (define-own-property! name desc)
       (define old-len-desc (get-own-property (string->es-string "length")))
       (define old-len (unbox (data-property-value old-len-desc)))
@@ -26,7 +26,7 @@
          ; TODO: delete / writable semantics
          (let ([new-len (cdr (assq 'value (cdr desc)))])
            (for ([i (in-range new-len old-len)])
-             (delete-property! (to-string i)))
+             (delete! (to-string i)))
            (set-data-property-value! old-len-desc new-len))]
         [(string->number (es-string->string name)) ; TODO: validate array index
          => (λ (i)
