@@ -24,9 +24,9 @@
          [has-binding? (-> ESString Boolean)]
          [create-mutable-binding! (-> ESString Boolean (U Void Boolean))]
          [create-immutable-binding! (-> ESString Boolean (U Void Boolean))]
-         [initialize-binding! (-> ESString ESValue (U Void Boolean))]
-         [set-mutable-binding! (-> ESString ESValue Boolean (U Void Boolean))]
-         [get-binding-value (-> ESString Boolean ESValue)]
+         [initialize-binding! (-> ESString Any (U Void Boolean))]
+         [set-mutable-binding! (-> ESString Any Boolean (U Void Boolean))]
+         [get-binding-value (-> ESString Boolean Any)]
          [delete-binding! (-> ESString Boolean)]
          [has-this-binding? (-> Boolean)]
          [has-super-binding? (-> Boolean)]
@@ -35,7 +35,7 @@
 (define-type ESEnvironment (Instance ESEnvironment<%>))
 
 (struct binding
-  ([value : (Initializable (Boxof ESValue))])
+  ([value : (Initializable (Boxof Any))])
   #:type-name ESBinding
   #:mutable
   #:transparent)
@@ -180,13 +180,13 @@
 
 (define-type ESFunctionEnvironment<%>
   (Class #:implements/inits ESEnvironment<%>
-         (init-field [this-value ESValue]
+         (init-field [this-value Any]
                      [this-binding-status (U 'lexical 'initialized 'uninitialized)]
                      [function-object ESObject]
                      [new-target (U ESObject ESUndefined)])
-         [bind-this-value! (-> ESValue ESValue)]
-         [get-this-binding (-> ESValue)]
-         [get-super-base (-> (U ESValue ESUndefined))]))
+         [bind-this-value! (-> Any Any)]
+         [get-this-binding (-> Any)]
+         [get-super-base (-> (U Any ESUndefined))]))
 
 (define-type ESFunctionEnvironment (Instance ESFunctionEnvironment<%>))
 
@@ -231,7 +231,7 @@
          [can-declare-global-var? (-> ESString Boolean)]
          [can-declare-global-function? (-> ESString Boolean)]
          [create-global-var-binding! (-> ESString Boolean Void)]
-         [create-global-function-binding! (-> ESString ESValue Boolean Void)]))
+         [create-global-function-binding! (-> ESString Any Boolean Void)]))
 
 (define-type ESGlobalEnvironment (Instance ESGlobalEnvironment<%>))
 
@@ -370,10 +370,10 @@
                [get-global-object (-> ESObject)])
 
 (struct reference
-  ([base : (U (Boxof ESValue) ESEnvironment 'unresolvable)]
+  ([base : (U (Boxof Any) ESEnvironment 'unresolvable)]
    [name :  ESPropertyKey]
    [strict? : Boolean]
-   [this-value : (U (Boxof ESValue) 'empty)])
+   [this-value : (U (Boxof Any) 'empty)])
   #:type-name ESReference
   #:transparent)
 
@@ -390,9 +390,9 @@
   ; TODO
   #f)
 
-(: get-this-value (-> ESReference ESValue))
+(: get-this-value (-> ESReference Any))
 
-(define (get-value [v : (U ESValue ESReference)])
+(define (get-value v)
   (cond
     [(not (reference? v)) v]
     [(unresolvable-reference? v) (raise-native-error 'reference)]
@@ -405,7 +405,7 @@
        (assert base environment?)
        (send base get-binding-value (cast (reference-name v) ESString) (reference-strict? v)))]))
 
-(define (put-value! v [w : ESValue])
+(define (put-value! v w)
   (cond
     [(not (reference? v)) (raise-native-error 'reference)]
     [(unresolvable-reference? v)
@@ -427,7 +427,7 @@
       (unbox (reference-this-value v))
       (unbox (reference-base v))))
 
-(define (initialize-referenced-binding! v [w : ESValue])
+(define (initialize-referenced-binding! v w)
   (assert v reference?)
   (assert (not (unresolvable-reference? v)))
   (let ([base (reference-base v)])
@@ -454,5 +454,5 @@
 
 (define (environment-record? v) (environment? v))
 
-(define (make-property-reference [base : ESValue] [name : ESString] [strict? : Boolean])
+(define (make-property-reference [base : Any] [name : ESString] [strict? : Boolean])
   (reference (box base) name strict? 'empty))

@@ -15,27 +15,27 @@
   #:transparent)
 
 (struct data-property es-property
-  ([value : (Initializable (Boxof ESValue))]
+  ([value : (Initializable (Boxof Any))]
    [writable? : (Initializable Boolean)])
   #:type-name ESDataProperty
   #:mutable
   #:transparent)
 
-(define (make-data-property [value : (Initializable ESValue) uninitialized]
+(define (make-data-property [value : (Initializable Any) uninitialized] ; FIXME
                             #:writable? [writable? : (Initializable Boolean) uninitialized]
                             #:enumerable? [enumerable? : (Initializable Boolean) uninitialized]
                             #:configurable? [configurable? : (Initializable Boolean) uninitialized])
   (data-property enumerable? configurable? (if (initialized? value) (box value) uninitialized) writable?))
 
 (struct accessor-property es-property
-  ([get : (Initializable (U ESUndefined (-> ESValue ESValue)))]
-   [set : (Initializable (U ESUndefined (-> ESValue ESValue Void)))])
+  ([get : (Initializable (U ESUndefined (-> Any Any)))]
+   [set : (Initializable (U ESUndefined (-> Any Any Void)))])
   #:type-name ESAccessorProperty
   #:mutable
   #:transparent)
 
-(define (make-accessor-property #:get [get : (Initializable (U ESUndefined (-> ESValue ESValue))) uninitialized]
-                                #:set [set : (Initializable (U ESUndefined (-> ESValue ESValue Void))) uninitialized]
+(define (make-accessor-property #:get [get : (Initializable (U ESUndefined (-> Any Any))) uninitialized]
+                                #:set [set : (Initializable (U ESUndefined (-> Any Any Void))) uninitialized]
                                 #:enumerable? [enumerable? : (Initializable Boolean) uninitialized]
                                 #:configurable? [configurable? : (Initializable Boolean) uninitialized])
   (accessor-property enumerable? configurable? get set))
@@ -55,14 +55,12 @@
          [get-own-property (-> ESPropertyKey (U ESUndefined ESDataProperty ESAccessorProperty))]
          [define-own-property! (-> ESPropertyKey ESProperty Boolean)]
          [has-property? (-> ESPropertyKey Boolean)]
-         [get-property (-> ESPropertyKey ESValue ESValue)]
-         [set-property! (-> ESPropertyKey ESValue ESValue Boolean)]
+         [get-property (-> ESPropertyKey Any Any)]
+         [set-property! (-> ESPropertyKey Any Any Boolean)]
          [delete-property! (-> ESPropertyKey Boolean)]
          [own-property-keys (-> (Listof ESPropertyKey))]))
 
 (define-type ESObject (Instance ESObject<%>))
-
-(define-type ESValue (U ESPrimitive ESObject))
 
 (: is-compatible-property-descriptor? (-> Boolean ESProperty (U ESUndefined ESDataProperty ESAccessorProperty) Boolean))
 (: validate-and-apply-property-descriptor!
@@ -219,9 +217,9 @@
                            (let-values ([(value writable?)
                                          (if (data-property? desc)
                                              (values (coalesce (data-property-value desc)
-                                                               (ann (box es-undefined) (Boxof ESValue)))
+                                                               (ann (box es-undefined) (Boxof Any)))
                                                      (coalesce (data-property-writable? desc) #f))
-                                             (values (ann (box es-undefined) (Boxof ESValue))
+                                             (values (ann (box es-undefined) (Boxof Any))
                                                      #f))])
                              (data-property
                               enumerable?
@@ -295,18 +293,13 @@
 (require/typed "error.rkt" ; TODO
  [raise-native-error (->* (Symbol) (String) Nothing)])
 
-(: es-value? (-> Any Boolean : ESValue))
-(define (es-value? v)
-  (or (es-primitive? v)
-      (es-object? v)))
-
 (define (extensible? [o : ESObject])
   (get-field extensible? o))
 
 (define (get-property [o : ESObject] [p : ESPropertyKey])
   (send o get-property p o))
 
-(define (set-property! [o : ESObject] [p : ESPropertyKey] [v : ESValue] [throw? : Boolean])
+(define (set-property! [o : ESObject] [p : ESPropertyKey] [v : Any] [throw? : Boolean])
   (or (send o set-property! p v o)
       (begin
         (when throw? (raise-native-error 'type))
@@ -360,7 +353,7 @@
              (get-field extensible? o)))])
      Boolean)))
 
-(define (set-property-value! [o : ESObject] [p : String] [v : ESValue] [throw? : Boolean #t])
+(define (set-property-value! [o : ESObject] [p : String] [v : Any] [throw? : Boolean #t])
   (cond
     [(send o set-property! (string->es-string p) v o) (void)]
     [throw? (raise-native-error 'type (format "~a: can't set property" p))]
@@ -381,14 +374,14 @@
        (U (Pairof 'configurable Boolean)
           (Pairof 'enumerable Boolean)
           (Pairof 'writable Boolean)
-          (Pairof 'value ESValue))))
+          (Pairof 'value Any))))
      (Pairof
       'accessor
       (Listof
        (U (Pairof 'configurable Boolean)
           (Pairof 'enumerable Boolean)
-          (Pairof 'get (-> ESValue))
-          (Pairof 'set (-> ESValue Any)))))))
+          (Pairof 'get (-> Any))
+          (Pairof 'set (-> Any Any)))))))
 
 (define (define-own-property [o : ESObject] [p : String] [desc : CompatPropertyDescriptor] [throw? : Boolean])
   (define x
@@ -409,7 +402,7 @@
              [(configurable) (set-es-property-configurable?! x (cdr f))]
              [(enumerable) (set-es-property-enumerable?! x (cdr f))]
              [(get) (set-accessor-property-get! x (λ (receiver) ((cdr f))))]
-             [(set) (set-accessor-property-set! x (λ ([v : ESValue] receiver) (void ((cdr f) v))))]))
+             [(set) (set-accessor-property-set! x (λ (v receiver) (void ((cdr f) v))))]))
          x)]))
   (cond
     [(send o define-own-property! (string->es-string p) x) (void)]
