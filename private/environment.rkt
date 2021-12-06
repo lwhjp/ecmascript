@@ -4,6 +4,7 @@
 (require typed/racket/class
          racket/set
          "../lang/helpers.rkt"
+         "initializable.rkt"
          "object.rkt"
          "primitive.rkt"
          "string.rkt")
@@ -34,7 +35,7 @@
 (define-type ESEnvironment (Instance ESEnvironment<%>))
 
 (struct binding
-  ([value : (Boxof (U Void ESValue))])
+  ([value : (Boxof (Initializable ESValue))])
   #:type-name ESBinding
   #:transparent)
 
@@ -64,20 +65,20 @@
       (hash-has-key? bindings n))
     (define/public (create-mutable-binding! name deletable?)
       (assert (not (hash-has-key? bindings name)))
-      (hash-set! bindings name (mutable-binding (box (void)) deletable?)))
+      (hash-set! bindings name (mutable-binding (box uninitialized) deletable?)))
     (define/public (create-immutable-binding! name strict?)
       (assert (not (hash-has-key? bindings name)))
-      (hash-set! bindings name (immutable-binding (box (void)) strict?)))
+      (hash-set! bindings name (immutable-binding (box uninitialized) strict?)))
     (define/public (initialize-binding! name v)
       (let ([b (hash-ref bindings name)])
-        (assert (void? (unbox (binding-value b))))
+        (assert (unbox (binding-value b)) uninitialized?)
         (set-box! (binding-value b) v)))
     (define/public (set-mutable-binding! name v strict?)
       (cond
         [(hash-ref bindings name (λ () #f))
          => (λ (b)
               (cond
-                [(void? (unbox (binding-value b)))
+                [(uninitialized? (unbox (binding-value b)))
                  (raise-native-error 'reference
                                      (es-string-append
                                       (es-string-literal "uninitialized: ")
@@ -102,7 +103,7 @@
     (define/public (get-binding-value name strict?)
       (let* ([b (hash-ref bindings name)]
              [v (unbox (binding-value b))])
-        (when (void? v)
+        (when (uninitialized? v)
           (raise-native-error 'reference
                               (es-string-append
                                (es-string-literal "uninitialized: ")
