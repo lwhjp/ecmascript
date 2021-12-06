@@ -15,7 +15,7 @@
   #:transparent)
 
 (struct data-property es-property
-  ([value : (Initializable ESValue)]
+  ([value : (Initializable (Boxof ESValue))]
    [writable? : (Initializable Boolean)])
   #:type-name ESDataProperty
   #:mutable
@@ -25,7 +25,7 @@
                             #:writable? [writable? : (Initializable Boolean) uninitialized]
                             #:enumerable? [enumerable? : (Initializable Boolean) uninitialized]
                             #:configurable? [configurable? : (Initializable Boolean) uninitialized])
-  (data-property enumerable? configurable? value writable?))
+  (data-property enumerable? configurable? (if (initialized? value) (box value) uninitialized) writable?))
 
 (struct accessor-property es-property
   ([get : (Initializable (U ESUndefined (-> ESValue ESValue)))]
@@ -123,7 +123,7 @@
           [(data-property? desc)
            (let ([value (data-property-value desc)])
              (assert value initialized?)
-             value)]
+             (unbox value))]
           [else
            (let ([getter (accessor-property-get desc)])
              (assert getter initialized?)
@@ -218,9 +218,11 @@
                             (coalesce (accessor-property-set desc) es-undefined))
                            (let-values ([(value writable?)
                                          (if (data-property? desc)
-                                             (values (coalesce (data-property-value desc) es-undefined)
+                                             (values (coalesce (data-property-value desc)
+                                                               (ann (box es-undefined) (Boxof ESValue)))
                                                      (coalesce (data-property-writable? desc) #f))
-                                             (values es-undefined #f))])
+                                             (values (ann (box es-undefined) (Boxof ESValue))
+                                                     #f))])
                              (data-property
                               enumerable?
                               configurable?
@@ -248,7 +250,7 @@
                                                 es-undefined)
                              (data-property (es-property-enumerable? current)
                                             (es-property-configurable? current)
-                                            es-undefined
+                                            (box es-undefined)
                                             #f))))
             (update-property!)))]
     [(and (data-property? current) (data-property? desc))
@@ -398,7 +400,7 @@
              [(configurable) (set-es-property-configurable?! x (cdr f))]
              [(enumerable) (set-es-property-enumerable?! x (cdr f))]
              [(writable) (set-data-property-writable?! x (cdr f))]
-             [(value) (set-data-property-value! x (cdr f))]))
+             [(value) (set-data-property-value! x (box (cdr f)))]))
          x)]
       [(accessor)
        (let ([x (make-accessor-property)])

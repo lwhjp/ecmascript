@@ -30,7 +30,7 @@
 
 (define (get-identifier-reference lex name strict?)
   (if (ecma:null? lex)
-      (reference ecma:undefined name strict?)
+      (make-property-reference ecma:undefined name strict?)
       (if (send lex has-binding? name)
           (reference lex name strict? 'empty)
           (get-identifier-reference
@@ -97,12 +97,12 @@
      (with-syntax ([prop-name (if (identifier? #'prop)
                                   #'(string->es-string (symbol->string 'prop))
                                   #'(to-string prop))])
-       #'(#%ref (reference (to-object base) prop-name #f 'empty)))]))
+       #'(#%ref (make-property-reference (to-object base) prop-name #f)))]))
 
 (define (delete/ref ref)
   (cond
     [(not (reference? ref)) #t]
-    [(ecma:undefined? (reference-base ref))
+    [(equal? (box es-undefined) (reference-base ref))
      (if (reference-strict? ref)
          (raise-native-error 'syntax)
          #t)]
@@ -114,7 +114,7 @@
                (reference-name ref)))]
     [else
      (delete-property!
-      (to-object (reference-base ref))
+      (to-object (unbox (reference-base ref)))
       (reference-name ref)
       (reference-strict? ref))]))
 
@@ -141,7 +141,7 @@
        #'(let ([v ref-expr])
            (typeof/value
             (if (reference? v)
-                (if (ecma:undefined? (reference-base v))
+                (if (equal? (box es-undefined) (reference-base v))
                     ecma:undefined
                     (get-value v))
                 v))))]))
@@ -154,7 +154,7 @@
     (if (reference? ref)
         (let ([base (reference-base ref)])
           (cond
-            [(Object? base) base]
+            [(box? base) (unbox base)]
             [(environment-record? base)
              es-undefined]))
         ecma:undefined))

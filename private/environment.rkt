@@ -35,8 +35,9 @@
 (define-type ESEnvironment (Instance ESEnvironment<%>))
 
 (struct binding
-  ([value : (Boxof (Initializable ESValue))])
+  ([value : (Initializable (Boxof ESValue))])
   #:type-name ESBinding
+  #:mutable
   #:transparent)
 
 (struct mutable-binding binding
@@ -65,26 +66,27 @@
       (hash-has-key? bindings n))
     (define/public (create-mutable-binding! name deletable?)
       (assert (not (hash-has-key? bindings name)))
-      (hash-set! bindings name (mutable-binding (box uninitialized) deletable?)))
+      (hash-set! bindings name (mutable-binding uninitialized deletable?)))
     (define/public (create-immutable-binding! name strict?)
       (assert (not (hash-has-key? bindings name)))
-      (hash-set! bindings name (immutable-binding (box uninitialized) strict?)))
+      (hash-set! bindings name (immutable-binding uninitialized strict?)))
     (define/public (initialize-binding! name v)
       (let ([b (hash-ref bindings name)])
-        (assert (unbox (binding-value b)) uninitialized?)
-        (set-box! (binding-value b) v)))
+        (assert (binding-value b) uninitialized?)
+        (set-binding-value! b (box v))))
     (define/public (set-mutable-binding! name v strict?)
       (cond
         [(hash-ref bindings name (λ () #f))
          => (λ (b)
+              (define old-v (binding-value b))
               (cond
-                [(uninitialized? (unbox (binding-value b)))
+                [(uninitialized? old-v)
                  (raise-native-error 'reference
                                      (es-string-append
                                       (es-string-literal "uninitialized: ")
                                       name))]
                 [(mutable-binding? b)
-                 (set-box! (binding-value b) v)]
+                 (set-box! old-v v)]
                 [else
                  (assert (immutable-binding? b))
                  (when (or strict? (immutable-binding-strict? b))
@@ -102,13 +104,13 @@
          (initialize-binding! name v)]))
     (define/public (get-binding-value name strict?)
       (let* ([b (hash-ref bindings name)]
-             [v (unbox (binding-value b))])
+             [v (binding-value b)])
         (when (uninitialized? v)
           (raise-native-error 'reference
                               (es-string-append
                                (es-string-literal "uninitialized: ")
                                name)))
-        v))
+        (unbox v)))
     (define/public (delete-binding! name)
       (let ([b (hash-ref bindings name)])
         (and (mutable-binding? b)
@@ -368,17 +370,15 @@
                [get-global-object (-> ESObject)])
 
 (struct reference
-  ([base : (U ESValue ESEnvironment 'unresolvable)]
+  ([base : (U (Boxof ESValue) ESEnvironment 'unresolvable)]
    [name :  ESPropertyKey]
    [strict? : Boolean]
-   [this-value : (U ESValue 'empty)])
+   [this-value : (U (Boxof ESValue) 'empty)])
   #:type-name ESReference
   #:transparent)
 
 (define (property-reference? [v : ESReference])
-  (let ([base (reference-base v)])
-    (and (not (eq? 'unresolvable base))
-         (not (environment? base)))))
+  (box? (reference-base v)))
 
 (define (unresolvable-reference? [v : ESReference])
   (eq? 'unresolvable (reference-base v)))
@@ -397,12 +397,12 @@
     [(not (reference? v)) v]
     [(unresolvable-reference? v) (raise-native-error 'reference)]
     [(property-reference? v)
-     (let ([base (to-object (reference-base v))])
+     (let ([base (to-object (unbox (reference-base v)))])
        ; TODO: private reference
        (send base get-property (reference-name v) (get-this-value v)))]
     [else
      (let ([base (reference-base v)])
-       (assert (environment? base))
+       (assert base environment?)
        (send base get-binding-value (cast (reference-name v) ESString) (reference-strict? v)))]))
 
 (define (put-value! v [w : ESValue])
@@ -412,23 +412,23 @@
      (when (reference-strict? v) (raise-native-error 'reference))
      (set-property! (get-global-object) (reference-name v) w #f)]
     [(property-reference? v)
-     (let ([base (to-object (reference-base v))])
+     (let ([base (to-object (unbox (reference-base v)))])
        ; TODO: private reference
        (let ([status (send base set-property! (reference-name v) w (get-this-value v))])
          (when (and (not status) (reference-strict? v)) (raise-native-error 'type))))]
     [else
      (let ([base (reference-base v)])
-       (assert (environment? base))
+       (assert base environment?)
        (send base set-mutable-binding! (cast (reference-name v) ESString) w (reference-strict? v)))]))
 
 (define (get-this-value v)
   (assert (property-reference? v))
   (if (super-reference? v)
-      (reference-this-value v)
-      (reference-base v)))
+      (unbox (reference-this-value v))
+      (unbox (reference-base v))))
 
 (define (initialize-referenced-binding! v [w : ESValue])
-  (assert (reference? v))
+  (assert v reference?)
   (assert (not (unresolvable-reference? v)))
   (let ([base (reference-base v)])
     (assert (environment? base))
@@ -450,4 +450,9 @@
   (for ([id (in-list ids)])
     (send e create-mutable-binding! (string->es-string (symbol->string id)) #f)))
 
+; TODO: remove
+
 (define (environment-record? v) (environment? v))
+
+(define (make-property-reference [base : ESValue] [name : ESString] [strict? : Boolean])
+  (reference (box base) name strict? 'empty))
