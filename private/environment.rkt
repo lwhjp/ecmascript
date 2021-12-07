@@ -355,7 +355,6 @@
          (all-defined-out))
 
 (require typed/racket/class
-         "../convert.rkt"
          "object.rkt"
          "primitive.rkt"
          "string.rkt")
@@ -366,9 +365,12 @@
 (module lazy racket/base
   (require racket/lazy-require)
   (lazy-require
+   ["../convert.rkt" (to-object)]
    ["realm.rkt" (get-global-object)])
-  (provide get-global-object))
+  (provide to-object
+           get-global-object))
 (unsafe-require/typed (submod "." lazy)
+                      [to-object (-> Any ESObject)]
                       [get-global-object (-> ESObject)])
 
 (struct reference
