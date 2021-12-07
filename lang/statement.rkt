@@ -10,7 +10,6 @@
          "../private/object.rkt"
          "../private/primitive.rkt"
          "../convert.rkt"
-         (only-in "environment.rkt" lexical-environment)
          (only-in "function.rkt" begin-scope)
          (prefix-in ecma: "operator.rkt")
          "reference.rkt")
@@ -59,9 +58,9 @@
   (syntax-parser
     [(_ (~optional (~seq #:vars (var-id:id ...)))
         (~optional (~seq stmt ...+)))
-     #'(let ([new-scope (new-declarative-environment lexical-environment)])
-         (syntax-parameterize ([lexical-environment (make-rename-transformer #'new-scope)])
-           (~? (create-variables! lexical-environment '(var-id ...)))
+     #'(let ([new-scope (new-declarative-environment (current-lexical-environment))])
+         (parameterize ([current-lexical-environment new-scope])
+           (~? (create-variables! new-scope '(var-id ...)))
            (~? (~@ stmt ...) (void))))]))
 
 (begin-for-syntax
@@ -105,7 +104,7 @@
 (define-syntax (stmt:for stx)
   (syntax-parse stx
     [(_ #:init ((~literal stmt:let) [var init] ...) . rest)
-     #'(begin-scope (new-declarative-environment lexical-environment)
+     #'(begin-scope (new-declarative-environment (current-lexical-environment))
          #:vars (var ...)
          (stmt:for #:init (begin (initialize-lexical-var! (identifier-reference var) init) ...) . rest))]
     [(_ (~optional (~seq #:init init))
@@ -150,7 +149,7 @@
             body)))))
 
 (define-syntax-rule (stmt:with expr body0 body ...)
-  (begin-scope (new-object-environment expr #t lexical-environment)
+  (begin-scope (new-object-environment expr #t (current-lexical-environment))
     body0 body ...))
 
 (define-syntax (stmt:switch stx)
@@ -206,7 +205,7 @@
                (with-syntax ([eid (symbol->string (syntax-e (attribute cid)))])
                  #'([es-exn?
                      (λ (e)
-                       (let ([env (new-declarative-environment lexical-environment)])
+                       (let ([env (new-declarative-environment (current-lexical-environment))])
                          (send env create-mutable-binding! eid)
                          (send env set-mutable-binding! eid (es-exn-value e) #f)
                          (begin-scope env

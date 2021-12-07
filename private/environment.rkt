@@ -29,7 +29,7 @@
          [set-mutable-binding! (-> ESString Any Boolean Void)]
          [get-binding-value (-> ESString Boolean Any)]
          [delete-binding! (-> ESString Boolean)]
-         [has-this-binding? (-> Boolean)]
+         [get-this-binding-accessor (-> (Option (-> Any)))]
          [has-super-binding? (-> Boolean)]
          [with-base-object (-> (U ESObject ESUndefined))]))
 
@@ -120,7 +120,7 @@
                (hash-remove! bindings name)
                #t)
              #f)))
-    (define/public (has-this-binding?) #f)
+    (define/public (get-this-binding-accessor) #f)
     (define/public (has-super-binding?) #f)
     (define/public (with-base-object) es-undefined)))
 
@@ -167,7 +167,7 @@
         [else es-undefined]))
     (define/public (delete-binding! name)
       (send binding-object delete! name))
-    (define/public (has-this-binding?) #f)
+    (define/public (get-this-binding-accessor) #f)
     (define/public (has-super-binding?) #f)
     (define/public (with-base-object)
       (if is-with-environment?
@@ -201,11 +201,12 @@
       (set! this-value v)
       (set! this-binding-status 'initialized)
       v)
-    (define/override (has-this-binding?)
-      (not (eq? 'lexical this-binding-status)))
+    (define/override (get-this-binding-accessor)
+      (and (not (eq? 'lexical this-binding-status))
+           (λ () (get-this-binding))))
     (define/override (has-super-binding?)
       ; TODO: home-object
-      (and (not (eq? 'lexical this-binding-status))))
+      (not (eq? 'lexical this-binding-status)))
     (define/public (get-this-binding)
       (assert (not (eq? 'lexical this-binding-status)))
       (when (eq? 'uninitialzied this-binding-status)
@@ -273,7 +274,7 @@
                     (set-remove! var-names name))
                   status)
                 #t))))
-    (define/public (has-this-binding?) #t)
+    (define/public (get-this-binding-accessor) (λ () (get-this-binding)))
     (define/public (has-super-binding?) #f)
     (define/public (with-base-object) es-undefined)
     (define/public (get-this-binding) global-this-value)
@@ -482,3 +483,31 @@
 
 (define (make-property-reference [base : Any] [name : ESString] [strict? : Boolean])
   (reference (box base) name strict? 'empty))
+
+;; Execution context
+
+(define current-lexical-environment
+  : (Parameterof ESEnvironment (Option ESEnvironment))
+  (make-parameter #f))
+
+(define current-variable-environment
+  : (Parameterof ESEnvironment (Option ESEnvironment))
+  (make-parameter #f))
+
+(define (resolve-binding [name : ESString] [env : (U ESEnvironment ESUndefined) es-undefined])
+  ; TODO: strict mode
+  (get-identifier-reference
+   (if (es-undefined? env)
+       (assert (current-lexical-environment))
+       env)
+   name
+   #f))
+
+(define (resolve-this-binding)
+  (let loop : Any ([env (assert (current-lexical-environment))])
+    (cond
+      [(send env get-this-binding-accessor) => (λ ([f : (-> Any)]) (f))]
+      [else
+       (let ([outer (get-field outer-env env)])
+         (assert (not (es-null? outer)))
+         (loop outer))])))

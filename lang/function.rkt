@@ -11,7 +11,6 @@
          "../private/string.rkt"
          "../private/this.rkt"
          "../lib/function.rkt"
-         "environment.rkt"
          "reference.rkt")
 
 (provide
@@ -42,7 +41,7 @@
        (param:id ...)
        (~optional (~seq #:vars (var-id:id ...)))
        (~optional (~seq body:expr ...+) #:defaults ([(body 1) (list #'ecma:undefined)])))
-    #`(let ([scope-env (new-declarative-environment lexical-environment)])
+    #`(let ([scope-env (new-declarative-environment (current-lexical-environment))])
         (letrec
             ([f (new Function%
                      [formal-parameters '(param ...)]
@@ -79,17 +78,18 @@
 
 (define-syntax (begin-scope stx)
   (syntax-parse stx
-    [(_ new-env (~optional (~seq #:vars (var-id:id ...))) form ...)
-     #'(let ([new-scope new-env])
-         (syntax-parameterize
-             ([variable-environment (make-rename-transformer #'new-scope)]
-              [lexical-environment (make-rename-transformer #'new-scope)])
+    [(_ env (~optional (~seq #:vars (var-id:id ...))) form ...)
+     #'(let ([scope-env env])
+         (parameterize
+             ([current-variable-environment scope-env]
+              [current-lexical-environment scope-env])
            (reorder-functions () ()
-             (~? (create-variables! variable-environment '(var-id ...)))
+             (~? (create-variables! scope-env '(var-id ...)))
              form ...)))]))
 
-(define (create-function! env-rec id fn)
-  (let ([name (string->es-string (symbol->string id))])
+(define (create-function! id fn)
+  (let ([env-rec (current-variable-environment)]
+        [name (string->es-string (symbol->string id))])
     (void
      (send env-rec create-mutable-binding! name #f)
      (send env-rec initialize-binding! name fn))))
@@ -99,7 +99,7 @@
    #:literals (function)
    [(_ ([fn-id fn-def] ...) (form ...))
     #'(begin
-        (create-function! variable-environment 'fn-id fn-def) ...
+        (create-function! 'fn-id fn-def) ...
         form ...)]
    [(_ (fns ...) collected-forms
        (function fn-id:id . rest)

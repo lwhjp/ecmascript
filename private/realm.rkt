@@ -32,7 +32,7 @@
            es-undefined)))
 
 (define current-realm
-  : (Parameterof (Option ESRealm))
+  : (Parameterof ESRealm (Option ESRealm))
   (make-parameter #f))
 
 (define (get-global-object)

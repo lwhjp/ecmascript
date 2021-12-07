@@ -10,8 +10,7 @@
          "../private/object.rkt"
          "../private/primitive.rkt"
          "../private/realm.rkt"
-         "../private/string.rkt"
-         "environment.rkt")
+         "../private/string.rkt")
 
 (lazy-require
  ["../convert.rkt" (to-object)])
@@ -77,7 +76,7 @@
      (with-syntax ([name #'(string->es-string (symbol->string 'id))])
        #'(#%ref
           (get-identifier-reference
-           lexical-environment
+           (current-lexical-environment)
            name
            #f)))]))
 
