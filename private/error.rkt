@@ -1,31 +1,34 @@
-#lang racket/base
+#lang typed/racket/base
 
-(require racket/lazy-require
-         "primitive.rkt"
-         "string.rkt")
+(require "primitive.rkt"
+         "string.rkt"
+         "typed-lazy-require.rkt")
 
-(lazy-require
- ["../convert.rkt" (to-string)])
+(lazy-require/typed
+ ["../convert.rkt" ([to-string (-> Any ESString)])])
 
 (provide (all-defined-out))
 
-(struct es-exn exn:fail (value) #:transparent)
+(struct es-exn exn:fail
+  ([value : Any])
+  #:transparent)
 
 ;; TODO: error constructors should be intrinsics
-(define native-error-constructor (make-parameter #f))
+(define native-error-constructor
+  : (Parameterof (-> Symbol (U String ESString ESUndefined) Any))
+  (make-parameter
+   (λ args
+     (error 'native-error-constructor "not initialized"))))
 
-(define (raise-native-error type [message ecma:undefined])
+(define (raise-native-error [type : Symbol] [message : (U String ESString ESUndefined) ecma:undefined])
   (raise-es-exn ((native-error-constructor) type message)))
 
-(define (raise-es-exn v)
+(define (raise-es-exn [v : Any])
+  : Nothing
   (define message
-    (es-string->string
-     (with-handlers ([exn:fail? (λ (e)
-                                  "(invalid)")])
-       (to-string v))))
+    (if (string? v)
+        v
+        (with-handlers ([exn:fail? (λ (e) "(invalid)")])
+          (es-string->string
+           (to-string v)))))
   (raise (es-exn message (current-continuation-marks) v)))
-
-(define-syntax-rule
-  (with-es-exceptions form ...)
-  (with-handlers ()
-    form ...))

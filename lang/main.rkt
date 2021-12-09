@@ -44,10 +44,9 @@
     [(_ #:vars (var ...) stmt ...)
      #'(#%plain-module-begin
         (current-module-environment (realm-global-env (current-realm)))
-        (with-es-exceptions
-          (begin-scope (current-module-environment)
-            #:vars (var ...)
-            stmt ...)))]))
+        (begin-scope (current-module-environment)
+          #:vars (var ...)
+          stmt ...))]))
 
 (define-syntax (es-top-interaction stx)
   (syntax-case stx (begin)
