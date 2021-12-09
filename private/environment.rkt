@@ -338,12 +338,12 @@
 (define-unsafe-class-predicate function-environment? function-environment% ESFunctionEnvironment<%>)
 (define-unsafe-class-predicate global-environment? global-environment% ESGlobalEnvironment<%>)
 
-(define-unsafe-predicate environment? ESEnvironment
-  (λ (v)
-    (or (declarative-environment? v)
-        (object-environment? v)
-        (function-environment? v)
-        (global-environment? v))))
+(: environment? (-> Any Boolean : #:+ ESEnvironment))
+(define (environment? v)
+  (or (declarative-environment? v)
+      (object-environment? v)
+      (function-environment? v)
+      (global-environment? v)))
 
 (struct reference
   ([base : (U (Boxof Any) ESEnvironment 'unresolvable)]
