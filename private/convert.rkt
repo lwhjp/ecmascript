@@ -71,7 +71,7 @@
     [(es-number? v) v]
     [(es-string? v) (let ([n (string->number (string-trim (es-string->string v)))]) ; FIXME
                       (if (real? n)
-                          (cast (exact->inexact n) Flonum)
+                          (real->double-flonum n)
                           +nan.0))]
     [(es-symbol? v) (raise-native-error 'type)]
     [(es-big-int? v) (raise-native-error 'type)]
@@ -80,17 +80,20 @@
 
 (define (to-integer-or-infinity [v : Any])
   (let ([n (to-number v)])
-    (if (or (nan? n) (infinite? n))
-        0
-        (exact-truncate n))))
+    (cond
+      [(nan? n) 0]
+      [(infinite? n) n]
+      [else (exact-truncate n)])))
 
 (define (to-integer [v : Any])
+  : Integer
   (let ([n (to-integer-or-infinity v)])
     (if (exact-integer? n)
         n
         0)))
 
 (define (to-int32 [v : Any])
+  : Integer
   (let* ([n (to-integer v)]
          [n (modulo n (expt 2 32))])
     (if (>= n (expt 2 31))
@@ -98,9 +101,11 @@
         n)))
 
 (define (to-uint32 [v : Any])
+  : Nonnegative-Integer
   (modulo (to-integer v) (expt 2 32)))
 
 (define (to-int16 [v : Any])
+  : Integer
   (let* ([n (to-integer v)]
          [n (modulo n (expt 2 16))])
     (if (>= n (expt 2 15))
@@ -108,9 +113,11 @@
         n)))
 
 (define (to-uint16 [v : Any])
+  : Nonnegative-Integer
   (modulo (to-integer v) (expt 2 16)))
 
 (define (to-int8 [v : Any])
+  : Integer
   (let* ([n (to-integer v)]
          [n (modulo n (expt 2 8))])
     (if (>= n (expt 2 7))
@@ -118,6 +125,7 @@
         n)))
 
 (define (to-uint8 [v : Any])
+  : Nonnegative-Integer
   (modulo (to-integer v) (expt 2 8)))
 
 (define (to-big-int [v : Any])
@@ -169,3 +177,30 @@
     (if (es-symbol? key)
         key
         (to-string key))))
+
+(define (to-length [v : Any])
+  : ESNumber
+  (let ([len (to-integer-or-infinity v)])
+    (if (<= len 0)
+        0.0
+        (real->double-flonum (min len (sub1 (expt 2 53)))))))
+
+(define (canonical-numeric-index-string [v : ESString])
+  : (U ESNumber ESUndefined)
+  (if (es-string=? (es-string-literal "-0") v)
+      -0.0
+      (let ([n (to-number v)])
+        (if (same-value? (to-string n) v)
+            n
+            es-undefined))))
+
+(define (to-index [v : Any])
+  : Nonnegative-Integer
+  (if (es-undefined? v)
+      0
+      (let* ([integer (to-integer-or-infinity v)]
+             [clamped (to-length (real->double-flonum integer))])
+        (unless (same-value? (real->double-flonum integer) clamped)
+          (raise-native-error 'range))
+        (assert integer exact-nonnegative-integer?)
+        integer)))

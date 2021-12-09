@@ -9,9 +9,22 @@
          "unsafe-predicate.rkt")
 
 (lazy-require/typed
- ["convert.rkt" ([to-object (-> Any ESObject)])])
+ ["convert.rkt" ([to-object (-> Any ESObject)]
+                 [canonical-numeric-index-string (-> ESString (U ESNumber ESUndefined))])])
 
 (provide (all-defined-out))
+
+(define (integer-index? [v : ESPropertyKey])
+  (and (es-string? v)
+       (let ([n (canonical-numeric-index-string v)])
+         (and (not (es-undefined? n))
+              (<= 0 n (sub1 (expt 2 53)))))))
+
+(define (array-index? [v : ESPropertyKey])
+  (and (es-string? v)
+       (let ([n (canonical-numeric-index-string v)])
+         (and (not (es-undefined? n))
+              (<= 0 n (sub1 (expt 2 32)))))))
 
 (struct property
   ([enumerable? : (Initializable Boolean)]
@@ -45,6 +58,17 @@
                                 #:enumerable? [enumerable? : (Initializable Boolean) uninitialized]
                                 #:configurable? [configurable? : (Initializable Boolean) uninitialized])
   (accessor-property enumerable? configurable? get set))
+
+(: property-copy
+   (case->
+    (-> ESDataProperty ESDataProperty)
+    (-> ESAccessorProperty ESAccessorProperty)
+    (-> ESProperty ESProperty)))
+(define (property-copy p)
+  (cond
+    [(data-property? p) (struct-copy data-property p)]
+    [(accessor-property? p) (struct-copy accessor-property p)]
+    [else (struct-copy property p)]))
 
 (define-type ESPropertyKey (U ESSymbol ESString))
 
@@ -109,7 +133,7 @@
       (set-field! extensible? this #f)
       #t)
     (define/public (get-own-property p)
-      (hash-ref properties p (λ () es-undefined)))
+      (ordinary-get-own-property this p))
     (define/public (define-own-property! p desc)
       (ordinary-define-own-property! this p desc))
     (define/public (has-property? p)
@@ -182,6 +206,17 @@
       (hash-keys properties))))
 
 (define-unsafe-class-predicate es-object? es-object% ESObject<%>)
+
+(define (ordinary-get-own-property [o : ESObject] [p : ESPropertyKey])
+  : (U ESDataProperty ESAccessorProperty ESUndefined)
+  (let ([x (hash-ref (get-field properties o) p (λ () #f))])
+    (cond
+      [(not x) es-undefined]
+      [(data-property? x)
+       (struct-copy data-property x)]
+      [else
+       (assert x accessor-property?)
+       (struct-copy accessor-property x)])))
 
 (define (ordinary-define-own-property! [o : ESObject] [p : ESPropertyKey] [desc : ESProperty])
   (validate-and-apply-property-descriptor!

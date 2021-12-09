@@ -3,13 +3,11 @@
 (require racket/class
          racket/lazy-require
          racket/string
-         "../lang/reference.rkt"
          "../private/array.rkt"
          "../private/environment.rkt"
          "../private/function.rkt"
          "../private/object.rkt"
          "../private/primitive.rkt"
-         "../private/string.rkt"
          "../private/this.rkt"
          (only-in "object.rkt" Object:prototype)
          "util.rkt")
@@ -18,33 +16,20 @@
  ["../convert.rkt" (to-integer to-object to-string to-uint32)])
 
 (provide get-properties
- Array%
- make-array)
+         make-array)
 
 (define (get-properties)
   `(["Array" . ,array-constructor]))
 
-(define Array%
-  (class ecma-array%
-    (init [prototype Array:prototype])
-    (super-new [prototype prototype])))
-
 (define Array:prototype
-  (new Array% [prototype Object:prototype]))
+  (new es-array% [prototype Object:prototype]))
 
 (define (make-array . elements)
-  (let ([obj (new Array%)])
+  (let ([obj (array-create 0 Array:prototype)])
     (for ([i (in-naturals)]
           [elt (in-list elements)]
           #:unless (ecma:undefined? elt))
-      (define-own-property obj
-            (es-string->string (to-string i))
-            `(data
-              (value . ,elt)
-              (writable . #t)
-              (enumerable . #t)
-              (configurable . #t))
-            #f))
+      (create-data-property-or-throw! obj (to-string i) elt))
     obj))
 
 (define array-constructor
@@ -54,7 +39,7 @@
   ["prototype" Array:prototype]
   ["isArray"
    (native-method (arg)
-     (is-a? arg ecma-array%))])
+     (is-a? arg es-array%))])
 
 (define-object-properties Array:prototype
   ["constructor" array-constructor]
@@ -86,7 +71,7 @@
   ["slice"
    (native-method (start end)
      (define o (to-object ecma:this))
-     (define a (new Array%))
+     (define a (new es-array% [prototype Array:prototype]))
      (define len (to-uint32 (send o get "length")))
      (define relative-start (to-integer start))
      (define k

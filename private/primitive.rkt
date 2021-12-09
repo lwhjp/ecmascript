@@ -62,3 +62,21 @@
      ESSymbol))
 
 (define-predicate es-primitive? ESPrimitive)
+
+(define (same-value? x y)
+  (equal? x y))
+
+(define (same-value-zero? x y)
+  (or (equal? x y)
+      (and (number? x) (number? y) (= x y))))
+
+(define (same-value-non-numeric? x y)
+  (equal? x y))
+
+; loosely-equal?
+
+(define (strictly-equal? x y)
+  (cond
+    [(es-number? x) (and (es-number? y) (= x y))]
+    [(es-big-int? x) (and (es-big-int? y) (= x y))]
+    [else (equal? x y)]))
