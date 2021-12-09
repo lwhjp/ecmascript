@@ -4,19 +4,14 @@
          "initializable.rkt"
          "primitive.rkt"
          "string.rkt"
+         "typed-lazy-require.rkt"
          "unsafe-predicate.rkt")
 
 (require/typed "error.rkt" ; TODO
  [raise-native-error (->* (Symbol) (String) Nothing)])
 
-(require typed/racket/unsafe)
-(module lazy racket/base
-  (require racket/lazy-require)
-  (lazy-require
-   ["../convert.rkt" (to-object)])
-  (provide to-object))
-(unsafe-require/typed (submod "." lazy)
-                      [to-object (-> Any ESObject)])
+(lazy-require/typed
+ ["../convert.rkt" ([to-object (-> Any ESObject)])])
 
 (provide (all-defined-out))
 

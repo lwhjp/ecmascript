@@ -1,12 +1,13 @@
 #lang typed/racket/base
 
 (require typed/racket/class
-         racket/set
+         (except-in racket/set mutable-set set-add! set-remove!)
          "../lang/helpers.rkt"
          "initializable.rkt"
          "object.rkt"
          "primitive.rkt"
          "string.rkt"
+         "typed-lazy-require.rkt"
          "unsafe-predicate.rkt")
 
 (require typed/racket/unsafe)
@@ -18,16 +19,9 @@
 (require/typed "error.rkt" ; TODO
                [raise-native-error (->* (Symbol) ((U String ESString)) Nothing)])
 
-(module lazy racket/base
-  (require racket/lazy-require)
-  (lazy-require
-   ["../convert.rkt" (to-object)]
-   ["realm.rkt" (get-global-object)])
-  (provide to-object
-           get-global-object))
-(unsafe-require/typed (submod "." lazy)
-                      [to-object (-> Any ESObject)]
-                      [get-global-object (-> ESObject)])
+(lazy-require/typed
+ ["../convert.rkt" ([to-object (-> Any ESObject)])]
+ ["realm.rkt" ([get-global-object (-> ESObject)])])
 
 (provide (all-defined-out))
 
