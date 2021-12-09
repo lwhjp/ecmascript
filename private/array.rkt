@@ -1,7 +1,7 @@
 #lang racket/base
 
 (require racket/class
-         "../convert.rkt"
+         "convert.rkt"
          "object.rkt"
          "string.rkt")
 

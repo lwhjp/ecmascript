@@ -3,6 +3,8 @@
 (require typed/racket/class
          (except-in racket/set mutable-set set-add! set-remove!)
          "../lang/helpers.rkt"
+         "convert.rkt"
+         "error.rkt"
          "initializable.rkt"
          "object.rkt"
          "primitive.rkt"
@@ -16,11 +18,7 @@
                       [set-add! (∀ (T) (-> (Setof T) T Void))]
                       [set-remove! (∀ (T) (-> (Setof T) T Void))])
 
-(require/typed "error.rkt" ; TODO
-               [raise-native-error (->* (Symbol) ((U String ESString)) Nothing)])
-
 (lazy-require/typed
- ["../convert.rkt" ([to-object (-> Any ESObject)])]
  ["realm.rkt" ([get-global-object (-> ESObject)])])
 
 (provide (all-defined-out))

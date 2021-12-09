@@ -1,17 +1,15 @@
 #lang typed/racket/base
 
 (require typed/racket/class
+         "error.rkt"
          "initializable.rkt"
          "primitive.rkt"
          "string.rkt"
          "typed-lazy-require.rkt"
          "unsafe-predicate.rkt")
 
-(require/typed "error.rkt" ; TODO
- [raise-native-error (->* (Symbol) (String) Nothing)])
-
 (lazy-require/typed
- ["../convert.rkt" ([to-object (-> Any ESObject)])])
+ ["convert.rkt" ([to-object (-> Any ESObject)])])
 
 (provide (all-defined-out))
 
@@ -51,8 +49,8 @@
 (define-type ESPropertyKey (U ESSymbol ESString))
 
 (define-type ESObject<%>
-  (Class (init-field [class-name Symbol]
-                     [prototype (U ESObject ESNull)]
+  (Class (init-field [class-name Symbol #:optional]
+                     [prototype (U ESObject ESNull) #:optional]
                      [extensible? Boolean #:optional]
                      [properties (Mutable-HashTable ESPropertyKey (U ESDataProperty ESAccessorProperty)) #:optional])
          [clone (-> ESObject)]
@@ -76,10 +74,11 @@
     (-> ESUndefined ESUndefined Boolean ESProperty (U ESUndefined ESDataProperty ESAccessorProperty) Boolean)
     (-> ESObject ESPropertyKey Boolean ESProperty (U ESUndefined ESDataProperty ESAccessorProperty) Boolean)))
 
-(define es-object% : ESObject<%>
+(define es-object%
+  : ESObject<%>
   (class object%
-    (init-field class-name
-                prototype
+    (init-field [class-name 'Object]
+                [prototype es-null]
                 [extensible? #t]
                 [properties (make-hash)])
     (super-new)
@@ -112,7 +111,7 @@
     (define/public (get-own-property p)
       (hash-ref properties p (λ () es-undefined)))
     (define/public (define-own-property! p desc)
-      (validate-and-apply-property-descriptor! this p extensible? desc (get-own-property p)))
+      (ordinary-define-own-property! this p desc))
     (define/public (has-property? p)
       (or (not (es-null? (get-own-property p)))
           (let ([parent (get-prototype)])
@@ -183,6 +182,14 @@
       (hash-keys properties))))
 
 (define-unsafe-class-predicate es-object? es-object% ESObject<%>)
+
+(define (ordinary-define-own-property! [o : ESObject] [p : ESPropertyKey] [desc : ESProperty])
+  (validate-and-apply-property-descriptor!
+   o
+   p
+   (extensible? o)
+   desc
+   (send o get-own-property p)))
 
 (define (is-compatible-property-descriptor? extensible? desc current)
   (validate-and-apply-property-descriptor! es-undefined es-undefined extensible? desc current))
@@ -279,6 +286,7 @@
                       (accessor-property-get current))))]))
 
 (define (extensible? [o : ESObject])
+  : Boolean
   (get-field extensible? o))
 
 (define (get/object [o : ESObject] [p : ESPropertyKey])

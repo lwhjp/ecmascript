@@ -6,14 +6,14 @@
          racket/promise
          racket/runtime-path
          net/uri-codec
+         "convert.rkt"
          (prefix-in ecma: "eval.rkt")
          "object.rkt"
          "primitive.rkt"
          "realm.rkt"
          "string.rkt"
          "this.rkt"
-         (only-in "../lib/util.rkt" native-method)
-         "../convert.rkt")
+         (only-in "../lib/util.rkt" native-method))
 
 (provide make-default-realm)
 

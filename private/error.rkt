@@ -5,7 +5,7 @@
          "typed-lazy-require.rkt")
 
 (lazy-require/typed
- ["../convert.rkt" ([to-string (-> Any ESString)])])
+ ["convert.rkt" ([to-string (-> Any ESString)])])
 
 (provide (all-defined-out))
 
