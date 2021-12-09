@@ -63,7 +63,8 @@
   #:transparent)
 
 (define-type ESDeclarativeEnvironment<%>
-  (Class #:implements/inits ESEnvironment<%>))
+  (Class #:implements/inits ESEnvironment<%>
+         (field [bindings (Mutable-HashTable ESString (U ESMutableBinding ESImmutableBinding))])))
 
 (define-type ESDeclarativeEnvironment (Instance ESDeclarativeEnvironment<%>))
 
@@ -71,9 +72,8 @@
   : ESDeclarativeEnvironment<%>
   (class object%
     (init-field outer-env)
+    (field [bindings (make-hash)])
     (super-new)
-    (define bindings : (Mutable-HashTable ESString (U ESMutableBinding ESImmutableBinding))
-      (make-hash))
     (define/public (has-binding? n)
       (hash-has-key? bindings n))
     (define/public (create-mutable-binding! name deletable?)
@@ -186,7 +186,7 @@
           es-undefined))))
 
 (define-type ESFunctionEnvironment<%>
-  (Class #:implements/inits ESEnvironment<%>
+  (Class #:implements/inits ESDeclarativeEnvironment<%>
          (init-field [this-value Any]
                      [this-binding-status (U 'lexical 'initialized 'uninitialized)]
                      [function-object ESObject]
