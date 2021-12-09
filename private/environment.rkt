@@ -1,13 +1,13 @@
 #lang typed/racket/base
 
-(module definitions typed/racket/base
 (require typed/racket/class
          racket/set
          "../lang/helpers.rkt"
          "initializable.rkt"
          "object.rkt"
          "primitive.rkt"
-         "string.rkt")
+         "string.rkt"
+         "unsafe-predicate.rkt")
 
 (require typed/racket/unsafe)
 (unsafe-require/typed racket/set
@@ -17,6 +17,17 @@
 
 (require/typed "error.rkt" ; TODO
                [raise-native-error (->* (Symbol) ((U String ESString)) Nothing)])
+
+(module lazy racket/base
+  (require racket/lazy-require)
+  (lazy-require
+   ["../convert.rkt" (to-object)]
+   ["realm.rkt" (get-global-object)])
+  (provide to-object
+           get-global-object))
+(unsafe-require/typed (submod "." lazy)
+                      [to-object (-> Any ESObject)]
+                      [get-global-object (-> ESObject)])
 
 (provide (all-defined-out))
 
@@ -321,57 +332,18 @@
         (define-property-or-throw! obj name desc)
         (set!/object obj name v #f)
         (set-add! var-names name)))))
-)
 
-(module predicates racket/base
-  (require racket/class
-           (submod ".." definitions))
-  (provide (all-defined-out))
-  (define (declarative-environment? v)
-    (is-a? v declarative-environment%))
-  (define (object-environment? v)
-    (is-a? v object-environment%))
-  (define (function-environment? v)
-    (is-a? v function-environment%))
-  (define (global-environment? v)
-    (is-a? v global-environment%))
-  (define (environment? v)
+(define-unsafe-class-predicate declarative-environment? declarative-environment% ESDeclarativeEnvironment<%>)
+(define-unsafe-class-predicate object-environment? object-environment% ESObjectEnvironment<%>)
+(define-unsafe-class-predicate function-environment? function-environment% ESFunctionEnvironment<%>)
+(define-unsafe-class-predicate global-environment? global-environment% ESGlobalEnvironment<%>)
+
+(define-unsafe-predicate environment? ESEnvironment
+  (λ (v)
     (or (declarative-environment? v)
         (object-environment? v)
         (function-environment? v)
         (global-environment? v))))
-
-(require typed/racket/unsafe
-         (submod "." definitions))
-; FIXME: unsafe
-(unsafe-require/typed (submod "." predicates)
-                      [declarative-environment? (-> Any Boolean : ESDeclarativeEnvironment)]
-                      [object-environment? (-> Any Boolean : ESObjectEnvironment)]
-                      [function-environment? (-> Any Boolean : ESFunctionEnvironment)]
-                      [global-environment? (-> Any Boolean : ESGlobalEnvironment)]
-                      [environment? (-> Any Boolean : ESEnvironment)])
-(provide (all-from-out (submod "." definitions))
-         environment?
-         (all-defined-out))
-
-(require typed/racket/class
-         "object.rkt"
-         "primitive.rkt"
-         "string.rkt")
-
-(require/typed "error.rkt" ; TODO
-               [raise-native-error (->* (Symbol) ((U String ESString)) Nothing)])
-
-(module lazy racket/base
-  (require racket/lazy-require)
-  (lazy-require
-   ["../convert.rkt" (to-object)]
-   ["realm.rkt" (get-global-object)])
-  (provide to-object
-           get-global-object))
-(unsafe-require/typed (submod "." lazy)
-                      [to-object (-> Any ESObject)]
-                      [get-global-object (-> ESObject)])
 
 (struct reference
   ([base : (U (Boxof Any) ESEnvironment 'unresolvable)]

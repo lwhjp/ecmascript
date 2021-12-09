@@ -1,9 +1,22 @@
 #lang typed/racket/base
 
-(module definitions typed/racket/base
 (require typed/racket/class
          "initializable.rkt"
-         "primitive.rkt")
+         "primitive.rkt"
+         "string.rkt"
+         "unsafe-predicate.rkt")
+
+(require/typed "error.rkt" ; TODO
+ [raise-native-error (->* (Symbol) (String) Nothing)])
+
+(require typed/racket/unsafe)
+(module lazy racket/base
+  (require racket/lazy-require)
+  (lazy-require
+   ["../convert.rkt" (to-object)])
+  (provide to-object))
+(unsafe-require/typed (submod "." lazy)
+                      [to-object (-> Any ESObject)])
 
 (provide (all-defined-out))
 
@@ -174,6 +187,8 @@
       ; FIXME: order
       (hash-keys properties))))
 
+(define-unsafe-class-predicate es-object? es-object% ESObject<%>)
+
 (define (is-compatible-property-descriptor? extensible? desc current)
   (validate-and-apply-property-descriptor! es-undefined es-undefined extensible? desc current))
 
@@ -267,40 +282,6 @@
                       (accessor-property-set current))
               (equal? (accessor-property-get desc)
                       (accessor-property-get current))))]))
-)
-
-(module predicate racket/base
-  (require racket/class
-           (submod ".." definitions))
-  (provide es-object?)
-  (define (es-object? v)
-    (is-a? v es-object%)))
-
-(require typed/racket/unsafe
-         (submod "." definitions))
-;; This really is unsafe: untyped code can set fields, which will not be caught by is-a?.
-(unsafe-require/typed
- (submod "." predicate)
- [es-object? (-> Any Boolean : ESObject)])
-(provide (all-from-out (submod "." definitions))
-         es-object?
-         (all-defined-out))
-
-(require typed/racket/class
-         "initializable.rkt"
-         "primitive.rkt"
-         "string.rkt")
-
-(module lazy racket/base
-  (require racket/lazy-require)
-  (lazy-require
-   ["../convert.rkt" (to-object)])
-  (provide to-object))
-(unsafe-require/typed (submod "." lazy)
-                      [to-object (-> Any ESObject)])
-
-(require/typed "error.rkt" ; TODO
- [raise-native-error (->* (Symbol) (String) Nothing)])
 
 (define (extensible? [o : ESObject])
   (get-field extensible? o))
@@ -455,14 +436,15 @@
     [else (void)]))
 
 (define Object? es-object?)
+(define ecma-object% es-object%)
 
 (module compat-untyped racket/base
 (require racket/class
-         "string.rkt"
-         (submod ".." definitions))
-(provide define-object-properties
-         (rename-out
-          [es-object% ecma-object%]))
+         racket/lazy-require
+         "string.rkt")
+(provide define-object-properties)
+(lazy-require
+ [(submod "..") (make-data-property)])
 
 (define (compat:->es-value v)
   (if (string? v)
